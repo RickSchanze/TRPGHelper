@@ -2,6 +2,8 @@
 
 一个记录"我车了哪些卡、留了哪些卡、还能怎么车新卡"的电子卡器。
 
+仓库：<https://github.com/RickSchanze/TRPGHelper>
+
 - 后端：.NET 10（ASP.NET Core Minimal API + EF Core + SQLite）
 - 前端：uni-app（Vue 3 + TypeScript + Vite），一套代码编译到微信小程序和 H5
 - 当前是**骨架版**：登录、卡库、新建向导、状态流转（留卡）、辅助素材（属性/姓名/职业/灵感）已跑通，业务细节后续逐个补。
@@ -95,6 +97,26 @@ H5 在桌面浏览器下也有适配：宽度 ≥ 900px 时使用居中版心（
 | GET | `/api/generator/names` | 随机姓名 |
 | GET | `/api/generator/occupations` | 随机职业 |
 | GET | `/api/generator/inspirations` | 车卡灵感 |
+
+## 车新卡流程
+
+「车新卡」是一个 4 步的引导式流程：
+
+1. **规则书**：DND 5E / COC 7E（带图标）
+2. **基本信息**：姓名、职业、年龄、简介
+3. **属性与灵感**：掷骰 / 标准数组，随机姓名、职业、故事钩子
+4. **确认**：检查一遍，点「完成并保存」
+
+前 3 步只写在本机（uni storage，key `trpg_create_draft`），刷新页面、切后台、退出再进都会自动恢复；**只有第 4 步「完成并保存」才会 `POST /api/characters` 提交给服务器**。想从头来可以点右上角「重新开始」。
+
+### 规则书图标替换
+
+开发期用的是临时素材，正式版可以随时替换：
+
+- 直接同名覆盖：`frontend/src/static/rulebooks/dnd5e.png`、`coc7.png`
+- 想换文件名或加新规则书：改 `frontend/src/config/rulebooks.ts` 里的 `icon` / `accent`
+
+当前素材来自 [game-icons.net](https://game-icons.net)（Delapouite，CC BY 3.0），说明见 `frontend/src/static/rulebooks/README.md`。
 
 ## 状态流转
 
