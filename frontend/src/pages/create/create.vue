@@ -111,7 +111,7 @@
         v-for="(item, index) in classes"
         :key="item.code"
         class="rail-item"
-        :class="{ active: activeClassIndex === index }"
+        :class="{ active: activeClassIndex === index, selected: draft.classCode === item.code }"
         @tap="scrollToClass(index)"
       >
         <text class="rail-name">{{ item.name }}</text>
@@ -156,6 +156,10 @@ const failedIcons = ref<Record<string, boolean>>({})
 const failedCovers = ref<Record<string, boolean>>({})
 const activeClassIndex = ref(0)
 const cardTops = ref<number[]>([])
+const jumping = ref(false)
+
+let jumpTimer: ReturnType<typeof setTimeout> | null = null
+let scrollTimer: ReturnType<typeof setTimeout> | null = null
 
 const step = computed(() => draft.value.step)
 
@@ -194,18 +198,25 @@ onLoad(() => {
 })
 
 onPageScroll((event) => {
-  if (cardTops.value.length === 0) {
+  // 跳转动画期间不跟着滚动事件改高亮，避免来回闪
+  if (jumping.value || cardTops.value.length === 0) {
     return
   }
 
-  const threshold = event.scrollTop + 160
-  let index = 0
-  cardTops.value.forEach((top, position) => {
-    if (top <= threshold) {
-      index = position
-    }
-  })
-  activeClassIndex.value = index
+  if (scrollTimer) {
+    clearTimeout(scrollTimer)
+  }
+
+  scrollTimer = setTimeout(() => {
+    const threshold = event.scrollTop + 160
+    let index = 0
+    cardTops.value.forEach((top, position) => {
+      if (top <= threshold) {
+        index = position
+      }
+    })
+    activeClassIndex.value = index
+  }, 60)
 })
 
 function measureCards(): void {
@@ -225,10 +236,22 @@ function scrollToClass(index: number): void {
     return
   }
 
+  jumping.value = true
   activeClassIndex.value = index
 
+  if (jumpTimer) {
+    clearTimeout(jumpTimer)
+  }
+
+  jumpTimer = setTimeout(() => {
+    jumping.value = false
+  }, 420)
+
   const isDesktop = uni.getSystemInfoSync().windowWidth >= 900
-  uni.pageScrollTo({ scrollTop: Math.max(0, top - (isDesktop ? 96 : 24)), duration: 250 })
+  uni.pageScrollTo({
+    scrollTop: Math.max(0, top - (isDesktop ? 96 : 24)),
+    duration: 300,
+  })
 }
 
 async function init(): Promise<void> {
@@ -598,6 +621,11 @@ function scrollTop(): void {
 }
 
 .rail-item.active {
+  background: #efe1c9;
+  color: $trpg-accent-deep;
+}
+
+.rail-item.selected {
   background: $trpg-accent;
   color: #fffaf0;
 }
@@ -618,7 +646,8 @@ function scrollTop(): void {
 
 .class-selected {
   border-color: $trpg-accent;
-  box-shadow: 0 10rpx 30rpx rgba(91, 70, 54, 0.16);
+  background: #fffaf1;
+  box-shadow: 0 12rpx 34rpx rgba(91, 70, 54, 0.2);
 }
 
 .class-cover-wrap {
