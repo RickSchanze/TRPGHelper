@@ -78,7 +78,7 @@
               v-if="!failedCovers[item.code]"
               class="class-cover"
               :src="classArtworkFor(item.code).image"
-              mode="aspectFill"
+              mode="aspectFit"
               @error="failedCovers[item.code] = true"
             />
             <view
@@ -533,11 +533,19 @@ function scrollTop(): void {
 
 .class-cover-wrap {
   position: relative;
-  height: 420rpx;
+  width: 100%;
+  height: 0;
+  padding-top: 133.33%;
+  overflow: hidden;
   background: #2b211a;
 }
 
 .class-cover {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: block;
   width: 100%;
   height: 100%;
@@ -745,7 +753,7 @@ function scrollTop(): void {
   }
 
   .class-card {
-    max-width: 720px;
+    max-width: 480px;
     border-width: 1px;
     border-radius: 14px;
     cursor: pointer;
@@ -755,10 +763,6 @@ function scrollTop(): void {
   .class-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 30px rgba(91, 70, 54, 0.14);
-  }
-
-  .class-cover-wrap {
-    height: 300px;
   }
 
   .class-title-wrap {
