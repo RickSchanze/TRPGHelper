@@ -88,15 +88,12 @@
             >
               <text>{{ item.name.slice(0, 1) }}</text>
             </view>
-            <view class="class-cover-shade" />
-            <view class="class-title-wrap">
-              <view class="class-name">{{ item.name }}</view>
-              <view class="class-sub">生命骰 {{ item.hitDie }} · 主要属性 {{ item.primaryAbility }}</view>
-            </view>
             <view v-if="draft.classCode === item.code" class="class-check">✓</view>
           </view>
 
           <view class="class-body">
+            <view class="class-name">{{ item.name }}</view>
+            <view class="class-sub">生命骰 {{ item.hitDie }} · 主要属性 {{ item.primaryAbility }}</view>
             <view class="class-desc">{{ item.description }}</view>
             <view class="feature-list">
               <view v-for="feature in item.features" :key="feature" class="feature">
@@ -538,7 +535,7 @@ function scrollTop(): void {
   position: relative;
   width: 100%;
   height: 0;
-  padding-top: 133.33%;
+  padding-top: 56.25%;
   overflow: hidden;
   background: #2b211a;
 }
@@ -562,33 +559,16 @@ function scrollTop(): void {
   font-size: 64rpx;
 }
 
-.class-cover-shade {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background: linear-gradient(180deg, rgba(20, 12, 8, 0) 42%, rgba(20, 12, 8, 0.78) 100%);
-}
-
-.class-title-wrap {
-  position: absolute;
-  left: 24rpx;
-  right: 24rpx;
-  bottom: 20rpx;
-  color: #fff8e8;
-}
-
 .class-name {
-  font-size: 32rpx;
+  font-size: 30rpx;
   font-weight: 600;
   letter-spacing: 2rpx;
 }
 
 .class-sub {
   margin-top: 4rpx;
-  font-size: 18rpx;
-  opacity: 0.85;
+  font-size: 20rpx;
+  color: $trpg-muted;
 }
 
 .class-check {
@@ -612,6 +592,7 @@ function scrollTop(): void {
 }
 
 .class-desc {
+  margin-top: 12rpx;
   font-size: 22rpx;
   line-height: 1.5;
   color: #4a4238;
@@ -771,18 +752,13 @@ function scrollTop(): void {
     box-shadow: 0 12px 30px rgba(91, 70, 54, 0.14);
   }
 
-  .class-title-wrap {
-    left: 16px;
-    right: 16px;
-    bottom: 14px;
-  }
-
   .class-name {
-    font-size: 26px;
+    font-size: 22px;
     letter-spacing: 1px;
   }
 
   .class-sub {
+    margin-top: 6px;
     font-size: 12px;
   }
 
@@ -799,6 +775,7 @@ function scrollTop(): void {
   }
 
   .class-desc {
+    margin-top: 10px;
     font-size: 13px;
   }
 
