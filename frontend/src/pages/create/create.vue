@@ -1,5 +1,7 @@
 <template>
   <view class="page">
+    <AppHeader current="create" />
+
     <view class="section">
       <view class="section-title">规则系统</view>
       <picker :range="systems" range-key="name" :value="systemIndex" @change="onSystemChange">
@@ -72,6 +74,7 @@ import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { request } from '../../api/http'
 import type { GameSystem, GeneratedAttributes, Inspiration, SheetAttribute } from '../../api/types'
+import AppHeader from '../../components/AppHeader/AppHeader.vue'
 
 const systems = ref<GameSystem[]>([])
 const systemIndex = ref(0)
@@ -335,5 +338,90 @@ onLoad(() => {
 
 .save {
   margin-top: 12rpx;
+}
+
+@media (min-width: 900px) {
+  .page {
+    max-width: 860px;
+  }
+
+  .section {
+    border-width: 1px;
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-size: 17px;
+    margin-bottom: 14px;
+  }
+
+  .section-head .section-title {
+    margin-bottom: 0;
+  }
+
+  .picker {
+    height: 48px;
+    padding: 0 16px;
+    border-radius: 10px;
+    border-width: 1px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .tip {
+    font-size: 13px;
+    margin-top: 10px;
+  }
+
+  .field {
+    min-height: 56px;
+  }
+
+  .field-label {
+    width: 72px;
+    font-size: 14px;
+  }
+
+  .field-input {
+    height: 56px;
+    font-size: 14px;
+  }
+
+  .field-action {
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .roll-btn {
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .attr {
+    padding: 14px 0;
+  }
+
+  .attr-value {
+    font-size: 30px;
+  }
+
+  .attr-label {
+    font-size: 12px;
+  }
+
+  .inspiration {
+    padding: 18px;
+    border-radius: 10px;
+  }
+
+  .inspiration-title {
+    font-size: 15px;
+  }
+
+  .save {
+    margin-top: 8px;
+  }
 }
 </style>

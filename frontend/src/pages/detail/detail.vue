@@ -1,5 +1,7 @@
 <template>
   <view v-if="card" class="page">
+    <AppHeader current="detail" />
+
     <view class="head">
       <view class="head-main">
         <view class="name">{{ card.name }}</view>
@@ -65,6 +67,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { request } from '../../api/http'
 import type { CardStatusKey, CharacterDetail } from '../../api/types'
 import { formatDateTime } from '../../utils/format'
+import AppHeader from '../../components/AppHeader/AppHeader.vue'
 
 const card = ref<CharacterDetail | null>(null)
 const cardId = ref('')
@@ -274,5 +277,88 @@ onLoad((options) => {
   margin-top: 6rpx;
   font-size: 24rpx;
   color: #4a4238;
+}
+
+@media (min-width: 900px) {
+  .page {
+    max-width: 900px;
+  }
+
+  .head {
+    margin-bottom: 12px;
+  }
+
+  .name {
+    font-size: 34px;
+  }
+
+  .meta {
+    font-size: 13px;
+    margin-top: 6px;
+  }
+
+  .summary {
+    font-size: 14px;
+    margin: 10px 0 20px;
+  }
+
+  .actions {
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .action {
+    font-size: 13px;
+    padding: 8px 18px;
+    border-width: 1px;
+    cursor: pointer;
+  }
+
+  .section {
+    border-width: 1px;
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-size: 17px;
+    margin-bottom: 14px;
+  }
+
+  .attr {
+    width: 20%;
+    padding: 14px 0;
+  }
+
+  .attr-value {
+    font-size: 30px;
+  }
+
+  .attr-label {
+    font-size: 12px;
+  }
+
+  .attr-formula {
+    font-size: 11px;
+  }
+
+  .skill,
+  .log {
+    padding: 12px 0;
+    border-bottom-width: 1px;
+  }
+
+  .log-head {
+    font-size: 13px;
+  }
+
+  .log-time {
+    font-size: 12px;
+  }
+
+  .log-note {
+    font-size: 13px;
+  }
 }
 </style>

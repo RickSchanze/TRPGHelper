@@ -1,5 +1,7 @@
 <template>
   <view class="page">
+    <AppHeader current="index" />
+
     <view class="hero">
       <view class="hero-title">卡库</view>
       <view class="hero-sub">已车 {{ stats?.total ?? 0 }} 张 · 留存 {{ stats?.retained ?? 0 }} 张</view>
@@ -32,18 +34,20 @@
       <view class="empty-text">点右下角「车新卡」，先掷一组属性。</view>
     </view>
 
-    <view v-for="card in items" :key="card.id" class="card" @tap="openDetail(card.id)">
-      <view class="card-head">
-        <text class="card-name">{{ card.name }}</text>
-        <text class="badge" :class="'badge-' + card.status">{{ card.statusLabel }}</text>
+    <view class="card-list">
+      <view v-for="card in items" :key="card.id" class="card" @tap="openDetail(card.id)">
+        <view class="card-head">
+          <text class="card-name">{{ card.name }}</text>
+          <text class="badge" :class="'badge-' + card.status">{{ card.statusLabel }}</text>
+        </view>
+        <view class="card-meta muted">
+          <text>{{ card.systemName }}</text>
+          <text v-if="card.occupation"> · {{ card.occupation }}</text>
+          <text v-if="card.age"> · {{ card.age }} 岁</text>
+        </view>
+        <view v-if="card.summary" class="card-summary">{{ card.summary }}</view>
+        <view v-if="card.retainedAt" class="card-foot muted">留存于 {{ formatDate(card.retainedAt) }}</view>
       </view>
-      <view class="card-meta muted">
-        <text>{{ card.systemName }}</text>
-        <text v-if="card.occupation"> · {{ card.occupation }}</text>
-        <text v-if="card.age"> · {{ card.age }} 岁</text>
-      </view>
-      <view v-if="card.summary" class="card-summary">{{ card.summary }}</view>
-      <view v-if="card.retainedAt" class="card-foot muted">留存于 {{ formatDate(card.retainedAt) }}</view>
     </view>
 
     <view class="fab" @tap="goCreate">＋ 车新卡</view>
@@ -56,6 +60,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { getToken, request } from '../../api/http'
 import type { CardStatusKey, CharacterStats, CharacterSummary, PagedResult } from '../../api/types'
 import { formatDate } from '../../utils/format'
+import AppHeader from '../../components/AppHeader/AppHeader.vue'
 
 const filters: { key: string; label: string }[] = [
   { key: 'all', label: '全部' },
@@ -219,5 +224,97 @@ onShow(() => {
 
 .fab:active {
   opacity: 0.88;
+}
+
+@media (min-width: 900px) {
+  .hero {
+    margin-bottom: 24px;
+  }
+
+  .hero-title {
+    font-size: 36px;
+    letter-spacing: 1px;
+  }
+
+  .hero-sub {
+    font-size: 14px;
+    margin-top: 8px;
+  }
+
+  .search {
+    margin-bottom: 18px;
+    max-width: 520px;
+  }
+
+  .search-input {
+    height: 44px;
+    font-size: 14px;
+    border-radius: 10px;
+    border-width: 1px;
+    padding: 0 16px;
+  }
+
+  .filters {
+    margin-bottom: 24px;
+  }
+
+  .chip {
+    font-size: 13px;
+    padding: 6px 16px;
+    margin-right: 8px;
+    border-width: 1px;
+    cursor: pointer;
+  }
+
+  .chip:hover {
+    border-color: $trpg-accent;
+    color: $trpg-accent;
+  }
+
+  .card-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+  }
+
+  .card-list .card {
+    margin-bottom: 0;
+  }
+
+  .card-name {
+    font-size: 18px;
+  }
+
+  .card-meta {
+    font-size: 13px;
+  }
+
+  .card-summary {
+    font-size: 14px;
+  }
+
+  .card-foot {
+    font-size: 12px;
+  }
+
+  .empty {
+    padding: 80px 0;
+  }
+
+  .empty-title {
+    font-size: 20px;
+  }
+
+  .empty-text {
+    font-size: 14px;
+  }
+
+  .fab {
+    right: max(40px, calc((100vw - 1100px) / 2 + 40px));
+    bottom: 40px;
+    padding: 12px 22px;
+    font-size: 14px;
+    box-shadow: 0 10px 24px rgba(91, 70, 54, 0.22);
+  }
 }
 </style>

@@ -45,6 +45,13 @@ npm run dev:h5          # 浏览器预览 http://localhost:5173
 
 微信开发者工具里请勾选「不校验合法域名」（本地调试 http://localhost:5080 需要）。
 
+H5 在桌面浏览器下也有适配：宽度 ≥ 900px 时使用居中版心（最大 1100px）、固定顶栏、卡片网格和鼠标悬停反馈，隐藏小程序式的导航条与底部 tabBar。
+
+已经启动的两个地址：
+
+- 后端：<http://localhost:5080>（健康检查 /health，文档 /scalar/v1）
+- 前端 H5：<http://localhost:5173>
+
 ### 3. 登录
 
 - 本地开发：登录页点「本地开发登录」（需要 `ASPNETCORE_ENVIRONMENT=Development`，即默认 `dotnet run` 的环境，`appsettings.Development.json` 里 `Auth:EnableDevLogin = true`）。

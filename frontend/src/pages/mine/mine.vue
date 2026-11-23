@@ -1,5 +1,7 @@
 <template>
   <view class="page">
+    <AppHeader current="mine" />
+
     <view class="profile">
       <view class="avatar">{{ initial }}</view>
       <view class="profile-main">
@@ -47,6 +49,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { getToken, request } from '../../api/http'
 import { goLogin, logout, refreshMe, session } from '../../stores/session'
 import type { CharacterStats } from '../../api/types'
+import AppHeader from '../../components/AppHeader/AppHeader.vue'
 
 const stats = ref<CharacterStats | null>(null)
 
@@ -163,5 +166,64 @@ onShow(() => {
   margin-top: 48rpx;
   text-align: center;
   font-size: 22rpx;
+}
+
+@media (min-width: 900px) {
+  .page {
+    max-width: 720px;
+  }
+
+  .profile {
+    padding: 12px 0 28px;
+  }
+
+  .avatar {
+    width: 72px;
+    height: 72px;
+    font-size: 28px;
+    margin-right: 18px;
+  }
+
+  .nickname {
+    font-size: 24px;
+  }
+
+  .sub {
+    font-size: 13px;
+  }
+
+  .stats {
+    border-width: 1px;
+    border-radius: 14px;
+    padding: 22px 0;
+    margin-bottom: 20px;
+  }
+
+  .stat-value {
+    font-size: 28px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+  }
+
+  .section {
+    border-width: 1px;
+    border-radius: 14px;
+    padding: 0 24px;
+    margin-bottom: 24px;
+  }
+
+  .row {
+    height: 56px;
+    border-bottom-width: 1px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .footer {
+    margin-top: 32px;
+    font-size: 12px;
+  }
 }
 </style>

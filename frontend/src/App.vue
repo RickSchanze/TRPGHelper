@@ -66,4 +66,59 @@ page {
 .muted {
   color: $trpg-muted;
 }
+
+/* ---------- 桌面浏览器（H5）适配 ---------- */
+@media (min-width: 900px) {
+  /* 桌面用固定顶栏，隐藏小程序式导航条和底部 tabBar */
+  uni-page-head {
+    display: none !important;
+  }
+
+  uni-tabbar {
+    display: none !important;
+  }
+
+  page {
+    font-size: 15px;
+  }
+
+  .page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 112px 40px 80px;
+  }
+
+  .card {
+    border-width: 1px;
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 20px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(91, 70, 54, 0.1);
+  }
+
+  .btn {
+    height: 48px;
+    font-size: 15px;
+    border-radius: 999px;
+  }
+
+  button.btn {
+    border: none;
+  }
+
+  .btn:hover {
+    opacity: 0.92;
+  }
+
+  .badge {
+    font-size: 12px;
+    padding: 2px 12px;
+    border-radius: 999px;
+  }
+}
 </style>

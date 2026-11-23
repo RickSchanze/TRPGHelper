@@ -140,4 +140,61 @@ function loginWithWeChat(): void {
   font-size: 22rpx;
   text-align: center;
 }
+
+@media (min-width: 900px) {
+  .login-page {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 140px 40px 80px;
+    justify-content: flex-start;
+  }
+
+  .brand {
+    margin-bottom: 48px;
+  }
+
+  .brand-mark {
+    font-size: 14px;
+    letter-spacing: 8px;
+    margin-bottom: 12px;
+  }
+
+  .brand-title {
+    font-size: 44px;
+    letter-spacing: 4px;
+  }
+
+  .brand-sub {
+    font-size: 14px;
+    margin-top: 14px;
+  }
+
+  .panel {
+    border-width: 1px;
+    border-radius: 16px;
+    padding: 32px;
+  }
+
+  .input {
+    height: 48px;
+    font-size: 14px;
+    border-radius: 10px;
+    border-width: 1px;
+    margin-bottom: 16px;
+  }
+
+  .hint {
+    font-size: 12px;
+    margin-top: 18px;
+  }
+
+  .divider {
+    margin: 20px 0;
+  }
+
+  .divider text {
+    font-size: 13px;
+    margin: 0 12px;
+  }
+}
 </style>
