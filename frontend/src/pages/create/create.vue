@@ -514,12 +514,15 @@ function scrollTop(): void {
 }
 
 .class-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20rpx;
 }
 
 .class-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   overflow: hidden;
   border: 2rpx solid $trpg-line;
   border-radius: 20rpx;
@@ -577,14 +580,14 @@ function scrollTop(): void {
 }
 
 .class-name {
-  font-size: 40rpx;
+  font-size: 32rpx;
   font-weight: 600;
   letter-spacing: 2rpx;
 }
 
 .class-sub {
   margin-top: 4rpx;
-  font-size: 22rpx;
+  font-size: 18rpx;
   opacity: 0.85;
 }
 
@@ -604,25 +607,28 @@ function scrollTop(): void {
 }
 
 .class-body {
-  padding: 24rpx;
+  flex: 1;
+  padding: 20rpx;
 }
 
 .class-desc {
-  font-size: 24rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
   color: #4a4238;
 }
 
 .feature-list {
   display: flex;
   flex-direction: column;
-  gap: 10rpx;
-  margin-top: 16rpx;
+  gap: 8rpx;
+  margin-top: 12rpx;
 }
 
 .feature {
   display: flex;
-  gap: 10rpx;
-  font-size: 22rpx;
+  gap: 8rpx;
+  font-size: 20rpx;
+  line-height: 1.5;
   color: $trpg-muted;
 }
 
@@ -749,11 +755,11 @@ function scrollTop(): void {
   }
 
   .class-list {
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     gap: 16px;
   }
 
   .class-card {
-    max-width: 480px;
     border-width: 1px;
     border-radius: 14px;
     cursor: pointer;
@@ -766,18 +772,18 @@ function scrollTop(): void {
   }
 
   .class-title-wrap {
-    left: 20px;
-    right: 20px;
-    bottom: 16px;
+    left: 16px;
+    right: 16px;
+    bottom: 14px;
   }
 
   .class-name {
-    font-size: 30px;
+    font-size: 26px;
     letter-spacing: 1px;
   }
 
   .class-sub {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .class-check {
@@ -789,15 +795,15 @@ function scrollTop(): void {
   }
 
   .class-body {
-    padding: 20px;
+    padding: 16px;
   }
 
   .class-desc {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .feature {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .wizard-actions {
