@@ -17,6 +17,10 @@ export const classArtwork: Record<string, ClassArtwork> = {
     image: '/static/classes/paladin.jpg',
     accent: '#b8862f',
   },
+  fighter: {
+    image: '/static/classes/fighter.jpg',
+    accent: '#3d5a8a',
+  },
 }
 
 const fallbackArtwork: ClassArtwork = {
