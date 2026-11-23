@@ -60,21 +60,12 @@
     <view v-else class="panel">
       <view class="panel-title">选择职业</view>
 
-      <view class="class-toolbar">
-        <text class="toolbar-label muted">布局</text>
-        <view class="layout-switch">
-          <text class="layout-btn" :class="{ active: layout === 'grid' }" @tap="setLayout('grid')">双列</text>
-          <text class="layout-btn" :class="{ active: layout === 'story' }" @tap="setLayout('story')">大图</text>
-          <text class="layout-btn" :class="{ active: layout === 'row' }" @tap="setLayout('row')">横排</text>
-        </view>
-      </view>
-
       <view v-if="classesLoading" class="muted">正在加载职业…</view>
       <view v-else-if="classesError" class="load-error" @tap="loadClasses">
         <text class="muted">职业加载失败，点这里重试</text>
       </view>
 
-      <view v-else class="class-list" :class="'layout-' + layout">
+      <view v-else class="class-list">
         <view
           v-for="item in classes"
           :key="item.code"
@@ -142,12 +133,6 @@ import AppHeader from '../../components/AppHeader/AppHeader.vue'
 
 const stepLabels = ['规则书', '职业']
 
-type LayoutMode = 'grid' | 'story' | 'row'
-
-const LAYOUT_KEY = 'trpg_class_layout'
-
-const layout = ref<LayoutMode>('story')
-
 const draft = ref<CreateDraft>(emptyDraft())
 const systems = ref<GameSystem[]>([])
 const classes = ref<ClassOption[]>([])
@@ -194,21 +179,7 @@ onLoad(() => {
   void init()
 })
 
-function restoreLayout(): void {
-  const stored = uni.getStorageSync(LAYOUT_KEY) as string
-  if (stored === 'grid' || stored === 'story' || stored === 'row') {
-    layout.value = stored
-  }
-}
-
-function setLayout(mode: LayoutMode): void {
-  layout.value = mode
-  uni.setStorageSync(LAYOUT_KEY, mode)
-}
-
 async function init(): Promise<void> {
-  restoreLayout()
-
   const restored = loadDraft()
   if (restored) {
     draft.value = restored
@@ -539,75 +510,10 @@ function scrollTop(): void {
   padding: 20rpx 0;
 }
 
-.class-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 14rpx;
-  margin-bottom: 16rpx;
-}
-
-.toolbar-label {
-  font-size: 22rpx;
-}
-
-.layout-switch {
-  display: flex;
-  overflow: hidden;
-  border: 2rpx solid $trpg-line;
-  border-radius: 999rpx;
-  background: #fffdf8;
-}
-
-.layout-btn {
-  padding: 6rpx 20rpx;
-  font-size: 22rpx;
-  color: $trpg-muted;
-}
-
-.layout-btn.active {
-  background: $trpg-accent;
-  color: #fffaf0;
-}
-
-.class-list.layout-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20rpx;
-}
-
-.class-list.layout-story {
+.class-list {
   display: flex;
   flex-direction: column;
   gap: 24rpx;
-}
-
-.class-list.layout-row {
-  display: flex;
-  flex-direction: column;
-  gap: 20rpx;
-}
-
-.layout-story .feature-list {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 24rpx;
-  row-gap: 8rpx;
-}
-
-.layout-row .class-card {
-  flex-direction: row;
-}
-
-.layout-row .class-cover-wrap {
-  flex: 0 0 34%;
-  width: 34%;
-  height: auto;
-  padding-top: 0;
-}
-
-.layout-row .class-body {
-  flex: 1;
 }
 
 .class-card {
@@ -693,9 +599,10 @@ function scrollTop(): void {
 }
 
 .feature-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8rpx;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 24rpx;
+  row-gap: 8rpx;
   margin-top: 12rpx;
 }
 
@@ -829,31 +736,12 @@ function scrollTop(): void {
     font-size: 11px;
   }
 
-  .class-toolbar {
-    margin-bottom: 14px;
-  }
-
-  .toolbar-label {
-    font-size: 12px;
-  }
-
-  .layout-btn {
-    padding: 4px 14px;
-    font-size: 12px;
-    cursor: pointer;
-  }
-
-  .class-list.layout-grid {
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 16px;
-  }
-
-  .class-list.layout-story {
+  .class-list {
     gap: 18px;
   }
 
-  .class-list.layout-row {
-    gap: 16px;
+  .feature-list {
+    column-gap: 32px;
   }
 
   .class-card {

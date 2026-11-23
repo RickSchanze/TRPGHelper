@@ -13,6 +13,10 @@ export interface ClassArtwork {
 }
 
 export const classArtwork: Record<string, ClassArtwork> = {
+  ranger: {
+    image: '/static/classes/ranger.jpg',
+    accent: '#3f5a3a',
+  },
   paladin: {
     image: '/static/classes/paladin.jpg',
     accent: '#b8862f',
