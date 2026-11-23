@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TRPGHelper.Api/TRPGHelper.Api.csproj" />
+    <Project Path="src/TRPGHelper.Domain/TRPGHelper.Domain.csproj" />
+    <Project Path="src/TRPGHelper.Infrastructure/TRPGHelper.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TRPGHelper.Tests/TRPGHelper.Tests.csproj" />
+  </Folder>
+</Solution>

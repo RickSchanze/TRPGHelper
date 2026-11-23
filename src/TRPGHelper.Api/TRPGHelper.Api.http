@@ -1,0 +1,73 @@
+@TRPGHelper.Api_HostAddress = http://localhost:5080
+
+### 健康检查
+GET {{TRPGHelper.Api_HostAddress}}/health
+Accept: application/json
+
+### 规则系统
+GET {{TRPGHelper.Api_HostAddress}}/api/systems
+Accept: application/json
+
+### 本地开发登录（Development，Auth:EnableDevLogin=true）
+POST {{TRPGHelper.Api_HostAddress}}/api/auth/dev-login
+Content-Type: application/json
+
+{
+  "nickName": "调查员"
+}
+
+### 用登录返回的 token 替换下面这行
+@token = paste-token-here
+
+### 卡库列表
+GET {{TRPGHelper.Api_HostAddress}}/api/characters?status=all&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### 卡库统计
+GET {{TRPGHelper.Api_HostAddress}}/api/characters/stats
+Authorization: Bearer {{token}}
+
+### 新建角色卡（不传 sheet.attributes 时按规则自动掷属性）
+POST {{TRPGHelper.Api_HostAddress}}/api/characters
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "systemCode": "coc7",
+  "name": "守夜人·林",
+  "occupation": "记者",
+  "age": 29,
+  "summary": "追查一桩旧案的调查员"
+}
+
+### 状态流转：留卡
+POST {{TRPGHelper.Api_HostAddress}}/api/characters/{id}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "retained",
+  "note": "先留着，下次跑团用"
+}
+
+### 掷骰
+POST {{TRPGHelper.Api_HostAddress}}/api/generator/roll
+Content-Type: application/json
+
+{
+  "expression": "4d6kh3"
+}
+
+### 生成属性
+POST {{TRPGHelper.Api_HostAddress}}/api/generator/attributes
+Content-Type: application/json
+
+{
+  "systemCode": "coc7",
+  "method": "roll"
+}
+
+### 随机姓名 / 职业 / 灵感
+GET {{TRPGHelper.Api_HostAddress}}/api/generator/names?systemCode=coc7&count=5
+GET {{TRPGHelper.Api_HostAddress}}/api/generator/occupations?systemCode=coc7&count=3
+GET {{TRPGHelper.Api_HostAddress}}/api/generator/inspirations?systemCode=coc7&count=3

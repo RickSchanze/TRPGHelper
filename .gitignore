@@ -1,0 +1,38 @@
+# ---- .NET ----
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+*.db
+*.db-shm
+*.db-wal
+App_Data/
+.vs/
+.idea/
+*.swp
+TestResults/
+coverage/
+artifacts/
+
+# ---- Node / uni-app ----
+node_modules/
+frontend/dist/
+frontend/unpackage/
+frontend/.vite/
+frontend/.hbuilderx/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# ---- Env / secrets ----
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+*.pfx
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
