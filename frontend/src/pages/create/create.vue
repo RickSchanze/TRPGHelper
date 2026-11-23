@@ -115,6 +115,7 @@
         @tap="scrollToClass(index)"
       >
         <text class="rail-name">{{ item.name }}</text>
+        <text v-if="draft.classCode === item.code" class="rail-check">✓</text>
       </view>
     </view>
 
@@ -614,19 +615,31 @@ function scrollTop(): void {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 52rpx;
-  height: 52rpx;
-  border-radius: 50%;
+  gap: 2rpx;
+  min-width: 52rpx;
+  min-height: 52rpx;
+  padding: 0 8rpx;
+  border-radius: 10rpx;
   color: $trpg-muted;
 }
 
 .rail-item.active {
-  background: $trpg-accent;
-  color: #fffaf0;
+  color: $trpg-ink;
 }
 
 .rail-name {
   font-size: 18rpx;
+  transition: font-size 0.15s ease;
+}
+
+.rail-item.active .rail-name {
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.rail-check {
+  font-size: 14rpx;
+  color: $trpg-accent;
 }
 
 .class-card {
@@ -861,8 +874,9 @@ function scrollTop(): void {
   }
 
   .rail-item {
-    width: 36px;
-    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0 6px;
     cursor: pointer;
   }
 
@@ -872,6 +886,14 @@ function scrollTop(): void {
 
   .rail-name {
     font-size: 12px;
+  }
+
+  .rail-item.active .rail-name {
+    font-size: 16px;
+  }
+
+  .rail-check {
+    font-size: 10px;
   }
 
   .class-card {
