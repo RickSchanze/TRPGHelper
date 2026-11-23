@@ -106,6 +106,18 @@
       </view>
     </view>
 
+    <view v-if="step === 2 && classes.length > 1" class="class-rail">
+      <view
+        v-for="(item, index) in classes"
+        :key="item.code"
+        class="rail-item"
+        :class="{ active: activeClassIndex === index }"
+        @tap="scrollToClass(index)"
+      >
+        <text class="rail-name">{{ item.name }}</text>
+      </view>
+    </view>
+
     <view class="wizard-actions">
       <button v-if="step > 1" class="btn btn-plain" @tap="prev">上一步</button>
       <button v-if="step === 1" class="btn" :disabled="!draft.systemCode" @tap="next">下一步</button>
@@ -115,8 +127,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { onHide, onLoad, onUnload } from '@dcloudio/uni-app'
+import { computed, nextTick, ref, watch } from 'vue'
+import { onHide, onLoad, onPageScroll, onUnload } from '@dcloudio/uni-app'
 import { request } from '../../api/http'
 import { classArtworkFor } from '../../config/classes'
 import { artworkFor } from '../../config/rulebooks'
@@ -142,6 +154,8 @@ const ready = ref(false)
 const finishing = ref(false)
 const failedIcons = ref<Record<string, boolean>>({})
 const failedCovers = ref<Record<string, boolean>>({})
+const activeClassIndex = ref(0)
+const cardTops = ref<number[]>([])
 
 const step = computed(() => draft.value.step)
 
@@ -178,6 +192,44 @@ onUnload(() => {
 onLoad(() => {
   void init()
 })
+
+onPageScroll((event) => {
+  if (cardTops.value.length === 0) {
+    return
+  }
+
+  const threshold = event.scrollTop + 160
+  let index = 0
+  cardTops.value.forEach((top, position) => {
+    if (top <= threshold) {
+      index = position
+    }
+  })
+  activeClassIndex.value = index
+})
+
+function measureCards(): void {
+  const query = uni.createSelectorQuery()
+  query.selectAll('.class-card').boundingClientRect()
+  query.selectViewport().scrollOffset()
+  query.exec((result) => {
+    const rects = (result?.[0] ?? []) as Array<{ top: number }>
+    const scrollTop = (result?.[1]?.scrollTop ?? 0) as number
+    cardTops.value = rects.map((rect) => rect.top + scrollTop)
+  })
+}
+
+function scrollToClass(index: number): void {
+  const top = cardTops.value[index]
+  if (top === undefined) {
+    return
+  }
+
+  activeClassIndex.value = index
+
+  const isDesktop = uni.getSystemInfoSync().windowWidth >= 900
+  uni.pageScrollTo({ scrollTop: Math.max(0, top - (isDesktop ? 96 : 24)), duration: 250 })
+}
 
 async function init(): Promise<void> {
   const restored = loadDraft()
@@ -219,6 +271,9 @@ async function loadClasses(): Promise<void> {
       url: `/api/generator/classes?systemCode=${code}`,
       auth: false,
     })
+
+    await nextTick()
+    setTimeout(measureCards, 250)
   } catch {
     classesError.value = true
   } finally {
@@ -516,6 +571,41 @@ function scrollTop(): void {
   gap: 24rpx;
 }
 
+.class-rail {
+  position: fixed;
+  top: 50%;
+  right: 12rpx;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: 10rpx;
+  border: 2rpx solid $trpg-line;
+  border-radius: 999rpx;
+  background: rgba(255, 253, 248, 0.94);
+  box-shadow: 0 10rpx 30rpx rgba(91, 70, 54, 0.14);
+  transform: translateY(-50%);
+}
+
+.rail-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  color: $trpg-muted;
+}
+
+.rail-item.active {
+  background: $trpg-accent;
+  color: #fffaf0;
+}
+
+.rail-name {
+  font-size: 18rpx;
+}
+
 .class-card {
   display: flex;
   flex-direction: column;
@@ -742,6 +832,27 @@ function scrollTop(): void {
 
   .feature-list {
     column-gap: 32px;
+  }
+
+  .class-rail {
+    right: max(16px, calc((100vw - 860px) / 2 - 68px));
+    gap: 6px;
+    padding: 8px;
+    border-width: 1px;
+  }
+
+  .rail-item {
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+  }
+
+  .rail-item:hover {
+    color: $trpg-accent;
+  }
+
+  .rail-name {
+    font-size: 12px;
   }
 
   .class-card {
