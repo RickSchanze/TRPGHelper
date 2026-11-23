@@ -105,7 +105,9 @@ H5 在桌面浏览器下也有适配：宽度 ≥ 900px 时使用居中版心（
 目前专注 DND 5E 车卡，页面顶部只写 **WHO ARE YOU / 你是谁**（标题用宋体，其余保持默认字体），流程先做 2 步：
 
 1. **规则书**：DND 5E / COC 7E（COC 先标「即将开放」）
-2. **职业**：12 个 DND 职业（生命骰、主要属性）
+2. **职业**：目前只做「圣武士」一张职业卡（配图 + 特点介绍），选中后「下一步」才可用
+
+职业卡配图：`frontend/src/static/classes/paladin.jpg`，想换图同名覆盖，或改 `frontend/src/config/classes.ts`。
 
 选择进度存在本机（uni storage，key `trpg_create_draft`），刷新 / 退出再进会恢复；点「完成」才会 `POST /api/characters` 提交，卡名暂由后端随机生成，等后续加上命名步骤再替换。
 

@@ -123,6 +123,7 @@ export interface ClassOption {
   description: string
   hitDie: string
   primaryAbility: string
+  features: string[]
 }
 
 export interface RaceOption {

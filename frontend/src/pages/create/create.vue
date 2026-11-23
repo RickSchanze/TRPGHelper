@@ -65,25 +65,54 @@
         <text class="muted">职业加载失败，点这里重试</text>
       </view>
 
-      <view v-else class="option-grid">
+      <view v-else class="class-list">
         <view
           v-for="item in classes"
           :key="item.code"
-          class="option-card"
-          :class="{ 'option-selected': draft.classCode === item.code }"
+          class="class-card"
+          :class="{ 'class-selected': draft.classCode === item.code }"
           @tap="pickClass(item)"
         >
-          <view class="option-name">{{ item.name }}</view>
-          <view class="option-meta muted">生命骰 {{ item.hitDie }} · 主要属性 {{ item.primaryAbility }}</view>
-          <view v-if="draft.classCode === item.code" class="option-check">✓</view>
+          <view class="class-cover-wrap">
+            <image
+              v-if="!failedCovers[item.code]"
+              class="class-cover"
+              :src="classArtworkFor(item.code).image"
+              mode="aspectFill"
+              @error="failedCovers[item.code] = true"
+            />
+            <view
+              v-else
+              class="class-cover class-cover-fallback"
+              :style="{ backgroundColor: classArtworkFor(item.code).accent }"
+            >
+              <text>{{ item.name.slice(0, 1) }}</text>
+            </view>
+            <view class="class-cover-shade" />
+            <view class="class-title-wrap">
+              <view class="class-name">{{ item.name }}</view>
+              <view class="class-sub">生命骰 {{ item.hitDie }} · 主要属性 {{ item.primaryAbility }}</view>
+            </view>
+            <view v-if="draft.classCode === item.code" class="class-check">✓</view>
+          </view>
+
+          <view class="class-body">
+            <view class="class-desc">{{ item.description }}</view>
+            <view class="feature-list">
+              <view v-for="feature in item.features" :key="feature" class="feature">
+                <text class="feature-dot">◆</text>
+                <text class="feature-text">{{ feature }}</text>
+              </view>
+            </view>
+          </view>
         </view>
       </view>
     </view>
 
     <view class="wizard-actions">
       <button v-if="step > 1" class="btn btn-plain" @tap="prev">上一步</button>
-      <button v-if="step === 1" class="btn" @tap="next">下一步</button>
-      <button v-else class="btn" :disabled="finishing" @tap="finish">完成</button>
+      <button v-if="step === 1" class="btn" :disabled="!draft.systemCode" @tap="next">下一步</button>
+      <button v-else class="btn" :disabled="!draft.classCode || finishing" @tap="finish">下一步</button>
     </view>
   </view>
 </template>
@@ -92,6 +121,7 @@
 import { computed, ref, watch } from 'vue'
 import { onHide, onLoad, onUnload } from '@dcloudio/uni-app'
 import { request } from '../../api/http'
+import { classArtworkFor } from '../../config/classes'
 import { artworkFor } from '../../config/rulebooks'
 import type { ClassOption, GameSystem } from '../../api/types'
 import {
@@ -114,6 +144,7 @@ const classesError = ref(false)
 const ready = ref(false)
 const finishing = ref(false)
 const failedIcons = ref<Record<string, boolean>>({})
+const failedCovers = ref<Record<string, boolean>>({})
 
 const step = computed(() => draft.value.step)
 
@@ -482,48 +513,117 @@ function scrollTop(): void {
   padding: 20rpx 0;
 }
 
-.option-grid {
+.class-list {
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
+  gap: 20rpx;
 }
 
-.option-card {
-  position: relative;
-  padding: 20rpx;
+.class-card {
+  overflow: hidden;
   border: 2rpx solid $trpg-line;
-  border-radius: 16rpx;
+  border-radius: 20rpx;
   background: #fff;
 }
 
-.option-selected {
+.class-selected {
   border-color: $trpg-accent;
-  box-shadow: 0 8rpx 24rpx rgba(91, 70, 54, 0.12);
+  box-shadow: 0 10rpx 30rpx rgba(91, 70, 54, 0.16);
 }
 
-.option-name {
-  font-size: 28rpx;
-  font-weight: 600;
+.class-cover-wrap {
+  position: relative;
+  height: 420rpx;
+  background: #2b211a;
 }
 
-.option-meta {
-  margin-top: 6rpx;
-  font-size: 20rpx;
+.class-cover {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.option-check {
-  position: absolute;
-  top: 16rpx;
-  right: 16rpx;
+.class-cover-fallback {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40rpx;
-  height: 40rpx;
+  color: #fffaf0;
+  font-size: 64rpx;
+}
+
+.class-cover-shade {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(180deg, rgba(20, 12, 8, 0) 42%, rgba(20, 12, 8, 0.78) 100%);
+}
+
+.class-title-wrap {
+  position: absolute;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: 20rpx;
+  color: #fff8e8;
+}
+
+.class-name {
+  font-size: 40rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+}
+
+.class-sub {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  opacity: 0.85;
+}
+
+.class-check {
+  position: absolute;
+  top: 20rpx;
+  right: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48rpx;
+  height: 48rpx;
   border-radius: 50%;
   background: $trpg-accent;
   color: #fffaf0;
+  font-size: 26rpx;
+}
+
+.class-body {
+  padding: 24rpx;
+}
+
+.class-desc {
+  font-size: 24rpx;
+  color: #4a4238;
+}
+
+.feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  margin-top: 16rpx;
+}
+
+.feature {
+  display: flex;
+  gap: 10rpx;
   font-size: 22rpx;
+  color: $trpg-muted;
+}
+
+.feature-dot {
+  color: $trpg-accent;
+}
+
+.btn[disabled] {
+  opacity: 0.4;
 }
 
 .wizard-actions {
@@ -640,39 +740,60 @@ function scrollTop(): void {
     font-size: 11px;
   }
 
-  .option-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
+  .class-list {
+    gap: 16px;
   }
 
-  .option-card {
-    padding: 16px;
+  .class-card {
+    max-width: 720px;
     border-width: 1px;
-    border-radius: 12px;
+    border-radius: 14px;
     cursor: pointer;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
 
-  .option-card:hover {
+  .class-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 26px rgba(91, 70, 54, 0.1);
+    box-shadow: 0 12px 30px rgba(91, 70, 54, 0.14);
   }
 
-  .option-name {
-    font-size: 16px;
+  .class-cover-wrap {
+    height: 300px;
   }
 
-  .option-meta {
-    font-size: 11px;
+  .class-title-wrap {
+    left: 20px;
+    right: 20px;
+    bottom: 16px;
   }
 
-  .option-check {
-    top: 12px;
-    right: 12px;
-    width: 22px;
-    height: 22px;
-    font-size: 12px;
+  .class-name {
+    font-size: 30px;
+    letter-spacing: 1px;
+  }
+
+  .class-sub {
+    font-size: 13px;
+  }
+
+  .class-check {
+    top: 14px;
+    right: 14px;
+    width: 26px;
+    height: 26px;
+    font-size: 14px;
+  }
+
+  .class-body {
+    padding: 20px;
+  }
+
+  .class-desc {
+    font-size: 14px;
+  }
+
+  .feature {
+    font-size: 13px;
   }
 
   .wizard-actions {

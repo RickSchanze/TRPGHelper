@@ -25,7 +25,8 @@ public sealed record ClassOptionDto(
     string Name,
     string Description,
     string HitDie,
-    string PrimaryAbility);
+    string PrimaryAbility,
+    IReadOnlyList<string> Features);
 
 public sealed record RaceOptionDto(
     string Code,
