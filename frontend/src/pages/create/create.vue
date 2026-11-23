@@ -70,7 +70,6 @@
           v-for="item in classes"
           :key="item.code"
           class="class-card"
-          :class="{ 'class-selected': draft.classCode === item.code }"
           @tap="pickClass(item)"
         >
           <view class="class-cover-wrap">
@@ -88,7 +87,6 @@
             >
               <text>{{ item.name.slice(0, 1) }}</text>
             </view>
-            <view v-if="draft.classCode === item.code" class="class-check">✓</view>
           </view>
 
           <view class="class-body">
@@ -102,6 +100,8 @@
               </view>
             </view>
           </view>
+
+          <view v-if="draft.classCode === item.code" class="class-ribbon">已选择</view>
         </view>
       </view>
     </view>
@@ -111,7 +111,7 @@
         v-for="(item, index) in classes"
         :key="item.code"
         class="rail-item"
-        :class="{ active: activeClassIndex === index, selected: draft.classCode === item.code }"
+        :class="{ active: activeClassIndex === index }"
         @tap="scrollToClass(index)"
       >
         <text class="rail-name">{{ item.name }}</text>
@@ -621,11 +621,6 @@ function scrollTop(): void {
 }
 
 .rail-item.active {
-  background: #efe1c9;
-  color: $trpg-accent-deep;
-}
-
-.rail-item.selected {
   background: $trpg-accent;
   color: #fffaf0;
 }
@@ -635,6 +630,7 @@ function scrollTop(): void {
 }
 
 .class-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -644,10 +640,19 @@ function scrollTop(): void {
   background: #fff;
 }
 
-.class-selected {
-  border-color: $trpg-accent;
-  background: #fffaf1;
-  box-shadow: 0 12rpx 34rpx rgba(91, 70, 54, 0.2);
+.class-ribbon {
+  position: absolute;
+  right: -72rpx;
+  bottom: 34rpx;
+  z-index: 3;
+  width: 230rpx;
+  padding: 8rpx 0;
+  background: $trpg-accent;
+  color: #fffaf0;
+  font-size: 20rpx;
+  letter-spacing: 4rpx;
+  text-align: center;
+  transform: rotate(-45deg);
 }
 
 .class-cover-wrap {
@@ -690,24 +695,9 @@ function scrollTop(): void {
   color: $trpg-muted;
 }
 
-.class-check {
-  position: absolute;
-  top: 20rpx;
-  right: 20rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48rpx;
-  height: 48rpx;
-  border-radius: 50%;
-  background: $trpg-accent;
-  color: #fffaf0;
-  font-size: 26rpx;
-}
-
 .class-body {
   flex: 1;
-  padding: 20rpx;
+  padding: 20rpx 20rpx 56rpx;
 }
 
 .class-desc {
@@ -906,16 +896,17 @@ function scrollTop(): void {
     font-size: 12px;
   }
 
-  .class-check {
-    top: 14px;
-    right: 14px;
-    width: 26px;
-    height: 26px;
-    font-size: 14px;
+  .class-body {
+    padding: 16px 16px 44px;
   }
 
-  .class-body {
-    padding: 16px;
+  .class-ribbon {
+    right: -56px;
+    bottom: 32px;
+    width: 170px;
+    padding: 6px 0;
+    font-size: 12px;
+    letter-spacing: 3px;
   }
 
   .class-desc {
