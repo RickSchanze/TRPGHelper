@@ -19,3 +19,17 @@ public sealed record GeneratedAttributesResponse(
     int Total);
 
 public sealed record InspirationDto(string Title, string Text);
+
+public sealed record ClassOptionDto(
+    string Code,
+    string Name,
+    string Description,
+    string HitDie,
+    string PrimaryAbility);
+
+public sealed record RaceOptionDto(
+    string Code,
+    string Name,
+    string Description,
+    string AbilityBonus,
+    int Speed);

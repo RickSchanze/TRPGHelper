@@ -94,20 +94,22 @@ H5 在桌面浏览器下也有适配：宽度 ≥ 900px 时使用居中版心（
 | POST | `/api/characters/{id}/notes` | 加一条备注 |
 | POST | `/api/generator/roll` | 掷骰（`d20`、`4d6kh3`、`3d6*5`、`2d6*5+30`） |
 | POST | `/api/generator/attributes` | 按规则生成属性（掷骰 / 标准数组） |
+| GET | `/api/generator/classes` | DND 5E 职业列表 |
+| GET | `/api/generator/races` | DND 5E 种族列表 |
 | GET | `/api/generator/names` | 随机姓名 |
 | GET | `/api/generator/occupations` | 随机职业 |
 | GET | `/api/generator/inspirations` | 车卡灵感 |
 
 ## 车新卡流程
 
-「车新卡」是一个 4 步的引导式流程：
+目前专注 DND 5E 车卡，页面顶部只写 **WHO ARE YOU / 你是谁**（标题用宋体，其余保持默认字体），流程先做 2 步：
 
-1. **规则书**：DND 5E / COC 7E（带图标）
-2. **基本信息**：姓名、职业、年龄、简介
-3. **属性与灵感**：掷骰 / 标准数组，随机姓名、职业、故事钩子
-4. **确认**：检查一遍，点「完成并保存」
+1. **规则书**：DND 5E / COC 7E（COC 先标「即将开放」）
+2. **职业**：12 个 DND 职业（生命骰、主要属性）
 
-前 3 步只写在本机（uni storage，key `trpg_create_draft`），刷新页面、切后台、退出再进都会自动恢复；**只有第 4 步「完成并保存」才会 `POST /api/characters` 提交给服务器**。想从头来可以点右上角「重新开始」。
+选择进度存在本机（uni storage，key `trpg_create_draft`），刷新 / 退出再进会恢复；点「完成」才会 `POST /api/characters` 提交，卡名暂由后端随机生成，等后续加上命名步骤再替换。
+
+职业来自后端：`GET /api/generator/classes?systemCode=dnd5e`
 
 ### 规则书图标替换
 
@@ -116,7 +118,7 @@ H5 在桌面浏览器下也有适配：宽度 ≥ 900px 时使用居中版心（
 - 直接同名覆盖：`frontend/src/static/rulebooks/dnd5e.png`、`coc7.png`
 - 想换文件名或加新规则书：改 `frontend/src/config/rulebooks.ts` 里的 `icon` / `accent`
 
-当前素材来自 [game-icons.net](https://game-icons.net)（Delapouite，CC BY 3.0），说明见 `frontend/src/static/rulebooks/README.md`。
+当前素材来自 [game-icons.net](https://game-icons.net)（Delapouite，CC BY 3.0），说明见 `frontend/src/static/rulebooks/README.md`。COC 的图标先留着，等 COC 车卡流程做好再接回来。
 
 ## 状态流转
 

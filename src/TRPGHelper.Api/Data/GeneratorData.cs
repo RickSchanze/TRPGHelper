@@ -1,3 +1,5 @@
+using TRPGHelper.Api.Contracts;
+
 namespace TRPGHelper.Api.Data;
 
 /// <summary>
@@ -47,6 +49,35 @@ internal static class GeneratorData
     private static readonly string[] DndBackgrounds =
     [
         "士兵", "贵族", "平民", "罪犯", "学徒", "佣兵", "隐士", "水手", "艺人", "流浪者",
+    ];
+
+    private static readonly ClassOptionDto[] DndClassOptions =
+    [
+        new("barbarian", "野蛮人", "靠怒火冲锋的近战猛兽，生命值厚得离谱。", "d12", "力量"),
+        new("bard", "吟游诗人", "用歌声和话术搅动战场，什么都会一点。", "d8", "魅力"),
+        new("cleric", "牧师", "神祇的代行者，治疗与神术兼备。", "d8", "感知"),
+        new("druid", "德鲁伊", "化身野兽、操控自然，荒野里最难缠的对手。", "d8", "感知"),
+        new("fighter", "战士", "武器大师，稳定、可靠、正面能打。", "d10", "力量 / 敏捷"),
+        new("monk", "武僧", "以气御身，赤手空拳也能打出连击。", "d8", "敏捷 / 感知"),
+        new("paladin", "圣武士", "誓言与重甲，既能扛也能砍。", "d10", "力量 / 魅力"),
+        new("ranger", "游侠", "荒野猎手，弓箭与追踪样样在行。", "d10", "敏捷 / 感知"),
+        new("rogue", "盗贼", "潜行与偷袭的好手，正面不硬但很致命。", "d8", "敏捷"),
+        new("sorcerer", "术士", "血脉里流淌着魔法，天生就会施法。", "d6", "魅力"),
+        new("warlock", "邪术师", "与强大存在签下契约，借来力量。", "d8", "魅力"),
+        new("wizard", "法师", "把魔法写进书里，准备得越充分越可怕。", "d6", "智力"),
+    ];
+
+    private static readonly RaceOptionDto[] DndRaceOptions =
+    [
+        new("human", "人类", "适应力最强，属性全面发展。", "全属性 +1", 30),
+        new("elf", "精灵", "敏捷而敏锐，拥有黑暗视觉与精类血统。", "敏捷 +2", 30),
+        new("dwarf", "矮人", "坚韧的山地工匠，黑暗视觉与毒素抗性。", "体质 +2", 25),
+        new("halfling", "半身人", "幸运的小个子，胆子却不小。", "敏捷 +2", 25),
+        new("dragonborn", "龙裔", "龙血后裔，拥有吐息武器与元素抗性。", "力量 +2，魅力 +1", 30),
+        new("gnome", "侏儒", "好奇心旺盛的发明家，擅长对抗魔法。", "智力 +2", 25),
+        new("half-elf", "半精灵", "两个世界都懂一点，擅长社交且多才多艺。", "魅力 +2，另两项 +1", 30),
+        new("half-orc", "半兽人", "强壮的混血儿，濒死时也能再撑一下。", "力量 +2，体质 +1", 30),
+        new("tiefling", "提夫林", "带着魔裔血统，拥有火焰抗性与黑暗视觉。", "魅力 +2，智力 +1", 30),
     ];
 
     private static readonly (string Title, string Text)[] CocHooks =
@@ -109,6 +140,16 @@ internal static class GeneratorData
         return pool.OrderBy(_ => random.Next()).Take(count).ToList();
     }
 
+    public static IReadOnlyList<ClassOptionDto> Classes(string? systemCode)
+    {
+        return IsDnd(systemCode) ? DndClassOptions : Array.Empty<ClassOptionDto>();
+    }
+
+    public static IReadOnlyList<RaceOptionDto> Races(string? systemCode)
+    {
+        return IsDnd(systemCode) ? DndRaceOptions : Array.Empty<RaceOptionDto>();
+    }
+
     public static IReadOnlyList<(string Title, string Text)> Inspirations(string? systemCode, int count = 3, Random? random = null)
     {
         random ??= Random.Shared;
@@ -118,6 +159,9 @@ internal static class GeneratorData
 
         return pool.OrderBy(_ => random.Next()).Take(count).ToList();
     }
+
+    private static bool IsDnd(string? systemCode)
+        => string.Equals(systemCode, "dnd5e", StringComparison.OrdinalIgnoreCase);
 
     private static string Pick(string[] pool, Random random) => pool[random.Next(pool.Length)];
 }

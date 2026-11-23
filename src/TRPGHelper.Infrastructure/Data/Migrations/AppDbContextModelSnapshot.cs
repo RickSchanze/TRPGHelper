@@ -52,6 +52,10 @@ namespace TRPGHelper.Infrastructure.Data.Migrations
                     b.Property<int?>("Age")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("ClassName")
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -72,6 +76,10 @@ namespace TRPGHelper.Infrastructure.Data.Migrations
 
                     b.Property<string>("PortraitUrl")
                         .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RaceName")
+                        .HasMaxLength(40)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("RetainedAt")

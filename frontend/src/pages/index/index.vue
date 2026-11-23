@@ -42,6 +42,8 @@
         </view>
         <view class="card-meta muted">
           <text>{{ card.systemName }}</text>
+          <text v-if="card.className"> · {{ card.className }}</text>
+          <text v-if="card.raceName"> · {{ card.raceName }}</text>
           <text v-if="card.occupation"> · {{ card.occupation }}</text>
           <text v-if="card.age"> · {{ card.age }} 岁</text>
         </view>

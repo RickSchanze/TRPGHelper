@@ -55,6 +55,8 @@ export interface CharacterSummary {
   id: string
   name: string
   occupation?: string
+  className?: string
+  raceName?: string
   age?: number
   summary?: string
   portraitUrl?: string
@@ -113,4 +115,20 @@ export interface GeneratedAttributes {
 export interface Inspiration {
   title: string
   text: string
+}
+
+export interface ClassOption {
+  code: string
+  name: string
+  description: string
+  hitDie: string
+  primaryAbility: string
+}
+
+export interface RaceOption {
+  code: string
+  name: string
+  description: string
+  abilityBonus: string
+  speed: number
 }

@@ -2,12 +2,9 @@
   <view class="page wizard-page">
     <AppHeader current="create" />
 
-    <view class="wizard-head">
-      <view>
-        <view class="wizard-title">车新卡</view>
-        <view class="wizard-sub muted">引导式流程 · 进度自动保存在本机，车完才提交</view>
-      </view>
-      <text v-if="hasProgress" class="restart-link" @tap="restart">重新开始</text>
+    <view class="hero">
+      <view class="hero-en">WHO ARE YOU</view>
+      <view class="hero-zh">你是谁</view>
     </view>
 
     <view class="stepper">
@@ -22,24 +19,19 @@
       </view>
     </view>
 
-    <view v-if="resumed" class="resume muted">已恢复上次进度（第 {{ step }} 步），接着车就行。</view>
-
-    <!-- 第一步：选择规则书 -->
+    <!-- 第一步：规则书 -->
     <view v-if="step === 1" class="panel">
       <view class="panel-title">选择规则书</view>
-      <view class="panel-hint muted">规则书决定属性模板和后续的检定方式，之后可以随时补齐细节。</view>
-
-      <view v-if="systemsLoading" class="muted">正在加载规则书…</view>
-      <view v-else-if="systemsError" class="load-error" @tap="loadSystems">
-        <text class="muted">规则书加载失败，点这里重试</text>
-      </view>
 
       <view class="system-grid">
         <view
           v-for="system in systems"
           :key="system.code"
           class="system-card"
-          :class="{ 'system-selected': draft.systemCode === system.code }"
+          :class="{
+            'system-selected': draft.systemCode === system.code,
+            'system-locked': system.code !== 'dnd5e',
+          }"
           @tap="pickSystem(system)"
         >
           <view class="system-icon-wrap" :style="{ backgroundColor: artworkFor(system.code).accent }">
@@ -55,127 +47,43 @@
 
           <view class="system-info">
             <view class="system-name">{{ system.name }}</view>
-            <view class="system-code muted">{{ system.code.toUpperCase() }}</view>
             <view class="system-desc muted">{{ system.description }}</view>
-            <view class="system-attrs muted">{{ attributeSummary(system) }}</view>
           </view>
 
-          <view v-if="draft.systemCode === system.code" class="system-check">✓</view>
+          <text v-if="system.code !== 'dnd5e'" class="system-lock muted">即将开放</text>
+          <view v-else-if="draft.systemCode === system.code" class="system-check">✓</view>
         </view>
       </view>
     </view>
 
-    <!-- 第二步：基本信息 -->
-    <view v-else-if="step === 2" class="panel">
-      <view class="panel-title">基本信息</view>
-      <view class="panel-hint muted">先随便起个名字，之后随时能改。</view>
-
-      <view class="field">
-        <text class="field-label">姓名</text>
-        <input v-model="draft.name" class="field-input" placeholder="角色名" maxlength="40" />
-        <text class="field-action" @tap="suggestName">随机</text>
-      </view>
-
-      <view class="field">
-        <text class="field-label">职业</text>
-        <input v-model="draft.occupation" class="field-input" placeholder="职业 / 定位" maxlength="40" />
-        <text class="field-action" @tap="suggestOccupation">随机</text>
-      </view>
-
-      <view class="field">
-        <text class="field-label">年龄</text>
-        <input v-model="draft.age" class="field-input" type="number" placeholder="可选" />
-      </view>
-
-      <view class="field field-column">
-        <text class="field-label">简介</text>
-        <textarea
-          v-model="draft.summary"
-          class="field-textarea"
-          placeholder="一句话介绍这个角色（可选）"
-          maxlength="200"
-        />
-      </view>
-    </view>
-
-    <!-- 第三步：属性与灵感 -->
-    <view v-else-if="step === 3" class="panel">
-      <view class="panel-head">
-        <view class="panel-title">属性</view>
-        <view class="method-actions">
-          <text class="method-btn" :class="{ active: draft.method === 'roll' }" @tap="rollAttributes('roll')">
-            掷骰
-          </text>
-          <text class="method-btn" :class="{ active: draft.method === 'standard' }" @tap="rollAttributes('standard')">
-            标准数组
-          </text>
-        </view>
-      </view>
-
-      <view class="attr-grid">
-        <view v-for="item in draft.attributes" :key="item.key" class="attr">
-          <view class="attr-value">{{ item.value }}</view>
-          <view class="attr-label muted">{{ item.label }}</view>
-        </view>
-      </view>
-      <view v-if="draft.attributes.length === 0" class="muted">还没有属性，点「掷骰」生成一组。</view>
-
-      <view class="inspiration">
-        <view class="inspiration-head">
-          <text class="inspiration-title">灵感</text>
-          <text class="method-btn" @tap="loadInspiration">换一个</text>
-        </view>
-        <template v-if="draft.inspiration">
-          <view class="inspiration-name">{{ draft.inspiration.title }}</view>
-          <view class="muted">{{ draft.inspiration.text }}</view>
-        </template>
-        <view v-else class="muted">还没有灵感素材。</view>
-      </view>
-    </view>
-
-    <!-- 第四步：确认 -->
+    <!-- 第二步：职业 -->
     <view v-else class="panel">
-      <view class="panel-title">确认这张卡</view>
-      <view class="panel-hint muted">确认无误后才会提交到服务器；之后可以在卡库里继续编辑。</view>
+      <view class="panel-title">选择职业</view>
 
-      <view class="summary">
-        <view class="summary-row">
-          <text class="summary-label muted">规则书</text>
-          <text>{{ currentSystem?.name || '未选择' }}</text>
-        </view>
-        <view class="summary-row">
-          <text class="summary-label muted">姓名</text>
-          <text>{{ draft.name || '未填写' }}</text>
-        </view>
-        <view class="summary-row">
-          <text class="summary-label muted">职业</text>
-          <text>{{ draft.occupation || '未填写' }}</text>
-        </view>
-        <view class="summary-row">
-          <text class="summary-label muted">年龄</text>
-          <text>{{ draft.age || '未填写' }}</text>
-        </view>
-        <view class="summary-row summary-attrs">
-          <text class="summary-label muted">属性</text>
-          <text>{{ attributeLine }}</text>
-        </view>
-        <view v-if="draft.summary" class="summary-row summary-attrs">
-          <text class="summary-label muted">简介</text>
-          <text>{{ draft.summary }}</text>
-        </view>
-        <view v-if="draft.inspiration" class="summary-row summary-attrs">
-          <text class="summary-label muted">灵感</text>
-          <text>{{ draft.inspiration.title }}</text>
+      <view v-if="classesLoading" class="muted">正在加载职业…</view>
+      <view v-else-if="classesError" class="load-error" @tap="loadClasses">
+        <text class="muted">职业加载失败，点这里重试</text>
+      </view>
+
+      <view v-else class="option-grid">
+        <view
+          v-for="item in classes"
+          :key="item.code"
+          class="option-card"
+          :class="{ 'option-selected': draft.classCode === item.code }"
+          @tap="pickClass(item)"
+        >
+          <view class="option-name">{{ item.name }}</view>
+          <view class="option-meta muted">生命骰 {{ item.hitDie }} · 主要属性 {{ item.primaryAbility }}</view>
+          <view v-if="draft.classCode === item.code" class="option-check">✓</view>
         </view>
       </view>
     </view>
 
     <view class="wizard-actions">
       <button v-if="step > 1" class="btn btn-plain" @tap="prev">上一步</button>
-      <view v-else class="action-spacer" />
-
-      <button v-if="step < 4" class="btn" @tap="next">下一步</button>
-      <button v-else class="btn" :disabled="saving" @tap="save">完成并保存</button>
+      <button v-if="step === 1" class="btn" @tap="next">下一步</button>
+      <button v-else class="btn" :disabled="finishing" @tap="finish">完成</button>
     </view>
   </view>
 </template>
@@ -185,43 +93,29 @@ import { computed, ref, watch } from 'vue'
 import { onHide, onLoad, onUnload } from '@dcloudio/uni-app'
 import { request } from '../../api/http'
 import { artworkFor } from '../../config/rulebooks'
-import type { GameSystem, GeneratedAttributes, Inspiration } from '../../api/types'
+import type { ClassOption, GameSystem } from '../../api/types'
 import {
   clearDraft,
   emptyDraft,
   loadDraft,
   saveDraft,
-  type AttributeMethod,
   type CreateDraft,
   type CreateStep,
 } from '../../stores/createDraft'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
 
-const stepLabels = ['规则书', '基本信息', '属性', '确认']
+const stepLabels = ['规则书', '职业']
 
 const draft = ref<CreateDraft>(emptyDraft())
 const systems = ref<GameSystem[]>([])
-const systemsLoading = ref(false)
-const systemsError = ref(false)
-const resumed = ref(false)
+const classes = ref<ClassOption[]>([])
+const classesLoading = ref(false)
+const classesError = ref(false)
 const ready = ref(false)
-const saving = ref(false)
+const finishing = ref(false)
 const failedIcons = ref<Record<string, boolean>>({})
 
 const step = computed(() => draft.value.step)
-const currentSystem = computed(
-  () => systems.value.find((system) => system.code === draft.value.systemCode) ?? null,
-)
-const hasProgress = computed(
-  () =>
-    draft.value.step > 1 ||
-    Boolean(draft.value.systemCode) ||
-    Boolean(draft.value.name.trim()) ||
-    draft.value.attributes.length > 0,
-)
-const attributeLine = computed(
-  () => draft.value.attributes.map((item) => `${item.label} ${item.value}`).join(' · ') || '未生成',
-)
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -261,173 +155,86 @@ async function init(): Promise<void> {
   const restored = loadDraft()
   if (restored) {
     draft.value = restored
-    resumed.value = restored.step > 1 || Boolean(restored.systemCode)
   }
 
   await loadSystems()
 
-  // 规则书被移除或改名时，把草稿回退到第一步
-  if (draft.value.systemCode && !systems.value.some((system) => system.code === draft.value.systemCode)) {
+  if (!draft.value.systemCode || draft.value.systemCode !== 'dnd5e') {
     draft.value.systemCode = null
     draft.value.step = 1
-    draft.value.attributes = []
-    draft.value.inspiration = null
+    draft.value.classCode = null
+    draft.value.className = ''
   }
 
   if (draft.value.systemCode) {
-    if (draft.value.attributes.length === 0) {
-      await rollAttributes(draft.value.method)
-    }
-    if (!draft.value.inspiration) {
-      void loadInspiration()
-    }
+    await loadClasses()
   }
 
   ready.value = true
 }
 
 async function loadSystems(): Promise<void> {
-  systemsLoading.value = true
-  systemsError.value = false
-
   try {
     systems.value = await request<GameSystem[]>({ url: '/api/systems', auth: false })
   } catch {
-    systemsError.value = true
-  } finally {
-    systemsLoading.value = false
+    // 错误提示已统一处理
   }
 }
 
-function attributeSummary(system: GameSystem): string {
-  if (system.attributes.length === 0) {
-    return ''
-  }
+async function loadClasses(): Promise<void> {
+  classesLoading.value = true
+  classesError.value = false
 
-  const labels = system.attributes.slice(0, 6).map((item) => item.label).join(' / ')
-  return system.attributes.length > 6 ? `${labels} …` : labels
+  try {
+    const code = draft.value.systemCode ?? 'dnd5e'
+    classes.value = await request<ClassOption[]>({
+      url: `/api/generator/classes?systemCode=${code}`,
+      auth: false,
+    })
+  } catch {
+    classesError.value = true
+  } finally {
+    classesLoading.value = false
+  }
 }
 
 function markIconFailed(code: string): void {
   failedIcons.value[code] = true
 }
 
-async function pickSystem(system: GameSystem): Promise<void> {
+function pickSystem(system: GameSystem): void {
+  if (system.code !== 'dnd5e') {
+    return
+  }
+
   if (draft.value.systemCode === system.code) {
     return
   }
 
   draft.value.systemCode = system.code
-  draft.value.attributes = []
-  draft.value.inspiration = null
-  draft.value.method = 'roll'
-
-  await rollAttributes('roll')
-  void loadInspiration()
+  draft.value.classCode = null
+  draft.value.className = ''
+  classes.value = []
+  void loadClasses()
 }
 
-async function rollAttributes(method: AttributeMethod): Promise<void> {
-  const system = currentSystem.value
-  if (!system) {
-    return
-  }
-
-  try {
-    const result = await request<GeneratedAttributes>({
-      url: '/api/generator/attributes',
-      method: 'POST',
-      auth: false,
-      data: { systemCode: system.code, method },
-    })
-    draft.value.attributes = result.attributes
-    draft.value.method = method
-  } catch {
-    // 错误提示已统一处理
-  }
-}
-
-async function suggestName(): Promise<void> {
-  const system = currentSystem.value
-  if (!system) {
-    return
-  }
-
-  try {
-    const names = await request<string[]>({
-      url: `/api/generator/names?systemCode=${system.code}&count=1`,
-      auth: false,
-    })
-    if (names.length > 0) {
-      draft.value.name = names[0]
-    }
-  } catch {
-    // ignore
-  }
-}
-
-async function suggestOccupation(): Promise<void> {
-  const system = currentSystem.value
-  if (!system) {
-    return
-  }
-
-  try {
-    const items = await request<string[]>({
-      url: `/api/generator/occupations?systemCode=${system.code}&count=1`,
-      auth: false,
-    })
-    if (items.length > 0) {
-      draft.value.occupation = items[0]
-    }
-  } catch {
-    // ignore
-  }
-}
-
-async function loadInspiration(): Promise<void> {
-  const system = currentSystem.value
-  if (!system) {
-    return
-  }
-
-  try {
-    const items = await request<Inspiration[]>({
-      url: `/api/generator/inspirations?systemCode=${system.code}&count=1`,
-      auth: false,
-    })
-    draft.value.inspiration = items[0] ?? null
-  } catch {
-    // ignore
-  }
+function pickClass(option: ClassOption): void {
+  draft.value.classCode = option.code
+  draft.value.className = option.name
 }
 
 function next(): void {
   if (step.value === 1 && !draft.value.systemCode) {
-    toast('先选一本规则书')
+    toast('先选规则书')
     return
   }
 
-  if (step.value === 2 && !draft.value.name.trim()) {
-    toast('先给角色起个名字')
-    return
-  }
-
-  if (step.value === 3 && draft.value.attributes.length === 0) {
-    toast('先掷一组属性')
-    return
-  }
-
-  if (step.value >= 4) {
-    return
+  if (step.value === 1 && classes.value.length === 0) {
+    void loadClasses()
   }
 
   draft.value.step = (step.value + 1) as CreateStep
   saveDraft(draft.value)
-
-  if (draft.value.step === 3 && !draft.value.inspiration) {
-    void loadInspiration()
-  }
-
   scrollTop()
 }
 
@@ -440,59 +247,41 @@ function prev(): void {
   scrollTop()
 }
 
-function restart(): void {
-  uni.showModal({
-    title: '清空重来',
-    content: '本机保存的草稿会被清空，确定吗？',
-    success: (result) => {
-      if (!result.confirm) {
-        return
-      }
-
-      clearDraft()
-      draft.value = emptyDraft()
-      resumed.value = false
-      failedIcons.value = {}
-      scrollTop()
-    },
-  })
-}
-
-async function save(): Promise<void> {
-  if (!draft.value.systemCode) {
-    draft.value.step = 1
-    toast('规则书丢失，请重新选择')
+async function finish(): Promise<void> {
+  if (!draft.value.classCode) {
+    toast('先选一个职业')
     return
   }
 
-  if (!draft.value.name.trim()) {
-    draft.value.step = 2
-    toast('先给角色起个名字')
-    return
-  }
-
-  saving.value = true
+  finishing.value = true
   try {
-    const age = Number.parseInt(draft.value.age, 10)
+    let name = ''
+    try {
+      const names = await request<string[]>({
+        url: `/api/generator/names?systemCode=${draft.value.systemCode}&count=1`,
+        auth: false,
+      })
+      name = names[0] ?? ''
+    } catch {
+      // 名字生成失败就用占位名
+    }
+
     const created = await request<{ id: string }>({
       url: '/api/characters',
       method: 'POST',
       data: {
         systemCode: draft.value.systemCode,
-        name: draft.value.name.trim(),
-        occupation: draft.value.occupation.trim() || null,
-        age: Number.isNaN(age) ? null : age,
-        summary: draft.value.summary.trim() || null,
-        sheet: { attributes: draft.value.attributes },
+        name: name || '未命名冒险者',
+        className: draft.value.className,
       },
     })
 
     clearDraft()
     uni.redirectTo({ url: `/pages/detail/detail?id=${created.id}` })
   } catch {
-    // 提交失败时保留本地草稿，用户可以继续改或重试
+    // 提交失败时保留本地草稿
   } finally {
-    saving.value = false
+    finishing.value = false
   }
 }
 
@@ -506,27 +295,25 @@ function scrollTop(): void {
 </script>
 
 <style lang="scss" scoped>
-.wizard-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 24rpx;
+.hero {
+  padding: 8rpx 0 32rpx;
+  text-align: center;
 }
 
-.wizard-title {
-  font-size: 44rpx;
+.hero-en {
+  font-family: 'Songti SC', 'SimSun', 'STSong', 'Noto Serif SC', serif;
+  font-size: 64rpx;
   font-weight: 600;
+  letter-spacing: 8rpx;
+  line-height: 1.2;
 }
 
-.wizard-sub {
-  margin-top: 6rpx;
-  font-size: 22rpx;
-}
-
-.restart-link {
-  padding-top: 8rpx;
+.hero-zh {
+  margin-top: 8rpx;
+  font-family: 'Songti SC', 'SimSun', 'STSong', 'Noto Serif SC', serif;
   font-size: 24rpx;
-  color: $trpg-accent;
+  letter-spacing: 8rpx;
+  color: $trpg-muted;
 }
 
 .stepper {
@@ -595,14 +382,6 @@ function scrollTop(): void {
   font-weight: 600;
 }
 
-.resume {
-  margin-bottom: 20rpx;
-  padding: 16rpx 20rpx;
-  border-radius: 12rpx;
-  background: #f7ecd9;
-  font-size: 22rpx;
-}
-
 .panel {
   padding: 28rpx;
   margin-bottom: 24rpx;
@@ -612,19 +391,9 @@ function scrollTop(): void {
 }
 
 .panel-title {
+  margin-bottom: 20rpx;
   font-size: 30rpx;
   font-weight: 600;
-}
-
-.panel-hint {
-  margin: 8rpx 0 20rpx;
-  font-size: 22rpx;
-}
-
-.panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
 }
 
 .system-grid {
@@ -646,6 +415,10 @@ function scrollTop(): void {
 .system-selected {
   border-color: $trpg-accent;
   box-shadow: 0 8rpx 24rpx rgba(91, 70, 54, 0.12);
+}
+
+.system-locked {
+  opacity: 0.55;
 }
 
 .system-icon-wrap {
@@ -678,18 +451,15 @@ function scrollTop(): void {
   font-weight: 600;
 }
 
-.system-code {
-  font-size: 20rpx;
-  letter-spacing: 2rpx;
-}
-
 .system-desc {
   margin-top: 6rpx;
   font-size: 22rpx;
 }
 
-.system-attrs {
-  margin-top: 8rpx;
+.system-lock {
+  position: absolute;
+  top: 16rpx;
+  right: 16rpx;
   font-size: 20rpx;
 }
 
@@ -709,134 +479,51 @@ function scrollTop(): void {
 }
 
 .load-error {
-  padding: 24rpx 0;
+  padding: 20rpx 0;
 }
 
-.field {
-  display: flex;
-  align-items: center;
-  min-height: 88rpx;
-  border-bottom: 2rpx solid $trpg-line;
-}
-
-.field:last-child {
-  border-bottom: none;
-}
-
-.field-column {
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 16rpx 0;
-}
-
-.field-label {
-  width: 120rpx;
-  font-size: 26rpx;
-  color: $trpg-muted;
-}
-
-.field-input {
-  flex: 1;
-  height: 88rpx;
-}
-
-.field-textarea {
-  width: 100%;
-  height: 140rpx;
-  margin-top: 8rpx;
-  font-size: 26rpx;
-}
-
-.field-action {
-  font-size: 24rpx;
-  color: $trpg-accent;
-}
-
-.method-actions {
-  display: flex;
-  gap: 24rpx;
-}
-
-.method-btn {
-  font-size: 24rpx;
-  color: $trpg-accent;
-}
-
-.method-btn.active {
-  font-weight: 600;
-  text-decoration: underline;
-}
-
-.attr-grid {
-  display: flex;
-  flex-wrap: wrap;
-  margin: 8rpx 0 20rpx;
-}
-
-.attr {
-  width: 33.33%;
-  padding: 12rpx 0;
-  text-align: center;
-}
-
-.attr-value {
-  font-size: 44rpx;
-  font-weight: 600;
-  color: $trpg-accent-deep;
-}
-
-.attr-label {
-  font-size: 22rpx;
-}
-
-.inspiration {
-  margin-top: 12rpx;
-  padding: 20rpx;
-  border-radius: 16rpx;
-  background: #f9f4e8;
-}
-
-.inspiration-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8rpx;
-}
-
-.inspiration-title {
-  font-size: 26rpx;
-  font-weight: 600;
-}
-
-.inspiration-name {
-  font-size: 26rpx;
-  font-weight: 600;
-}
-
-.summary {
+.option-grid {
   display: flex;
   flex-direction: column;
-  gap: 14rpx;
-  margin-top: 12rpx;
-}
-
-.summary-row {
-  display: flex;
   gap: 16rpx;
-  font-size: 26rpx;
 }
 
-.summary-label {
-  width: 120rpx;
-  flex-shrink: 0;
+.option-card {
+  position: relative;
+  padding: 20rpx;
+  border: 2rpx solid $trpg-line;
+  border-radius: 16rpx;
+  background: #fff;
 }
 
-.summary-attrs {
-  align-items: flex-start;
+.option-selected {
+  border-color: $trpg-accent;
+  box-shadow: 0 8rpx 24rpx rgba(91, 70, 54, 0.12);
 }
 
-.summary-attrs text:last-child {
-  flex: 1;
+.option-name {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.option-meta {
+  margin-top: 6rpx;
+  font-size: 20rpx;
+}
+
+.option-check {
+  position: absolute;
+  top: 16rpx;
+  right: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: $trpg-accent;
+  color: #fffaf0;
+  font-size: 22rpx;
 }
 
 .wizard-actions {
@@ -848,26 +535,24 @@ function scrollTop(): void {
   flex: 1;
 }
 
-.action-spacer {
-  flex: 1;
-}
-
 @media (min-width: 900px) {
   .page {
     max-width: 860px;
   }
 
-  .wizard-title {
-    font-size: 30px;
+  .hero {
+    padding: 4px 0 26px;
   }
 
-  .wizard-sub {
-    font-size: 13px;
+  .hero-en {
+    font-size: 44px;
+    letter-spacing: 10px;
   }
 
-  .restart-link {
+  .hero-zh {
+    margin-top: 6px;
     font-size: 13px;
-    cursor: pointer;
+    letter-spacing: 8px;
   }
 
   .stepper {
@@ -891,12 +576,6 @@ function scrollTop(): void {
     font-size: 12px;
   }
 
-  .resume {
-    padding: 10px 14px;
-    border-radius: 8px;
-    font-size: 13px;
-  }
-
   .panel {
     padding: 24px;
     border-width: 1px;
@@ -905,12 +584,8 @@ function scrollTop(): void {
   }
 
   .panel-title {
+    margin-bottom: 16px;
     font-size: 17px;
-  }
-
-  .panel-hint {
-    margin: 6px 0 16px;
-    font-size: 13px;
   }
 
   .system-grid {
@@ -929,7 +604,7 @@ function scrollTop(): void {
 
   .system-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 26px rgba(91, 70, 54, 0.12);
+    box-shadow: 0 10px 26px rgba(91, 70, 54, 0.1);
   }
 
   .system-icon-wrap {
@@ -947,16 +622,8 @@ function scrollTop(): void {
     font-size: 16px;
   }
 
-  .system-code {
-    font-size: 11px;
-  }
-
   .system-desc {
     font-size: 13px;
-  }
-
-  .system-attrs {
-    font-size: 11px;
   }
 
   .system-check {
@@ -967,65 +634,45 @@ function scrollTop(): void {
     font-size: 12px;
   }
 
-  .field {
-    min-height: 52px;
-    border-bottom-width: 1px;
+  .system-lock {
+    top: 12px;
+    right: 12px;
+    font-size: 11px;
   }
 
-  .field-label {
-    width: 72px;
-    font-size: 14px;
+  .option-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
   }
 
-  .field-input {
-    height: 52px;
-    font-size: 14px;
-  }
-
-  .field-textarea {
-    height: 96px;
-    font-size: 14px;
-  }
-
-  .field-action {
-    font-size: 13px;
-    cursor: pointer;
-  }
-
-  .method-btn {
-    font-size: 13px;
-    cursor: pointer;
-  }
-
-  .attr {
-    width: 20%;
-    padding: 10px 0;
-  }
-
-  .attr-value {
-    font-size: 28px;
-  }
-
-  .attr-label {
-    font-size: 12px;
-  }
-
-  .inspiration {
+  .option-card {
     padding: 16px;
-    border-radius: 10px;
+    border-width: 1px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
 
-  .inspiration-title,
-  .inspiration-name {
-    font-size: 14px;
+  .option-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(91, 70, 54, 0.1);
   }
 
-  .summary-row {
-    font-size: 14px;
+  .option-name {
+    font-size: 16px;
   }
 
-  .summary-label {
-    width: 72px;
+  .option-meta {
+    font-size: 11px;
+  }
+
+  .option-check {
+    top: 12px;
+    right: 12px;
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
   }
 
   .wizard-actions {

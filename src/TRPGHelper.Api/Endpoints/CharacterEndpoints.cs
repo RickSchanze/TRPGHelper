@@ -171,6 +171,16 @@ public static class CharacterEndpoints
             errors["occupation"] = ["职业最多 40 个字符。"];
         }
 
+        if (request.ClassName?.Trim().Length > 40)
+        {
+            errors["className"] = ["职业最多 40 个字符。"];
+        }
+
+        if (request.RaceName?.Trim().Length > 40)
+        {
+            errors["raceName"] = ["种族最多 40 个字符。"];
+        }
+
         if (request.Summary?.Trim().Length > 500)
         {
             errors["summary"] = ["简介最多 500 个字符。"];
@@ -227,6 +237,8 @@ public static class CharacterEndpoints
             System = system,
             Name = request.Name.Trim(),
             Occupation = NormalizeOptional(request.Occupation),
+            ClassName = NormalizeOptional(request.ClassName),
+            RaceName = NormalizeOptional(request.RaceName),
             Age = request.Age,
             Summary = NormalizeOptional(request.Summary),
             PortraitUrl = NormalizeOptional(request.PortraitUrl),
@@ -315,6 +327,36 @@ public static class CharacterEndpoints
             if (occupation != card.Occupation)
             {
                 card.Occupation = occupation;
+                changed = true;
+            }
+        }
+
+        if (request.ClassName is not null)
+        {
+            var className = NormalizeOptional(request.ClassName);
+            if (className?.Length > 40)
+            {
+                return Validation("className", "职业最多 40 个字符。");
+            }
+
+            if (className != card.ClassName)
+            {
+                card.ClassName = className;
+                changed = true;
+            }
+        }
+
+        if (request.RaceName is not null)
+        {
+            var raceName = NormalizeOptional(request.RaceName);
+            if (raceName?.Length > 40)
+            {
+                return Validation("raceName", "种族最多 40 个字符。");
+            }
+
+            if (raceName != card.RaceName)
+            {
+                card.RaceName = raceName;
                 changed = true;
             }
         }

@@ -29,6 +29,14 @@ public static class GeneratorEndpoints
                 Results.Ok(GeneratorData.Occupations(systemCode, count ?? 5)))
             .WithSummary("随机职业 / 职业与背景");
 
+        group.MapGet("/classes", (string? systemCode) =>
+                Results.Ok(GeneratorData.Classes(systemCode)))
+            .WithSummary("职业列表（目前只有 DND 5E）");
+
+        group.MapGet("/races", (string? systemCode) =>
+                Results.Ok(GeneratorData.Races(systemCode)))
+            .WithSummary("种族列表（目前只有 DND 5E）");
+
         group.MapGet("/inspirations", (string? systemCode, int? count) =>
             {
                 var items = GeneratorData.Inspirations(systemCode, count ?? 3)

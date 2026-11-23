@@ -22,6 +22,12 @@ public class CharacterCard
 
     public string? Occupation { get; set; }
 
+    /// <summary>规则系统里的职业，例如 DND 的「战士」。</summary>
+    public string? ClassName { get; set; }
+
+    /// <summary>规则系统里的种族，例如 DND 的「半精灵」。</summary>
+    public string? RaceName { get; set; }
+
     public int? Age { get; set; }
 
     public string? Summary { get; set; }
