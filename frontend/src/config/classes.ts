@@ -21,6 +21,10 @@ export const classArtwork: Record<string, ClassArtwork> = {
     image: '/static/classes/fighter.jpg',
     accent: '#3d5a8a',
   },
+  monk: {
+    image: '/static/classes/monk.jpg',
+    accent: '#3f5a3a',
+  },
 }
 
 const fallbackArtwork: ClassArtwork = {
