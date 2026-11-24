@@ -137,6 +137,20 @@ export interface KeywordEntry {
   imageUrl?: string
 }
 
+/** 职业等级成长：某一级获得的一条特性。 */
+export interface ClassLevelFeature {
+  level: number
+  title: string
+  description: string
+}
+
+export interface ClassLevels {
+  systemCode: string
+  classCode: string
+  className: string
+  features: ClassLevelFeature[]
+}
+
 /** 车卡流程的一步，由管理台配置；规则书选择不在其中。 */
 export interface CreationStep {
   id: string

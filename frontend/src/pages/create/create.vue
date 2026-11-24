@@ -85,7 +85,9 @@
 
         <!-- 职业步骤：唯一已实现的面板 -->
         <view v-if="isClassStep" class="panel">
-          <view class="panel-title">{{ currentStep?.title || '选择职业' }}</view>
+          <view class="panel-title">
+            <KeywordText :text="currentStep?.title || '选择职业'" />
+          </view>
           <view v-if="currentStep?.description" class="muted step-hint">
             <KeywordText :text="currentStep.description" />
           </view>
@@ -115,8 +117,11 @@
               </view>
 
               <view class="class-body">
-                <view class="class-name">
-                  <KeywordText :text="item.name" />
+                <view class="class-head">
+                  <view class="class-name">
+                    <KeywordText :text="item.name" />
+                  </view>
+                  <view class="class-detail" @tap.stop="openDetail(item)">详情 ›</view>
                 </view>
                 <view class="class-sub">
                   <text>生命骰 </text>
@@ -142,7 +147,9 @@
 
         <!-- 其它类型的步骤：面板还没做，先按配置占位 -->
         <view v-else class="panel placeholder-panel">
-          <view class="panel-title">{{ currentStep?.title }}</view>
+          <view class="panel-title">
+            <KeywordText :text="currentStep?.title" />
+          </view>
           <KeywordText class="muted" :text="currentStep?.description || '这一步的面板还在开发中，先跟着流程往下走。'" />
           <text class="placeholder-kind muted">步骤类型：{{ currentStep?.kind }}</text>
         </view>
@@ -157,7 +164,7 @@
         :class="{ active: activeClassIndex === index }"
         @tap="scrollToClass(index)"
       >
-        <text class="rail-name">{{ item.name }}</text>
+        <KeywordText class="rail-name" :text="item.name" />
         <text v-if="draft.classCode === item.code" class="rail-check">✓</text>
       </view>
     </view>
@@ -170,6 +177,13 @@
     </view>
 
     <KeywordModal />
+
+    <ClassDetailModal
+      :visible="detailVisible"
+      :option="detailClass"
+      :system-code="draft.systemCode"
+      @close="detailVisible = false"
+    />
   </view>
 </template>
 
@@ -184,6 +198,7 @@ import { clearDraft, emptyDraft, loadDraft, saveDraft, type CreateDraft } from '
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
 import KeywordText from '../../components/KeywordText/KeywordText.vue'
 import KeywordModal from '../../components/KeywordModal/KeywordModal.vue'
+import ClassDetailModal from '../../components/ClassDetailModal/ClassDetailModal.vue'
 
 const draft = ref<CreateDraft>(emptyDraft())
 const systems = ref<GameSystem[]>([])
@@ -201,6 +216,8 @@ const failedCovers = ref<Record<string, boolean>>({})
 const activeClassIndex = ref(0)
 const cardTops = ref<number[]>([])
 const jumping = ref(false)
+const detailVisible = ref(false)
+const detailClass = ref<ClassOption | null>(null)
 
 let jumpTimer: ReturnType<typeof setTimeout> | null = null
 let scrollTimer: ReturnType<typeof setTimeout> | null = null
@@ -445,6 +462,11 @@ async function startFlow(): Promise<void> {
 function pickClass(option: ClassOption): void {
   draft.value.classCode = option.code
   draft.value.className = option.name
+}
+
+function openDetail(option: ClassOption): void {
+  detailClass.value = option
+  detailVisible.value = true
 }
 
 function next(): void {
@@ -845,6 +867,26 @@ function scrollTop(): void {
   font-size: 64rpx;
 }
 
+.class-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.class-detail {
+  flex-shrink: 0;
+  padding: 4rpx 16rpx;
+  border: 2rpx solid #d8c6a5;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  color: $trpg-accent-deep;
+}
+
+.class-detail:active {
+  opacity: 0.7;
+}
+
 .class-name {
   font-size: 30rpx;
   font-weight: 600;
@@ -1065,6 +1107,13 @@ function scrollTop(): void {
   .class-name {
     font-size: 22px;
     letter-spacing: 1px;
+  }
+
+  .class-detail {
+    padding: 3px 12px;
+    border-width: 1px;
+    font-size: 12px;
+    cursor: pointer;
   }
 
   .class-sub {
