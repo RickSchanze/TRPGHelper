@@ -212,6 +212,81 @@
           </view>
         </view>
 
+        <!-- 属性步骤：投骰子或自己填 -->
+        <view v-else-if="isAttributesStep" class="panel">
+          <view class="panel-title">
+            <KeywordText :text="currentStep?.title || '决定属性'" />
+          </view>
+          <view v-if="currentStep?.description" class="muted step-hint">
+            <KeywordText :text="currentStep.description" />
+          </view>
+
+          <view class="attr-modes">
+            <view
+              class="attr-mode"
+              :class="{ active: draft.attributesMethod === 'roll' }"
+              @tap="setAttributeMethod('roll')"
+            >
+              投骰子
+            </view>
+            <view
+              class="attr-mode"
+              :class="{ active: draft.attributesMethod === 'manual' }"
+              @tap="setAttributeMethod('manual')"
+            >
+              自己填
+            </view>
+          </view>
+
+          <view v-if="draft.attributesMethod === 'roll'" class="attr-panel">
+            <view class="attr-grid">
+              <view v-for="attr in draft.attributes" :key="attr.key" class="attr-cell">
+                <view class="attr-name">
+                  <KeywordText :text="attr.label" />
+                </view>
+                <view class="attr-value">{{ attr.value || '—' }}</view>
+                <view class="attr-mod">{{ modifierText(attr.value) }}</view>
+              </view>
+            </view>
+
+            <button class="btn attr-roll-btn" :disabled="rolling" @tap="rollAttributes">
+              {{ rolling ? '投骰中…' : draft.attributes.length ? '重新投骰' : '投骰子' }}
+            </button>
+            <KeywordText class="muted attr-hint" text="4d6 取高 3，六项各掷一次；不满意可以重投。" />
+          </view>
+
+          <view v-else class="attr-panel">
+            <view class="attr-grid">
+              <view v-for="(attr, index) in draft.attributes" :key="attr.key" class="attr-cell">
+                <view class="attr-name">
+                  <KeywordText :text="attr.label" />
+                </view>
+                <input
+                  class="attr-input"
+                  type="number"
+                  :value="attr.value ? String(attr.value) : ''"
+                  placeholder="3-18"
+                  @input="setAttributeValue(index, $event)"
+                />
+                <view class="attr-mod">{{ modifierText(attr.value) }}</view>
+              </view>
+            </view>
+            <KeywordText class="muted attr-hint" text="手动填写 3–18，之后所有 [属性检定] 都用这组数值。" />
+          </view>
+
+          <view v-if="derived.length" class="derived">
+            <view class="derived-title">属性衍生</view>
+            <view v-for="row in derived" :key="row.label" class="derived-row">
+              <view class="derived-label">
+                <KeywordText :text="row.label" />
+              </view>
+              <view class="derived-value">{{ row.value }}</view>
+              <view class="derived-note">{{ row.note }}</view>
+            </view>
+            <view class="muted derived-hint">按 1 级、无甲、无武器计算；种族加值还没计入。</view>
+          </view>
+        </view>
+
         <!-- 其它类型的步骤：面板还没做，先按配置占位 -->
         <view v-else class="panel placeholder-panel">
           <view class="panel-title">
@@ -279,6 +354,8 @@ const classesLoading = ref(false)
 const classesError = ref(false)
 const subclassesLoading = ref(false)
 const subclassesError = ref(false)
+const attributesError = ref(false)
+const rolling = ref(false)
 const ready = ref(false)
 const started = ref(false)
 const finishing = ref(false)
@@ -298,6 +375,7 @@ const step = computed(() => draft.value.step)
 const currentStep = computed<CreationStep | null>(() => steps.value[draft.value.step - 1] ?? null)
 const isClassStep = computed(() => currentStep.value?.kind === 'class')
 const isSubclassStep = computed(() => currentStep.value?.kind === 'subclass')
+const isAttributesStep = computed(() => currentStep.value?.kind === 'attributes')
 const isLastStep = computed(() => steps.value.length > 0 && draft.value.step >= steps.value.length)
 const canNext = computed(() => {
   if (!currentStep.value) {
@@ -311,6 +389,14 @@ const canNext = computed(() => {
   if (isSubclassStep.value) {
     // 该职业还没配置子职时允许跳过
     return subclasses.value.length === 0 || Boolean(draft.value.subclassCode)
+  }
+
+  if (isAttributesStep.value) {
+    if (!draft.value.attributes.length) {
+      return true
+    }
+
+    return draft.value.attributes.every((item) => item.value >= 3 && item.value <= 18)
   }
 
   return true
@@ -345,6 +431,11 @@ watch(
     if (item?.kind === 'class') {
       // 从子职步骤退回时卡片会重新挂载，重新量一次顶部位置
       void nextTick(() => setTimeout(measureCards, 60))
+    }
+
+    if (item?.kind === 'attributes') {
+      ensureAttributes()
+      syncClassState()
     }
   },
 )
@@ -464,6 +555,10 @@ async function init(): Promise<void> {
   if (currentStep.value?.kind === 'subclass') {
     void loadSubclasses()
   }
+
+  if (currentStep.value?.kind === 'attributes') {
+    ensureAttributes()
+  }
 }
 
 async function loadSystems(): Promise<void> {
@@ -556,17 +651,200 @@ async function loadSubclasses(): Promise<void> {
       draft.value.subclassName = ''
     }
 
-    if (draft.value.classCode) {
-      draft.value.classStates[draft.value.classCode] = {
-        subclassCode: draft.value.subclassCode,
-        subclassName: draft.value.subclassName,
-      }
-    }
+    syncClassState()
   } catch {
     subclassesError.value = true
     subclasses.value = []
   } finally {
     subclassesLoading.value = false
+  }
+}
+
+const attributeTemplates = computed(() => {
+  const system = systems.value.find((item) => item.code === draft.value.systemCode)
+  return system?.attributes ?? []
+})
+
+/** 用规则系统的属性模板补齐 key / label，已填的数值保留。 */
+function ensureAttributes(): void {
+  const templates = attributeTemplates.value
+  if (!templates.length) {
+    return
+  }
+
+  const existing = new Map(draft.value.attributes.map((item) => [item.key, item]))
+  draft.value.attributes = templates.map((template) => {
+    const saved = existing.get(template.key)
+    return {
+      key: template.key,
+      label: template.label,
+      value: saved?.value ?? 0,
+    }
+  })
+}
+
+/** 把当前职业的所有选择（子职 + 属性）存进该职业自己的位置。 */
+function syncClassState(): void {
+  const code = draft.value.classCode
+  if (!code) {
+    return
+  }
+
+  draft.value.classStates[code] = {
+    subclassCode: draft.value.subclassCode,
+    subclassName: draft.value.subclassName,
+    attributes: draft.value.attributes.map((item) => ({ ...item })),
+    attributesMethod: draft.value.attributesMethod,
+  }
+}
+
+function setAttributeMethod(method: 'roll' | 'manual'): void {
+  draft.value.attributesMethod = method
+  syncClassState()
+
+  if (
+    method === 'roll' &&
+    draft.value.attributes.length > 0 &&
+    draft.value.attributes.every((item) => !item.value)
+  ) {
+    void rollAttributes()
+  }
+}
+
+function setAttributeValue(index: number, event: { detail?: { value?: string } }): void {
+  const raw = String(event?.detail?.value ?? '').trim()
+  const parsed = Number.parseInt(raw, 10)
+  draft.value.attributes[index].value = Number.isFinite(parsed) ? Math.max(0, Math.min(30, parsed)) : 0
+  syncClassState()
+}
+
+/** 5E：调整值 =（属性值 - 10）除以 2 向下取整。 */
+function modifierText(value: number): string {
+  if (!value) {
+    return ''
+  }
+
+  const modifier = Math.floor((value - 10) / 2)
+  return modifier >= 0 ? `+${modifier}` : String(modifier)
+}
+
+const selectedClass = computed<ClassOption | null>(
+  () => classes.value.find((item) => item.code === draft.value.classCode) ?? null,
+)
+
+function attributeKeyByLabel(label?: string): string {
+  if (!label) {
+    return ''
+  }
+
+  return attributeTemplates.value.find((item) => item.label === label)?.key ?? ''
+}
+
+function formatBonus(value: number): string {
+  return value >= 0 ? `+${value}` : String(value)
+}
+
+/** 1 级的人物衍生数值：生命值、先攻、AC、攻击加值、被动察觉、豁免（+ 施法数值）。 */
+const derived = computed(() => {
+  const characterClass = selectedClass.value
+  if (!characterClass || !draft.value.attributes.length) {
+    return [] as Array<{ label: string; value: string; note: string }>
+  }
+
+  // 六项都填好（3–18）才算，避免零值时先显示一堆无意义的数
+  if (draft.value.attributes.some((item) => item.value < 3 || item.value > 18)) {
+    return [] as Array<{ label: string; value: string; note: string }>
+  }
+
+  const valueOf = (key: string) => draft.value.attributes.find((item) => item.key === key)?.value ?? 0
+  const modOf = (key: string) => {
+    const value = valueOf(key)
+    return value ? Math.floor((value - 10) / 2) : 0
+  }
+
+  const proficiency = 2;
+  const hitDie = Number.parseInt((characterClass.hitDie ?? '').replace(/[^0-9]/g, ''), 10)
+  const constitution = modOf('CON')
+  const dexterity = modOf('DEX')
+  const wisdom = modOf('WIS')
+  const strength = modOf('STR')
+  const saves = (characterClass.savingThrows ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+
+  const saveText = draft.value.attributes
+    .map((item) => {
+      const modifier = modOf(item.key) + (saves.includes(item.label) ? proficiency : 0)
+      return `${item.label} ${formatBonus(modifier)}`
+    })
+    .join(' · ')
+
+  const rows = [
+    {
+      label: '[生命值]上限',
+      value: `${(Number.isFinite(hitDie) ? hitDie : 0) + constitution}`,
+      note: `${characterClass.hitDie} + 体质 ${formatBonus(constitution)}`,
+    },
+    { label: '[先攻]', value: formatBonus(dexterity), note: '敏捷调整值' },
+    { label: '[护甲等级]（无甲）', value: `${10 + dexterity}`, note: '10 + 敏捷调整值' },
+    {
+      label: '[攻击加值]（近战 / 远程）',
+      value: `${formatBonus(strength + proficiency)} / ${formatBonus(dexterity + proficiency)}`,
+      note: '熟练 +2 + 力量 / 敏捷',
+    },
+    { label: '[被动察觉]', value: `${10 + wisdom}`, note: '10 + 感知调整值（未计熟练）' },
+    {
+      label: '[豁免]',
+      value: saveText,
+      note: saves.length ? `熟练：${saves.join('、')}` : '本职业无豁免熟练',
+    },
+  ]
+
+  if (characterClass.spellcastingAbility) {
+    const modifier = modOf(attributeKeyByLabel(characterClass.spellcastingAbility))
+    rows.push({
+      label: '[法术豁免DC]',
+      value: `${8 + proficiency + modifier}`,
+      note: `8 + 熟练 + ${characterClass.spellcastingAbility}`,
+    })
+    rows.push({
+      label: '法术攻击加值',
+      value: formatBonus(proficiency + modifier),
+      note: `熟练 + ${characterClass.spellcastingAbility}`,
+    })
+  }
+
+  return rows
+})
+
+async function rollAttributes(): Promise<void> {
+  if (!draft.value.attributes.length) {
+    ensureAttributes()
+  }
+
+  rolling.value = true
+  attributesError.value = false
+
+  try {
+    const result = await request<{ attributes: Array<{ key: string; label: string; value: number }> }>({
+      url: '/api/generator/attributes',
+      method: 'POST',
+      auth: false,
+      data: { systemCode: draft.value.systemCode, method: 'roll' },
+    })
+
+    const byKey = new Map(result.attributes.map((item) => [item.key, item.value]))
+    draft.value.attributes = draft.value.attributes.map((item) => ({
+      ...item,
+      value: byKey.get(item.key) ?? item.value,
+    }))
+    syncClassState()
+  } catch {
+    attributesError.value = true
+    toast('投骰失败，稍后再试')
+  } finally {
+    rolling.value = false
   }
 }
 
@@ -585,6 +863,8 @@ function pickSystem(system: GameSystem): void {
     draft.value.className = ''
     draft.value.subclassCode = null
     draft.value.subclassName = ''
+    draft.value.attributes = []
+    draft.value.attributesMethod = 'roll'
     draft.value.classStates = {}
     classes.value = []
     subclasses.value = []
@@ -626,32 +906,25 @@ function pickClass(option: ClassOption): void {
     return
   }
 
-  // 先把当前职业的子职选择存起来，切回来时还能恢复
-  if (draft.value.classCode) {
-    draft.value.classStates[draft.value.classCode] = {
-      subclassCode: draft.value.subclassCode,
-      subclassName: draft.value.subclassName,
-    }
-  }
+  // 先把当前职业的所有选择存起来，切回来时还能恢复
+  syncClassState()
 
   const saved = draft.value.classStates[option.code]
   draft.value.classCode = option.code
   draft.value.className = option.name
   draft.value.subclassCode = saved?.subclassCode ?? null
   draft.value.subclassName = saved?.subclassName ?? ''
+  draft.value.attributes = saved?.attributes?.map((item) => ({ ...item })) ?? []
+  draft.value.attributesMethod = saved?.attributesMethod ?? 'roll'
   subclasses.value = []
+
+  ensureAttributes()
 }
 
 function pickSubclass(option: SubclassOption): void {
   draft.value.subclassCode = option.code
   draft.value.subclassName = option.name
-
-  if (draft.value.classCode) {
-    draft.value.classStates[draft.value.classCode] = {
-      subclassCode: option.code,
-      subclassName: option.name,
-    }
-  }
+  syncClassState()
 }
 
 /** 点 stepper 往回跳；只允许退到前面的步骤，前进仍然走「下一步」。 */
@@ -729,6 +1002,13 @@ async function finish(): Promise<void> {
         name: name || '未命名冒险者',
         className: draft.value.className,
         subclassName: draft.value.subclassName || null,
+        sheet: {
+          attributes: draft.value.attributes
+            .filter((item) => item.value > 0)
+            .map((item) => ({ key: item.key, label: item.label, value: item.value })),
+          skills: [],
+          items: [],
+        },
       },
     })
 
@@ -1216,6 +1496,127 @@ function scrollTop(): void {
   line-height: 1.6;
 }
 
+.attr-modes {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.attr-mode {
+  flex: 1;
+  padding: 16rpx 0;
+  border: 2rpx solid $trpg-line;
+  border-radius: 999rpx;
+  background: #fff;
+  color: $trpg-muted;
+  font-size: 24rpx;
+  text-align: center;
+}
+
+.attr-mode.active {
+  border-color: $trpg-accent;
+  background: $trpg-accent;
+  color: #fffaf0;
+}
+
+.attr-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16rpx;
+}
+
+.attr-cell {
+  padding: 16rpx 12rpx;
+  border: 2rpx solid $trpg-line;
+  border-radius: 14rpx;
+  background: #fff;
+  text-align: center;
+}
+
+.attr-name {
+  font-size: 22rpx;
+  color: $trpg-muted;
+}
+
+.attr-value {
+  margin-top: 6rpx;
+  font-size: 44rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+}
+
+.attr-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 64rpx;
+  margin-top: 8rpx;
+  border: 2rpx solid $trpg-line;
+  border-radius: 10rpx;
+  font-size: 32rpx;
+  text-align: center;
+}
+
+.attr-mod {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: $trpg-accent-deep;
+}
+
+.attr-roll-btn {
+  margin-top: 24rpx;
+}
+
+.attr-hint {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 20rpx;
+  line-height: 1.5;
+}
+
+.derived {
+  margin-top: 28rpx;
+  padding-top: 20rpx;
+  border-top: 2rpx dashed $trpg-line;
+}
+
+.derived-title {
+  margin-bottom: 10rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.derived-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+  padding: 10rpx 0;
+  border-bottom: 1rpx solid #f0e7d9;
+}
+
+.derived-label {
+  flex: 0 0 42%;
+  font-size: 22rpx;
+}
+
+.derived-value {
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.derived-note {
+  flex: 1;
+  font-size: 18rpx;
+  color: $trpg-muted;
+  text-align: right;
+}
+
+.derived-hint {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 18rpx;
+  line-height: 1.5;
+}
+
 .btn[disabled] {
   opacity: 0.4;
 }
@@ -1371,6 +1772,70 @@ function scrollTop(): void {
   .subclass-desc {
     margin-top: 8px;
     font-size: 13px;
+  }
+
+  .attr-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+  }
+
+  .attr-cell {
+    padding: 12px 8px;
+    border-width: 1px;
+    border-radius: 10px;
+  }
+
+  .attr-name {
+    font-size: 12px;
+  }
+
+  .attr-value {
+    font-size: 30px;
+  }
+
+  .attr-input {
+    height: 44px;
+    border-width: 1px;
+    font-size: 20px;
+  }
+
+  .attr-mod {
+    font-size: 12px;
+  }
+
+  .attr-mode {
+    padding: 8px 0;
+    border-width: 1px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .attr-hint {
+    font-size: 12px;
+  }
+
+  .derived-title {
+    font-size: 16px;
+  }
+
+  .derived-row {
+    padding: 8px 0;
+  }
+
+  .derived-label {
+    font-size: 13px;
+  }
+
+  .derived-value {
+    font-size: 15px;
+  }
+
+  .derived-note {
+    font-size: 12px;
+  }
+
+  .derived-hint {
+    font-size: 12px;
   }
 
   .feature-list {

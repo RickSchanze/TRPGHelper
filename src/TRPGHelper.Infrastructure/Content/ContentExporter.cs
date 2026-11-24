@@ -115,6 +115,8 @@ public static class ContentExporter
                     ReadString(extra, "imageUrl") ?? string.Empty,
                     string.Join('\n', ReadStringList(extra, "features")),
                     ReadString(extra, "accent") ?? string.Empty,
+                    ReadString(extra, "savingThrows") ?? string.Empty,
+                    ReadString(extra, "spellcastingAbility") ?? string.Empty,
                 };
             })
             .ToList();
@@ -175,7 +177,7 @@ public static class ContentExporter
         using (var workbook = new XLWorkbook())
         {
             XlsxHelpers.WriteSheet(workbook, "classes",
-                ["id", "systemId", "name", "description", "hitDie", "primaryAbility", "imageUrl", "features", "accent"],
+                ["id", "systemId", "name", "description", "hitDie", "primaryAbility", "imageUrl", "features", "accent", "savingThrows", "spellcastingAbility"],
                 classRows,
                 new Dictionary<string, double>
                 {
@@ -188,6 +190,8 @@ public static class ContentExporter
                     ["imageUrl"] = 30,
                     ["features"] = 64,
                     ["accent"] = 12,
+                    ["savingThrows"] = 22,
+                    ["spellcastingAbility"] = 22,
                 },
                 new HashSet<string> { "description", "features" });
             written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.ClassesFile)));

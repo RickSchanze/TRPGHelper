@@ -219,6 +219,8 @@ public sealed class GeneratorCatalogService(AppDbContext db)
             ReadString(extra, "description") ?? string.Empty,
             ReadString(extra, "hitDie") ?? string.Empty,
             ReadString(extra, "primaryAbility") ?? string.Empty,
+            ReadString(extra, "savingThrows") ?? string.Empty,
+            ReadString(extra, "spellcastingAbility") ?? string.Empty,
             ReadStringList(extra, "features"),
             ReadString(extra, "imageUrl"),
             ReadString(extra, "accent"));

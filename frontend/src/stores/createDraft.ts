@@ -1,11 +1,21 @@
 /*** 车新卡的本机草稿：车完之前只存在本地，最后一步才提交给服务器。 */
+export interface DraftAttribute {
+  key: string
+  label: string
+  value: number
+}
+
+export type AttributeMethod = 'roll' | 'manual'
+
 export interface ClassSelectionState {
   subclassCode: string | null
   subclassName: string
+  attributes: DraftAttribute[]
+  attributesMethod: AttributeMethod
 }
 
 export interface CreateDraft {
-  version: 6
+  version: 7
   /** 当前步骤序号，从 1 开始；步骤数量由后端的车卡流程配置决定。 */
   step: number
   systemCode: string | null
@@ -13,13 +23,15 @@ export interface CreateDraft {
   className: string
   subclassCode: string | null
   subclassName: string
+  attributes: DraftAttribute[]
+  attributesMethod: AttributeMethod
   /** 每个职业各自保留的选择，来回切职业时不丢 */
   classStates: Record<string, ClassSelectionState>
   updatedAt: string
 }
 
 const STORAGE_KEY = 'trpg_create_draft'
-const DRAFT_VERSION = 6
+const DRAFT_VERSION = 7
 
 export function emptyDraft(): CreateDraft {
   return {
@@ -30,6 +42,8 @@ export function emptyDraft(): CreateDraft {
     className: '',
     subclassCode: null,
     subclassName: '',
+    attributes: [],
+    attributesMethod: 'roll',
     classStates: {},
     updatedAt: new Date().toISOString(),
   }
@@ -37,6 +51,36 @@ export function emptyDraft(): CreateDraft {
 
 function asString(value: unknown): string {
   return typeof value === 'string' ? value : ''
+}
+
+function readAttributes(raw: unknown): DraftAttribute[] {
+  if (!Array.isArray(raw)) {
+    return []
+  }
+
+  const attributes: DraftAttribute[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') {
+      continue
+    }
+
+    const entry = item as Partial<DraftAttribute>
+    if (typeof entry.key !== 'string' || !entry.key) {
+      continue
+    }
+
+    attributes.push({
+      key: entry.key,
+      label: asString(entry.label) || entry.key,
+      value: Number.isFinite(Number(entry.value)) ? Math.trunc(Number(entry.value)) : 0,
+    })
+  }
+
+  return attributes
+}
+
+function readMethod(raw: unknown): AttributeMethod {
+  return raw === 'manual' ? 'manual' : 'roll'
 }
 
 function readClassStates(raw: unknown): Record<string, ClassSelectionState> {
@@ -54,6 +98,8 @@ function readClassStates(raw: unknown): Record<string, ClassSelectionState> {
     states[code] = {
       subclassCode: typeof item.subclassCode === 'string' && item.subclassCode ? item.subclassCode : null,
       subclassName: asString(item.subclassName),
+      attributes: readAttributes(item.attributes),
+      attributesMethod: readMethod(item.attributesMethod),
     }
   }
 
@@ -65,21 +111,25 @@ function normalize(raw: unknown): CreateDraft | null {
     return null
   }
 
-  const draft = raw as Partial<CreateDraft>
+  const draft = raw as Partial<CreateDraft> & { version?: number }
   const version = Number(draft.version)
-  // 5 → 6：只是把当前职业的子职选择补进 classStates
-  if (version !== 5 && version !== DRAFT_VERSION) {
+  // 5 / 6 / 7：旧草稿都能升上来，缺的字段补默认值
+  if (![5, 6, DRAFT_VERSION].includes(version)) {
     return null
   }
 
   const step = Number(draft.step)
   const classCode = typeof draft.classCode === 'string' && draft.classCode ? draft.classCode : null
   const classStates = readClassStates(draft.classStates)
+  const attributes = readAttributes(draft.attributes)
+  const attributesMethod = readMethod(draft.attributesMethod)
 
-  if (classCode && !classStates[classCode] && draft.subclassCode) {
+  if (classCode && !classStates[classCode]) {
     classStates[classCode] = {
-      subclassCode: draft.subclassCode,
+      subclassCode: typeof draft.subclassCode === 'string' && draft.subclassCode ? draft.subclassCode : null,
       subclassName: asString(draft.subclassName),
+      attributes,
+      attributesMethod,
     }
   }
 
@@ -91,6 +141,8 @@ function normalize(raw: unknown): CreateDraft | null {
     className: asString(draft.className),
     subclassCode: typeof draft.subclassCode === 'string' && draft.subclassCode ? draft.subclassCode : null,
     subclassName: asString(draft.subclassName),
+    attributes,
+    attributesMethod,
     classStates,
     updatedAt: typeof draft.updatedAt === 'string' ? draft.updatedAt : new Date().toISOString(),
   }

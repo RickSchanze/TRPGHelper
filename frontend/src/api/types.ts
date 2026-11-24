@@ -128,6 +128,10 @@ export interface ClassOption {
   description: string
   hitDie: string
   primaryAbility: string
+  /** 职业的豁免熟练，例如「力量,体质」 */
+  savingThrows?: string
+  /** 1 级即可施法时的施法属性，例如「魅力」；空表示 1 级还不施法 */
+  spellcastingAbility?: string
   features: string[]
   /** 管理台配置的职业配图，可能为空（为空时用主色块） */
   imageUrl?: string

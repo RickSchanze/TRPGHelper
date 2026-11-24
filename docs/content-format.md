@@ -54,6 +54,8 @@
 | `imageUrl` | 否 | 职业卡配图：`/static/classes/xxx.jpg` 或 `/uploads/xxx.png` |
 | `features` | 否 | 职业卡上的特性列表，**一行一条**（Excel 单元格内 Alt+Enter 换行） |
 | `accent` | 否 | 职业卡主色（没配图时用色块），例如 `#3f5a3a` |
+| `savingThrows` | 否 | 豁免熟练，逗号分隔，例如 `力量,体质`；决定属性步骤的豁免加值 |
+| `spellcastingAbility` | 否 | 1 级即可施法时的施法属性，例如 `魅力`；留空表示 1 级不施法（游侠 2 级才拿施法） |
 
 ## 子职.xlsx（工作表 subclasses）
 

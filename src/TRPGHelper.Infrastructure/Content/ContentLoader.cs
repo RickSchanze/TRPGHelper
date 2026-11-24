@@ -194,7 +194,7 @@ public static class ContentLoader
         foreach (var row in XlsxHelpers.ReadRows(
                      XlsxHelpers.RequireSheet(workbook, path, "classes"),
                      path,
-                     ["id", "systemId", "name", "description", "hitDie", "primaryAbility", "imageUrl", "features", "accent"]))
+                     ["id", "systemId", "name", "description", "hitDie", "primaryAbility", "imageUrl", "features", "accent", "savingThrows", "spellcastingAbility"]))
         {
             var id = row.Required("id", path).ToLowerInvariant();
             if (!ids.Add(id))
@@ -222,6 +222,8 @@ public static class ContentLoader
                     features,
                     imageUrl = imageUrl.Length == 0 ? null : imageUrl,
                     accent = accent.Length == 0 ? null : accent,
+                    savingThrows = row["savingThrows"].Trim(),
+                    spellcastingAbility = row["spellcastingAbility"].Trim(),
                 }, JsonOptions),
                 (index + 1) * 10));
             index += 1;

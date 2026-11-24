@@ -6,6 +6,10 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     port: 5174,
+    // 编辑器 / 工具写文件时会留下 .xxx.tmpdir 临时目录，别让 watcher 去监听
+    watch: {
+      ignored: ['**/.*.tmpdir/**', '**/*.tmp', '**/.*.tmp'],
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:5080',

@@ -70,6 +70,8 @@ const classForm = reactive({
   imageUrl: '',
   hitDie: 'd10',
   primaryAbility: '',
+  savingThrows: '',
+  spellcastingAbility: '',
   featuresText: '',
   isEnabled: true,
   sortOrder: 10,
@@ -238,6 +240,8 @@ function openClassEditor(entry: AdminGeneratorEntry): void {
     imageUrl: typeof extra.imageUrl === 'string' ? extra.imageUrl : '',
     hitDie: typeof extra.hitDie === 'string' ? extra.hitDie : 'd10',
     primaryAbility: typeof extra.primaryAbility === 'string' ? extra.primaryAbility : '',
+    savingThrows: typeof extra.savingThrows === 'string' ? extra.savingThrows : '',
+    spellcastingAbility: typeof extra.spellcastingAbility === 'string' ? extra.spellcastingAbility : '',
     featuresText: features.join('\n'),
     isEnabled: entry.isEnabled,
     sortOrder: entry.sortOrder,
@@ -255,6 +259,8 @@ function openClassCreate(): void {
     imageUrl: '',
     hitDie: 'd10',
     primaryAbility: '',
+    savingThrows: '',
+    spellcastingAbility: '',
     featuresText: '',
     isEnabled: true,
     sortOrder: nextSort,
@@ -383,6 +389,8 @@ async function saveClass(): Promise<void> {
       description: classForm.description,
       hitDie: classForm.hitDie,
       primaryAbility: classForm.primaryAbility,
+      savingThrows: classForm.savingThrows,
+      spellcastingAbility: classForm.spellcastingAbility,
       features: previewFeatures.value,
       imageUrl: classForm.imageUrl.trim(),
     },
@@ -605,6 +613,15 @@ onMounted(async () => {
               </el-form-item>
               <el-form-item label="主属性">
                 <el-input v-model="classForm.primaryAbility" placeholder="敏捷 / 感知" />
+              </el-form-item>
+            </div>
+
+            <div class="form-grid">
+              <el-form-item label="豁免熟练（逗号分隔）">
+                <el-input v-model="classForm.savingThrows" placeholder="力量,体质" />
+              </el-form-item>
+              <el-form-item label="1 级施法属性（空 = 不施法）">
+                <el-input v-model="classForm.spellcastingAbility" placeholder="魅力" />
               </el-form-item>
             </div>
 

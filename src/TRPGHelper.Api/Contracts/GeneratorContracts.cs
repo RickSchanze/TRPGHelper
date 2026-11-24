@@ -26,6 +26,8 @@ public sealed record ClassOptionDto(
     string Description,
     string HitDie,
     string PrimaryAbility,
+    string SavingThrows,
+    string SpellcastingAbility,
     IReadOnlyList<string> Features,
     string? ImageUrl,
     string? Accent);
