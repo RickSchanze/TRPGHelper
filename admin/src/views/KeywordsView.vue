@@ -6,6 +6,7 @@ import { errorMessage, http, resolveAssetUrl } from '../api/client'
 import type { AdminKeyword, SaveKeywordPayload } from '../api/types'
 
 const keywords = ref<AdminKeyword[]>([])
+const categories = ref<Array<{ code: string; name: string }>>([])
 const loading = ref(false)
 const saving = ref(false)
 const dialogVisible = ref(false)
@@ -76,6 +77,18 @@ async function load(): Promise<void> {
     ElMessage.error(errorMessage(error))
   } finally {
     loading.value = false
+  }
+}
+
+async function loadCategories(): Promise<void> {
+  try {
+    const { data } = await http.get<Array<{ code: string; name: string }>>('/api/admin/keyword-categories')
+    categories.value = data
+    if (!form.category && data.length) {
+      form.category = data[0].name
+    }
+  } catch (error) {
+    ElMessage.error(errorMessage(error))
   }
 }
 
@@ -170,7 +183,10 @@ async function remove(keyword: AdminKeyword): Promise<void> {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  void load()
+  void loadCategories()
+})
 </script>
 
 <template>
@@ -198,6 +214,7 @@ onMounted(load)
     />
 
     <el-table :data="keywords" border size="small">
+      <el-table-column prop="code" label="ID" width="100" />
       <el-table-column prop="key" label="关键词" width="130" />
       <el-table-column prop="category" label="分类" width="110" />
       <el-table-column prop="title" label="标题" width="160">
@@ -245,8 +262,15 @@ onMounted(load)
               <el-form-item label="关键词（不用写方括号）">
                 <el-input v-model="form.key" placeholder="敏捷" />
               </el-form-item>
-              <el-form-item label="分类（决定导出到哪个文件）">
-                <el-input v-model="form.category" placeholder="属性 / 规则 / 战斗" />
+              <el-form-item label="分类（决定导出到哪个文件 / ID 前三位）">
+                <el-select v-model="form.category" placeholder="选择分类" style="width: 100%">
+                  <el-option
+                    v-for="item in categories"
+                    :key="item.code"
+                    :label="`${item.code} ${item.name}`"
+                    :value="item.name"
+                  />
+                </el-select>
               </el-form-item>
               <el-form-item label="标题（可留空，默认同关键词）">
                 <el-input v-model="form.title" placeholder="敏捷" />

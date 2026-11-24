@@ -28,7 +28,8 @@ public static class ContentLoader
         LoadInspirations(dataPath, systems, entries);
 
         var steps = LoadSteps(dataPath, systems);
-        var keywords = LoadKeywords(dataPath);
+        var keywordCategories = LoadKeywordCategories(dataPath);
+        var keywords = LoadKeywords(dataPath, keywordCategories);
         var classLevels = LoadClassLevels(dataPath, entries);
 
         return new ContentBundle
@@ -37,6 +38,7 @@ public static class ContentLoader
             Attributes = attributes,
             GeneratorEntries = entries,
             CreationSteps = steps,
+            KeywordCategories = keywordCategories,
             Keywords = keywords,
             ClassLevels = classLevels,
         };
@@ -328,9 +330,52 @@ public static class ContentLoader
         return steps;
     }
 
-    /* ---------------- 关键词（按分类分文件） ---------------- */
+    /* ---------------- 关键词分类与关键词 ---------------- */
 
-    private static List<ContentKeyword> LoadKeywords(string dataPath)
+    private static List<ContentKeywordCategory> LoadKeywordCategories(string dataPath)
+    {
+        var path = Path.Combine(dataPath, ContentPaths.KeywordCategoriesFile);
+        using var workbook = OpenWorkbook(path);
+        var categories = new List<ContentKeywordCategory>();
+        var codes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var row in XlsxHelpers.ReadRows(
+                     XlsxHelpers.RequireSheet(workbook, path, "categories"),
+                     path,
+                     ["id", "name"]))
+        {
+            var code = row.Required("id", path);
+            if (!int.TryParse(code, out _) || code.Length != 3)
+            {
+                row.Fail(path, $"分类编号「{code}」必须是三位数字，例如 001。");
+            }
+
+            if (!codes.Add(code))
+            {
+                row.Fail(path, $"分类编号「{code}」重复。");
+            }
+
+            var name = row.Required("name", path);
+            if (!names.Add(name))
+            {
+                row.Fail(path, $"分类名称「{name}」重复。");
+            }
+
+            categories.Add(new ContentKeywordCategory(code, name));
+        }
+
+        if (categories.Count == 0)
+        {
+            throw new ContentException($"{ContentPaths.KeywordCategoriesFile} 里没有任何关键词分类。");
+        }
+
+        return categories;
+    }
+
+    private static List<ContentKeyword> LoadKeywords(
+        string dataPath,
+        IReadOnlyList<ContentKeywordCategory> categories)
     {
         var files = Directory
             .GetFiles(dataPath, $"{ContentPaths.KeywordFilePrefix}.*.xlsx")
@@ -343,8 +388,8 @@ public static class ContentLoader
                 $"data/ 下没有关键词文件，命名规则是「{ContentPaths.KeywordFilePrefix}.分类.xlsx」，例如 关键词.属性.xlsx。");
         }
 
-        var keywords = new List<ContentKeyword>();
-        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var codeByName = categories.ToDictionary(category => category.Name, category => category.Code, StringComparer.OrdinalIgnoreCase);
+        var raw = new List<(string Path, string Category, string Key, string Id, string Title, string Content, string? ImageUrl, bool IsEnabled)>();
 
         foreach (var path in files)
         {
@@ -356,29 +401,81 @@ public static class ContentLoader
                          path,
                          ["key", "title", "content", "imageUrl", "isEnabled"]))
             {
-                var key = row.Required("key", path);
-                if (!keys.Add(key))
-                {
-                    row.Fail(path, $"关键词「{key}」重复（同分类文件之间也不能重名）。");
-                }
-
                 var category = row["分类"].Trim();
                 if (category.Length == 0)
                 {
                     category = fileCategory;
                 }
 
-                var title = row["title"].Trim();
-                var imageUrl = row["imageUrl"].Trim();
+                if (!codeByName.ContainsKey(category))
+                {
+                    row.Fail(path, $"分类「{category}」没有在 {ContentPaths.KeywordCategoriesFile} 里登记。");
+                }
 
-                keywords.Add(new ContentKeyword(
-                    key,
+                raw.Add((
+                    path,
                     category,
-                    title.Length == 0 ? key : title,
+                    row.Required("key", path),
+                    row["id"].Trim(),
+                    row["title"].Trim(),
                     row.Required("content", path),
-                    imageUrl.Length == 0 ? null : imageUrl,
+                    row["imageUrl"].Trim(),
                     row.Bool("isEnabled")));
             }
+        }
+
+        // 先收集显式 ID，再给没写 ID 的词条按分类顺序补号，避免和已有编号撞车。
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in raw.Where(item => item.Id.Length > 0))
+        {
+            if (!used.Add(item.Id))
+            {
+                throw new ContentException($"关键词 ID「{item.Id}」重复（{Path.GetFileName(item.Path)}）。");
+            }
+        }
+
+        var counters = categories.ToDictionary(category => category.Code, _ => 0, StringComparer.OrdinalIgnoreCase);
+        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var keywords = new List<ContentKeyword>();
+
+        foreach (var item in raw)
+        {
+            if (!keys.Add(item.Key))
+            {
+                throw new ContentException($"关键词「{item.Key}」重复（同分类文件之间也不能重名）。");
+            }
+
+            var categoryCode = codeByName[item.Category];
+            var code = item.Id;
+
+            if (code.Length == 0)
+            {
+                do
+                {
+                    counters[categoryCode] += 1;
+                    code = categoryCode + counters[categoryCode].ToString("D5");
+                }
+                while (used.Contains(code));
+
+                used.Add(code);
+            }
+            else
+            {
+                if (code.Length != 8 || !code.StartsWith(categoryCode, StringComparison.OrdinalIgnoreCase) || !int.TryParse(code, out _))
+                {
+                    throw new ContentException(
+                        $"关键词「{item.Key}」的 ID「{code}」不符合规则：应为 8 位数字，且前三位是分类编号 {categoryCode}（例如 {categoryCode}00001）。");
+                }
+            }
+
+            keywords.Add(new ContentKeyword(
+                code,
+                item.Key,
+                item.Category,
+                item.Title.Length == 0 ? item.Key : item.Title,
+                item.Content,
+                item.ImageUrl.Length == 0 ? null : item.ImageUrl,
+                item.IsEnabled));
         }
 
         return keywords;
@@ -406,10 +503,20 @@ public static class ContentLoader
         var path = Path.Combine(dataPath, ContentPaths.LevelsFile);
         using var workbook = OpenWorkbook(path);
 
-        var classIds = entries
+        var classEntries = entries
             .Where(entry => entry.Kind == JsonKey(GeneratorKind.Class))
-            .Select(entry => entry.Category)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            .ToList();
+
+        var classByCode = classEntries.ToDictionary(
+            entry => entry.Category,
+            entry => entry.Category,
+            StringComparer.OrdinalIgnoreCase);
+
+        var classByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in classEntries)
+        {
+            classByName.TryAdd(entry.Value, entry.Category);
+        }
 
         var levels = new List<ContentLevelFeature>();
         var counters = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -419,10 +526,16 @@ public static class ContentLoader
                      path,
                      ["classId", "level", "title", "description", "isEnabled"]))
         {
-            var classId = row.Required("classId", path).ToLowerInvariant();
-            if (!classIds.Contains(classId))
+            var rawClassId = row.Required("classId", path).Trim();
+            var classId = classByCode.TryGetValue(rawClassId, out var code)
+                ? code
+                : classByName.TryGetValue(rawClassId, out var byName)
+                    ? byName
+                    : null;
+
+            if (classId is null)
             {
-                row.Fail(path, $"classId「{classId}」在 {ContentPaths.ClassesFile} 的 classes 工作表里不存在。");
+                row.Fail(path, $"classId「{rawClassId}」既不是 {ContentPaths.ClassesFile} 里的职业 id，也不是职业名。");
             }
 
             var level = row.Int("level");

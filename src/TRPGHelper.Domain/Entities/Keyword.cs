@@ -9,6 +9,9 @@ public class Keyword
     public Guid Id { get; set; } = Guid.NewGuid();
 
     /// <summary>关键词本身，不含方括号，例如「敏捷」。不区分大小写唯一。</summary>
+    /// <summary>关键词编号：三位分类号 + 五位序号，例如 00200001。</summary>
+    public string Code { get; set; } = string.Empty;
+
     public string Key { get; set; } = string.Empty;
 
     /// <summary>弹窗标题，为空时用 Key。</summary>

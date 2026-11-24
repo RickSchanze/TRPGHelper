@@ -103,6 +103,20 @@ public static class ContentSynchronizer
             });
         }
 
+        // ---------- 关键词分类：整份替换 ----------
+        db.KeywordCategories.RemoveRange(await db.KeywordCategories.ToListAsync(cancellationToken));
+
+        for (var index = 0; index < bundle.KeywordCategories.Count; index += 1)
+        {
+            var category = bundle.KeywordCategories[index];
+            db.KeywordCategories.Add(new KeywordCategory
+            {
+                Code = category.Code,
+                Name = category.Name,
+                SortOrder = (index + 1) * 10,
+            });
+        }
+
         // ---------- 关键词：整份替换 ----------
         db.Keywords.RemoveRange(await db.Keywords.ToListAsync(cancellationToken));
 
@@ -111,6 +125,7 @@ public static class ContentSynchronizer
             var keyword = bundle.Keywords[index];
             db.Keywords.Add(new Keyword
             {
+                Code = keyword.Code,
                 Key = keyword.Key,
                 Category = keyword.Category,
                 Title = keyword.Title,

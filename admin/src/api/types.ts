@@ -109,6 +109,7 @@ export interface SaveCreationStepPayload {
 
 export interface AdminKeyword {
   id: string
+  code: string
   key: string
   category: string
   title?: string | null

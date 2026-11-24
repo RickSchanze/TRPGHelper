@@ -27,6 +27,9 @@ public static class ContentPaths
 
     public const string LevelsFile = "职业等级.xlsx";
 
+    /// <summary>关键词分类编号表：三位分类号 + 名称，关键词 ID = 分类号 + 五位序号。</summary>
+    public const string KeywordCategoriesFile = "关键词分类.xlsx";
+
     /// <summary>关键词按分类拆成多个文件，命名规则：关键词.分类.xlsx（分类可以带点，例如 法术.一环）。</summary>
     public const string KeywordFilePrefix = "关键词";
 

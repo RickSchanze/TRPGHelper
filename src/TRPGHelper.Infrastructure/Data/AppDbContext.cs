@@ -20,6 +20,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<Keyword> Keywords => Set<Keyword>();
 
+    public DbSet<KeywordCategory> KeywordCategories => Set<KeywordCategory>();
+
     public DbSet<ClassLevelFeature> ClassLevelFeatures => Set<ClassLevelFeature>();
 
     public DbSet<CharacterCard> CharacterCards => Set<CharacterCard>();
@@ -82,12 +84,23 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             builder.ToTable("Keywords");
             builder.HasKey(x => x.Id);
+            builder.Property(x => x.Code).HasMaxLength(16).HasDefaultValue(string.Empty).IsRequired();
             builder.Property(x => x.Key).HasMaxLength(64).IsRequired();
             builder.Property(x => x.Title).HasMaxLength(128);
             builder.Property(x => x.Content).HasMaxLength(4000).IsRequired();
             builder.Property(x => x.ImageUrl).HasMaxLength(512);
             builder.HasIndex(x => x.Key).IsUnique();
             builder.HasIndex(x => x.IsEnabled);
+        });
+
+        modelBuilder.Entity<KeywordCategory>(builder =>
+        {
+            builder.ToTable("KeywordCategories");
+            builder.HasKey(x => x.Id);
+            builder.Property(x => x.Code).HasMaxLength(8).IsRequired();
+            builder.Property(x => x.Name).HasMaxLength(32).IsRequired();
+            builder.HasIndex(x => x.Code).IsUnique();
+            builder.HasIndex(x => x.Name).IsUnique();
         });
 
         modelBuilder.Entity<ClassLevelFeature>(builder =>

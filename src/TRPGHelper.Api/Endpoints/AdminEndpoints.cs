@@ -94,6 +94,10 @@ public static class AdminEndpoints
             .WithName("AdminListKeywords")
             .WithSummary("关键词词条列表");
 
+        group.MapGet("/keyword-categories", ListKeywordCategoriesAsync)
+            .WithName("AdminListKeywordCategories")
+            .WithSummary("关键词分类编号列表（分类编号 + 名称）");
+
         group.MapPost("/keywords", CreateKeywordAsync)
             .WithName("AdminCreateKeyword")
             .WithSummary("新增关键词词条");
@@ -794,6 +798,20 @@ public static class AdminEndpoints
     private static CreationStepKind ParseStepKind(string? raw)
         => TryParseStepKind(raw, out var kind) ? kind : CreationStepKind.Class;
 
+    private static async Task<IResult> ListKeywordCategoriesAsync(
+        AppDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var items = await db.KeywordCategories
+            .AsNoTracking()
+            .OrderBy(category => category.SortOrder)
+            .ThenBy(category => category.Code)
+            .Select(category => new { category.Code, category.Name })
+            .ToListAsync(cancellationToken);
+
+        return Results.Ok(items);
+    }
+
     private static async Task<IResult> ListKeywordsAsync(
         AppDbContext db,
         string? keyword,
@@ -828,8 +846,10 @@ public static class AdminEndpoints
         }
 
         var now = DateTime.UtcNow;
+        var categoryCode = await ResolveKeywordCategoryCode(db, request.Category, cancellationToken);
         var keyword = new Keyword
         {
+            Code = await NextKeywordCode(db, categoryCode, cancellationToken),
             Key = NormalizeKeywordKey(request.Key),
             Category = request.Category?.Trim() ?? string.Empty,
             Title = NormalizeOptional(request.Title),
@@ -866,6 +886,11 @@ public static class AdminEndpoints
         }
 
         keyword.Key = NormalizeKeywordKey(request.Key);
+        var categoryCode = await ResolveKeywordCategoryCode(db, request.Category, cancellationToken);
+        if (!keyword.Code.StartsWith(categoryCode, StringComparison.OrdinalIgnoreCase))
+        {
+            keyword.Code = await NextKeywordCode(db, categoryCode, cancellationToken);
+        }
         keyword.Category = request.Category?.Trim() ?? string.Empty;
         keyword.Title = NormalizeOptional(request.Title);
         keyword.Content = request.Content!.Trim();
@@ -941,11 +966,66 @@ public static class AdminEndpoints
             return Results.Conflict(new { message = $"关键词「{key}」已经存在了。" });
         }
 
+        var category = (request.Category ?? string.Empty).Trim();
+        if (category.Length == 0
+            || !await db.KeywordCategories.AnyAsync(item => item.Name == category, cancellationToken))
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["category"] = [$"分类「{category}」还没有编号，请先在 关键词分类.xlsx 里登记。"],
+            });
+        }
+
         return null;
+    }
+
+    /// <summary>分类编号：关键词 ID 的前三位。</summary>
+    private static async Task<string> ResolveKeywordCategoryCode(
+        AppDbContext db,
+        string? categoryRaw,
+        CancellationToken cancellationToken)
+    {
+        var name = (categoryRaw ?? string.Empty).Trim();
+        var category = await db.KeywordCategories
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Name == name, cancellationToken);
+
+        if (category is null)
+        {
+            throw new InvalidOperationException(
+                $"分类「{name}」还没有编号，请先在 data/关键词分类.xlsx 里登记（例如 004 法术）。");
+        }
+
+        return category.Code;
+    }
+
+    /// <summary>取当前分类里下一个可用的五位序号。</summary>
+    private static async Task<string> NextKeywordCode(
+        AppDbContext db,
+        string categoryCode,
+        CancellationToken cancellationToken)
+    {
+        var codes = await db.Keywords
+            .AsNoTracking()
+            .Where(item => item.Code.StartsWith(categoryCode))
+            .Select(item => item.Code)
+            .ToListAsync(cancellationToken);
+
+        var max = 0;
+        foreach (var code in codes)
+        {
+            if (code.Length == 8 && int.TryParse(code.AsSpan(3), out var sequence))
+            {
+                max = Math.Max(max, sequence);
+            }
+        }
+
+        return categoryCode + (max + 1).ToString("D5");
     }
 
     private static AdminKeywordDto ToAdminKeywordDto(Keyword keyword) => new(
         keyword.Id,
+        keyword.Code,
         keyword.Key,
         keyword.Category,
         keyword.Title,

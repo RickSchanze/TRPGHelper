@@ -17,6 +17,7 @@
               <text class="kw-title">{{ card.title }}</text>
               <text v-if="card.isTop" class="kw-x" @tap.stop="handleClose">×</text>
             </view>
+            <text v-if="card.code" class="kw-code">ID {{ card.code }}</text>
 
             <image
               v-if="card.imageUrl"
@@ -65,6 +66,7 @@ interface CardView {
   id: number
   key: string
   title: string
+  code: string
   content: string
   imageUrl: string
   /** 0 = 最前面，数字越大越靠后 */
@@ -84,6 +86,7 @@ const cards = computed<CardView[]>(() => {
       id: item.id,
       key: item.key,
       title: entry?.title || item.key,
+      code: entry?.code || '',
       content: entry?.content || '',
       imageUrl: resolveMediaUrl(entry?.imageUrl),
       depth,
@@ -226,6 +229,15 @@ function handleCloseAll(): void {
   font-weight: 600;
   letter-spacing: 1px;
   word-break: break-word;
+}
+
+.kw-code {
+  display: block;
+  margin-top: -2px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #a08a6c;
+  font-variant-numeric: tabular-nums;
 }
 
 .kw-x {

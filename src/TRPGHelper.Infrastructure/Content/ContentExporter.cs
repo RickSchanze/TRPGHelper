@@ -240,6 +240,24 @@ public static class ContentExporter
             written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.FlowFile)));
         }
 
+        // ---------- 关键词分类编号 ----------
+        var keywordCategories = await db.KeywordCategories
+            .AsNoTracking()
+            .OrderBy(category => category.SortOrder)
+            .ThenBy(category => category.Code)
+            .ToListAsync(cancellationToken);
+
+        var categoryRows = keywordCategories
+            .Select(category => new object?[] { category.Code, category.Name })
+            .ToList();
+
+        using (var workbook = new XLWorkbook())
+        {
+            XlsxHelpers.WriteSheet(workbook, "categories", ["id", "name"], categoryRows,
+                new Dictionary<string, double> { ["id"] = 8, ["name"] = 16 });
+            written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.KeywordCategoriesFile)));
+        }
+
         // ---------- 关键词（按分类拆文件） ----------
         foreach (var existing in Directory.GetFiles(dataPath, $"{ContentPaths.KeywordFilePrefix}.*.xlsx"))
         {
@@ -259,6 +277,7 @@ public static class ContentExporter
             var rows = group
                 .Select(keyword => new object?[]
                 {
+                    keyword.Code,
                     keyword.Key,
                     group.Key,
                     keyword.Title ?? string.Empty,
@@ -270,10 +289,11 @@ public static class ContentExporter
 
             using var workbook = new XLWorkbook();
             XlsxHelpers.WriteSheet(workbook, "keywords",
-                ["key", "分类", "title", "content", "imageUrl", "isEnabled"],
+                ["id", "key", "分类", "title", "content", "imageUrl", "isEnabled"],
                 rows,
                 new Dictionary<string, double>
                 {
+                    ["id"] = 10,
                     ["key"] = 14,
                     ["分类"] = 12,
                     ["title"] = 14,
@@ -287,6 +307,11 @@ public static class ContentExporter
         }
 
         // ---------- 职业等级成长 ----------
+        var classNames = await db.GeneratorEntries
+            .AsNoTracking()
+            .Where(entry => entry.Kind == GeneratorKind.Class)
+            .ToDictionaryAsync(entry => entry.Category, entry => entry.Value, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
         var levelFeatures = await db.ClassLevelFeatures
             .AsNoTracking()
             .OrderBy(feature => feature.ClassCode)
@@ -297,7 +322,7 @@ public static class ContentExporter
         var levelRows = levelFeatures
             .Select(feature => new object?[]
             {
-                feature.ClassCode,
+                classNames.TryGetValue(feature.ClassCode, out var className) ? className : feature.ClassCode,
                 feature.Level,
                 feature.Title,
                 feature.Description,

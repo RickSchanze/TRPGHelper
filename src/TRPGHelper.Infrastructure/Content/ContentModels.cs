@@ -46,7 +46,12 @@ public sealed record ContentCreationStep(
     string? Description,
     bool IsEnabled = true);
 
+public sealed record ContentKeywordCategory(
+    string Code,
+    string Name);
+
 public sealed record ContentKeyword(
+    string Code,
     string Key,
     string Category,
     string? Title,
@@ -81,6 +86,8 @@ public sealed class ContentBundle
     public required IReadOnlyList<GeneratorEntryContent> GeneratorEntries { get; init; }
 
     public required IReadOnlyList<ContentCreationStep> CreationSteps { get; init; }
+
+    public required IReadOnlyList<ContentKeywordCategory> KeywordCategories { get; init; }
 
     public required IReadOnlyList<ContentKeyword> Keywords { get; init; }
 
