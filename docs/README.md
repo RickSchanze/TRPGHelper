@@ -17,6 +17,7 @@
 | `GeneratorEntries` | 生成器素材：`namePart` / `occupation` / `background` / `class` / `race` / `inspiration` |
 | `CreationSteps` | 车卡流程步骤（`Kind` 决定前端渲染哪种面板；规则书选择不在其中） |
 | `Keywords` | 关键词词条：点击 `[关键词]` 弹出解释，解释正文可再嵌关键词 |
+| `ClassLevelFeatures` | 职业等级成长：某职业 1-20 级各获得什么（管理台「成长」维护，副职暂未接入） |
 | `GeneratorSeedData.cs` | 出厂素材与默认流程（首次启动写入，之后以管理台为准） |
 | `GeneratorCatalogService.cs` | 公共接口读取素材、按姓名模板拼名字 |
 | `AdminEndpoints.cs` | `/api/admin/*` 增删改查 + 图片上传，要求 `admin` 角色 |
@@ -40,6 +41,13 @@
 - 选规则书（DND / COC）是流程前置条件，**不算步骤**。
 - 目前只有 `class`（选择职业）实现了面板，其它类型前端会渲染占位面板，等实现后再接。
 - 职业卡配图存在 `class` 素材的 `extra.imageUrl`；管理台上传的图片放在 `src/TRPGHelper.Api/App_Data/uploads/`（已在 .gitignore 里），通过 `/uploads/...` 访问。
+
+### 职业详情 / 等级成长
+
+- 前端职业卡右上角「详情 ›」打开职业详情弹窗：封面图、生命骰、主属性、描述，以及 **1-20 级每级获得什么**（时间线展示）。
+- 数据表 `ClassLevelFeatures`：`SystemCode` + `ClassCode` + `Level` + `Title` + `Description`（支持关键词）+ `SortOrder` + `IsEnabled`。
+- 出厂按 DND 5E SRD 基础职业特性种入 5 个职业，**副职（武术范型 / 结社 / 誓言 / 范型 / 传统）暂未接入**，相关等级用「副职特性（暂未接入）」占位。
+- 接口：`GET /api/classes/{classCode}/levels?systemCode=dnd5e`（公开）；管理台「车卡流程 → 编辑职业 → 成长」用 `GET/PUT /api/admin/classes/{classCode}/levels` 整份替换。
 
 ### 关键词标记
 

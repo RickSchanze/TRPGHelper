@@ -72,7 +72,7 @@ npm run build      # 产物在 admin/dist
 | 页面 | 能改什么 |
 | --- | --- |
 | 概览 | 系统 / 素材 / 用户 / 卡数量，按素材类型分布 |
-| 车卡流程 | 配置车卡流程有几步、先后顺序、每步的标题与说明；**「选择职业」这一步点「编辑职业」可以逐张改职业的描述和配图，右侧实时预览前端职业卡**；右侧抽屉可以预览前端 stepper（选规则书不算步骤） |
+| 车卡流程 | 配置车卡流程有几步、先后顺序、每步的标题与说明；**「选择职业」这一步点「编辑职业」可以逐张改职业的描述和配图**，点「成长」维护该职业 1-20 级获得什么；右侧实时预览前端职业卡；右侧抽屉可以预览前端 stepper（选规则书不算步骤） |
 | 关键词 | 维护 `[方括号]` 词条：关键词、标题、解释正文（可再嵌关键词）、配图（可上传）；弹窗预览与「未定义引用」提示 |
 | 规则系统（暂隐藏） | 属性模板（key + 名称 + 骰子公式）；姓名模板（`{surname}{given}`、`{first}·{epithet}`） |
 | 素材库（暂隐藏） | 姓名片段、职业、背景、职业卡、种族、灵感的增删改查 |
@@ -138,6 +138,7 @@ npm run build      # 产物在 admin/dist
 | GET | `/api/generator/inspirations` | 车卡灵感 |
 | GET | `/api/creation-flow` | 车卡流程步骤（按 `systemCode` 过滤；规则书选择不算步骤） |
 | GET | `/api/keywords` | 关键词词条（启用中的，供前端点击弹窗） |
+| GET | `/api/classes/{classCode}/levels` | 职业等级成长（1-20 级，副职暂未接入） |
 
 管理台接口（都需要 `admin` 角色，见 `AdminEndpoints.PolicyName`）：
 
@@ -161,6 +162,8 @@ npm run build      # 产物在 admin/dist
 | POST | `/api/admin/keywords` | 新增关键词词条 |
 | PUT | `/api/admin/keywords/{id}` | 更新关键词词条 |
 | DELETE | `/api/admin/keywords/{id}` | 删除关键词词条（前端恢复成原样显示） |
+| GET | `/api/admin/classes/{classCode}/levels` | 职业等级成长（含停用项） |
+| PUT | `/api/admin/classes/{classCode}/levels` | 整份替换职业等级成长 |
 
 素材类型（`kind`）：`namePart`、`occupation`、`background`、`class`、`race`、`inspiration`。职业卡 / 种族的扩展字段放在 `extra` 里，例如职业卡：
 ```json

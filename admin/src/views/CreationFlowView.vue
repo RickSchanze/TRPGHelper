@@ -4,12 +4,14 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import type { UploadRequestOptions } from 'element-plus'
 import { errorMessage, http, resolveAssetUrl } from '../api/client'
 import type {
+  AdminClassLevelFeature,
   AdminCreationStep,
   AdminGeneratorEntry,
   AdminSystem,
   CreationFlowPreview,
   CreationStepKindKey,
   PagedResult,
+  SaveClassLevelItem,
   SaveCreationStepPayload,
 } from '../api/types'
 
@@ -78,6 +80,13 @@ const previewFeatures = computed(() =>
     .map((line) => line.trim())
     .filter(Boolean),
 )
+
+const levelsVisible = ref(false)
+const levelsLoading = ref(false)
+const levelsSaving = ref(false)
+const levelsClassCode = ref('')
+const levelsClassName = ref('')
+const levelItems = ref<SaveClassLevelItem[]>([])
 
 const previewImage = computed(() => resolveAssetUrl(classForm.imageUrl))
 
@@ -265,6 +274,79 @@ async function deleteClass(entry: AdminGeneratorEntry): Promise<void> {
     await loadClasses()
   } catch (error) {
     ElMessage.error(errorMessage(error))
+  }
+}
+
+/* ---------------- 等级成长 ---------------- */
+
+async function openLevels(entry: AdminGeneratorEntry): Promise<void> {
+  levelsClassCode.value = entry.category
+  levelsClassName.value = entry.value
+  levelsVisible.value = true
+  await loadLevels()
+}
+
+async function loadLevels(): Promise<void> {
+  levelsLoading.value = true
+  try {
+    const { data } = await http.get<AdminClassLevelFeature[]>(
+      `/api/admin/classes/${encodeURIComponent(levelsClassCode.value)}/levels`,
+      { params: { systemCode: classSystemCode.value } },
+    )
+    levelItems.value = data.map((item) => ({
+      level: item.level,
+      title: item.title,
+      description: item.description,
+      sortOrder: item.sortOrder,
+      isEnabled: item.isEnabled,
+    }))
+  } catch (error) {
+    ElMessage.error(errorMessage(error))
+  } finally {
+    levelsLoading.value = false
+  }
+}
+
+function addLevelRow(): void {
+  const maxLevel = levelItems.value.reduce((max, item) => Math.max(max, item.level), 0)
+  levelItems.value.push({
+    level: Math.min(20, maxLevel + 1 || 1),
+    title: '',
+    description: '',
+    sortOrder: (levelItems.value.length + 1) * 10,
+    isEnabled: true,
+  })
+}
+
+function removeLevelRow(index: number): void {
+  levelItems.value.splice(index, 1)
+}
+
+async function saveLevels(): Promise<void> {
+  const invalid = levelItems.value.find((item) => !item.title.trim() || !item.description.trim())
+  if (invalid) {
+    ElMessage.warning('特性名和说明都不能为空')
+    return
+  }
+
+  levelsSaving.value = true
+  try {
+    await http.put(`/api/admin/classes/${encodeURIComponent(levelsClassCode.value)}/levels`, {
+      systemCode: classSystemCode.value,
+      items: levelItems.value.map((item) => ({
+        level: Number(item.level) || 1,
+        title: item.title.trim(),
+        description: item.description.trim(),
+        sortOrder: Number(item.sortOrder) || 0,
+        isEnabled: item.isEnabled,
+      })),
+    })
+    ElMessage.success('已保存')
+    levelsVisible.value = false
+  } catch (error) {
+    ElMessage.error(errorMessage(error))
+  } finally {
+    levelsSaving.value = false
   }
 }
 
@@ -471,9 +553,10 @@ onMounted(async () => {
             <span class="muted">{{ classDescription(row) || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="140">
+        <el-table-column label="操作" width="200">
           <template #default="{ row }">
             <el-button link type="primary" @click="openClassEditor(row)">编辑</el-button>
+            <el-button link type="primary" @click="openLevels(row)">成长</el-button>
             <el-button link type="danger" @click="deleteClass(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -590,6 +673,58 @@ onMounted(async () => {
       <template #footer>
         <el-button @click="classDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="classSaving" @click="saveClass">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 职业等级成长 -->
+    <el-dialog
+      v-model="levelsVisible"
+      :title="`等级成长 · ${levelsClassName}（${levelsClassCode}）`"
+      width="980px"
+      top="5vh"
+    >
+      <div class="toolbar">
+        <el-button size="small" @click="loadLevels">刷新</el-button>
+        <el-button size="small" type="primary" @click="addLevelRow">添加一行</el-button>
+        <span class="muted">按 DND 5E 基础职业特性维护，等级 1-20；说明里可以用 [关键词]。</span>
+      </div>
+
+      <el-table v-loading="levelsLoading" :data="levelItems" border size="small" max-height="460">
+        <el-table-column label="等级" width="88">
+          <template #default="{ row }">
+            <el-input-number v-model="row.level" :min="1" :max="20" size="small" controls-position="right" />
+          </template>
+        </el-table-column>
+        <el-table-column label="特性名" width="190">
+          <template #default="{ row }">
+            <el-input v-model="row.title" size="small" />
+          </template>
+        </el-table-column>
+        <el-table-column label="说明">
+          <template #default="{ row }">
+            <el-input v-model="row.description" type="textarea" :rows="2" size="small" />
+          </template>
+        </el-table-column>
+        <el-table-column label="排序" width="88">
+          <template #default="{ row }">
+            <el-input-number v-model="row.sortOrder" :min="0" :step="10" size="small" controls-position="right" />
+          </template>
+        </el-table-column>
+        <el-table-column label="启用" width="70">
+          <template #default="{ row }">
+            <el-switch v-model="row.isEnabled" />
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="70">
+          <template #default="{ $index }">
+            <el-button link type="danger" @click="removeLevelRow($index)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <template #footer>
+        <el-button @click="levelsVisible = false">取消</el-button>
+        <el-button type="primary" :loading="levelsSaving" @click="saveLevels">保存</el-button>
       </template>
     </el-dialog>
 

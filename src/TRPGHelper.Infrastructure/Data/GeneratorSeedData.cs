@@ -214,6 +214,169 @@ public static class GeneratorSeedData
     }
 
     /// <summary>
+    /// 职业等级成长（DND 5E SRD 基础职业特性，1-20 级）。
+    /// 按用户要求先不写副职（武术范型 / 结社 / 誓言 / 范型 / 传统），这些等级用「副职特性（暂未接入）」占位。
+    /// </summary>
+    public static IReadOnlyList<ClassLevelFeature> BuildClassLevels()
+    {
+        var list = new List<ClassLevelFeature>();
+
+        void Add(string classCode, int level, string title, string description)
+        {
+            var used = list.Count(item => item.ClassCode == classCode && item.Level == level);
+            list.Add(new ClassLevelFeature
+            {
+                SystemCode = "dnd5e",
+                ClassCode = classCode,
+                Level = level,
+                Title = title,
+                Description = description,
+                SortOrder = level * 100 + used * 10,
+                IsEnabled = true,
+            });
+        }
+
+        const string Subclass = "副职特性（暂未接入）";
+        const string SubclassNote = "这一级只有副职（范型 / 结社 / 誓言 / 传统）特性，等接入副职后再补。";
+
+        // ---------------- 游侠 ranger ----------------
+        Add("ranger", 1, "宿敌", "选定一类宿敌（异怪、野兽、龙、精类、邪魔、不死生物等），追踪与回忆其情报时获得优势。");
+        Add("ranger", 1, "自然探索者", "选定一种偏好地形，在该地形中行军不减速、不会迷路，觅食可获得双倍食物。");
+        Add("ranger", 2, "战斗风格", "从弓箭术、防御、决斗、双武器战斗中选择一项，获得对应加成。");
+        Add("ranger", 2, "施法", "以[感知]为施法属性，凭[法术位]施放游侠法术。");
+        Add("ranger", 3, "原始感知", "消耗一个法术位，感知 1 英里内特定类型生物的存在。");
+        Add("ranger", 3, Subclass, SubclassNote);
+        Add("ranger", 4, "属性值提升", "一项属性 +2，或两项各 +1（上限 20）。");
+        Add("ranger", 5, "额外攻击", "使用攻击动作时可以攻击两次。");
+        Add("ranger", 6, "宿敌与自然探索者强化", "再获得一种宿敌类型与一种偏好地形，并学会宿敌的语言。");
+        Add("ranger", 7, Subclass, SubclassNote);
+        Add("ranger", 8, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("ranger", 8, "穿林", "非魔法[困难地形]不额外消耗移动力，可穿过带刺植物而不受伤。");
+        Add("ranger", 9, "法术位提升", "没有新增职业特性，法术位与已知法术按表提升。");
+        Add("ranger", 10, "自然探索者强化", "再获得一种偏好地形。");
+        Add("ranger", 10, "藏匿", "花 1 分钟制作伪装，静止不动时[隐匿]检定 +10。");
+        Add("ranger", 11, Subclass, SubclassNote);
+        Add("ranger", 12, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("ranger", 13, "法术位提升", "没有新增职业特性，法术位按表提升。");
+        Add("ranger", 14, "宿敌强化", "再获得一种宿敌类型。");
+        Add("ranger", 14, "消失", "可用附赠动作执行藏匿，且非魔法手段无法追踪你。");
+        Add("ranger", 15, Subclass, SubclassNote);
+        Add("ranger", 16, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("ranger", 17, "法术位提升", "没有新增职业特性，法术位按表提升。");
+        Add("ranger", 18, "野性感知", "攻击看不见的生物不受劣势，并感知 30 尺内的隐形生物。");
+        Add("ranger", 19, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("ranger", 20, "宿敌杀手", "每回合一次，对一个宿敌的攻击检定或伤害检定加上[感知]调整值。");
+
+        // ---------------- 战士 fighter ----------------
+        Add("fighter", 1, "战斗风格", "从弓箭术、防御、决斗、巨武器战斗、守护、双武器战斗中选择一项。");
+        Add("fighter", 1, "回气", "附赠动作恢复 1d10 + 战士等级 的生命值，短休或长休后恢复。");
+        Add("fighter", 2, "行动如潮", "一回合内额外获得一个动作，短休或长休后恢复。");
+        Add("fighter", 3, Subclass, SubclassNote);
+        Add("fighter", 4, "属性值提升", "一项属性 +2，或两项各 +1（上限 20）。");
+        Add("fighter", 5, "额外攻击", "使用攻击动作时可以攻击两次。");
+        Add("fighter", 6, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("fighter", 7, Subclass, SubclassNote);
+        Add("fighter", 8, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("fighter", 9, "不屈", "豁免失败时可以重掷一次，长休后恢复。");
+        Add("fighter", 10, Subclass, SubclassNote);
+        Add("fighter", 11, "额外攻击（二）", "使用攻击动作时可以攻击三次。");
+        Add("fighter", 12, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("fighter", 13, "不屈（两次）", "不屈可以使用两次。");
+        Add("fighter", 14, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("fighter", 15, Subclass, SubclassNote);
+        Add("fighter", 16, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("fighter", 17, "行动如潮（两次）", "行动如潮可以连续使用两次。");
+        Add("fighter", 17, "不屈（三次）", "不屈可以使用三次。");
+        Add("fighter", 18, Subclass, SubclassNote);
+        Add("fighter", 19, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("fighter", 20, "额外攻击（三）", "使用攻击动作时可以攻击四次。");
+
+        // ---------------- 武僧 monk ----------------
+        Add("monk", 1, "无甲防御", "未穿甲且不持盾时，AC = 10 + [敏捷]调整值 + [感知]调整值。");
+        Add("monk", 1, "武功", "空手与武僧武器可用[敏捷]，伤害骰从 1d4 起随等级提升，攻击后可附赠一次徒手打击。");
+        Add("monk", 2, "气", "获得等于武僧等级的元气点，可驱动疾风连击、闪避与疾走。");
+        Add("monk", 2, "无甲移动", "未穿甲时移动速度 +10 尺。");
+        Add("monk", 3, "偏转飞弹", "用反应减少远程武器伤害，减到 0 时可以接住并掷回。");
+        Add("monk", 3, Subclass, SubclassNote);
+        Add("monk", 4, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("monk", 4, "轻身坠", "用反应减少坠落伤害，数值为武僧等级 × 5。");
+        Add("monk", 5, "额外攻击", "使用攻击动作时可以攻击两次。");
+        Add("monk", 5, "震慑拳", "命中时消耗 1 点气，目标[体质]豁免失败则被震慑。");
+        Add("monk", 6, "气劲拳", "徒手打击视为魔法武器，用于克服非魔法抗性。");
+        Add("monk", 6, Subclass, SubclassNote);
+        Add("monk", 7, "闪避", "[敏捷]豁免成功时完全免伤，失败时只受一半伤害。");
+        Add("monk", 7, "静心", "用动作结束自己身上的魅惑或恐惧。");
+        Add("monk", 8, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("monk", 9, "无甲移动强化", "可沿垂直面或水面移动而不坠落。");
+        Add("monk", 10, "净化", "免疫疾病与毒素。");
+        Add("monk", 11, Subclass, SubclassNote);
+        Add("monk", 12, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("monk", 13, "万语通", "理解所有语言，任何懂语言的生物也能听懂你说的话。");
+        Add("monk", 14, "钻石魂", "熟练所有豁免；豁免失败时可花 1 点气重掷。");
+        Add("monk", 15, "永恒之躯", "不再因年老衰弱，也不需要饮食。");
+        Add("monk", 16, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("monk", 17, Subclass, SubclassNote);
+        Add("monk", 18, "空之躯", "花 4 点气隐身 1 分钟并获得伤害抗性，也可花 8 点气施放星界投射。");
+        Add("monk", 19, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("monk", 20, "完美自我", "战斗开始时若没有气，恢复 4 点气。");
+
+        // ---------------- 德鲁伊 druid ----------------
+        Add("druid", 1, "德鲁伊语", "掌握德鲁伊的秘密语言，可留下只有同门看得懂的暗号。");
+        Add("druid", 1, "施法", "以[感知]为施法属性，准备并施放德鲁伊法术。");
+        Add("druid", 2, "野性变身", "用动作变为野兽形态，每短休 2 次，可变形态随等级提升。");
+        Add("druid", 2, Subclass, SubclassNote);
+        Add("druid", 3, "法术位提升", "没有新增职业特性，法术位按表提升。");
+        Add("druid", 4, "野性变身强化", "可变身挑战等级 1/2 的野兽。");
+        Add("druid", 4, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("druid", 5, "法术位提升", "没有新增职业特性，法术位按表提升。");
+        Add("druid", 6, Subclass, SubclassNote);
+        Add("druid", 7, "法术位提升", "没有新增职业特性，法术位按表提升。");
+        Add("druid", 8, "野性变身强化", "可变身挑战等级 1 的野兽。");
+        Add("druid", 8, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("druid", 9, "法术位提升", "没有新增职业特性，法术位按表提升。");
+        Add("druid", 10, Subclass, SubclassNote);
+        Add("druid", 11, "法术位提升", "没有新增职业特性，法术位按表提升。");
+        Add("druid", 12, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("druid", 13, "法术位提升", "没有新增职业特性，法术位按表提升。");
+        Add("druid", 14, Subclass, SubclassNote);
+        Add("druid", 15, "法术位提升", "没有新增职业特性，法术位按表提升。");
+        Add("druid", 16, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("druid", 17, "法术位提升", "没有新增职业特性，法术位按表提升。");
+        Add("druid", 18, "永恒之躯", "每过 10 年身体只衰老 1 年。");
+        Add("druid", 18, "凶兽施法", "在野性变身的形态下也可以施放德鲁伊法术。");
+        Add("druid", 19, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("druid", 20, "大德鲁伊", "野性变身次数无限，并可忽略无法术成分的施法材料。");
+
+        // ---------------- 圣武士 paladin ----------------
+        Add("paladin", 1, "神圣感知", "用动作感知 60 尺内的天界生物、邪魔、不死生物，以及圣化或亵渎之地。");
+        Add("paladin", 1, "圣疗", "治疗池等于圣武士等级 × 5，也可消耗 5 点治疗一种疾病或毒素。");
+        Add("paladin", 2, "战斗风格", "从防御、决斗、巨武器战斗、守护中选择一项。");
+        Add("paladin", 2, "施法", "以[魅力]为施法属性，准备并施放圣武士法术。");
+        Add("paladin", 2, "至圣斩", "近战命中时消耗[法术位]追加 2d8 光耀伤害，每高一环再 +1d8。");
+        Add("paladin", 3, "神圣健康", "免疫疾病。");
+        Add("paladin", 3, Subclass, SubclassNote);
+        Add("paladin", 4, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("paladin", 5, "额外攻击", "使用攻击动作时可以攻击两次。");
+        Add("paladin", 6, "守护光环", "10 尺内的友军在豁免上获得你的[魅力]加值。");
+        Add("paladin", 7, Subclass, SubclassNote);
+        Add("paladin", 8, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("paladin", 9, "法术位提升", "没有新增职业特性，法术位按表提升。");
+        Add("paladin", 10, "勇气光环", "10 尺内的友军不会陷入恐惧。");
+        Add("paladin", 11, "强化至圣斩", "近战武器命中时额外造成 1d8 光耀伤害。");
+        Add("paladin", 12, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("paladin", 13, "法术位提升", "没有新增职业特性，法术位按表提升。");
+        Add("paladin", 14, "净化之触", "用动作结束一个法术，可使用次数等于[魅力]调整值。");
+        Add("paladin", 15, Subclass, SubclassNote);
+        Add("paladin", 16, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("paladin", 17, "法术位提升", "没有新增职业特性，法术位按表提升。");
+        Add("paladin", 18, "光环强化", "守护光环与勇气光环的范围从 10 尺扩大到 30 尺。");
+        Add("paladin", 19, "属性值提升", "一项属性 +2，或两项各 +1。");
+        Add("paladin", 20, Subclass, SubclassNote);
+
+        return list;
+    }
+
+    /// <summary>
     /// 关键词的出厂词条：DND 六项属性 + 属性检定，互相引用，方便直接看到「点关键词弹解释、解释里还能再点」的效果。
     /// </summary>
     public static IReadOnlyList<Keyword> BuildKeywords()

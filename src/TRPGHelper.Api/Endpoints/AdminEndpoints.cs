@@ -105,6 +105,14 @@ public static class AdminEndpoints
             .WithName("AdminDeleteKeyword")
             .WithSummary("删除关键词词条");
 
+        group.MapGet("/classes/{classCode}/levels", GetClassLevelsAsync)
+            .WithName("AdminGetClassLevels")
+            .WithSummary("职业等级成长（含停用项）");
+
+        group.MapPut("/classes/{classCode}/levels", SaveClassLevelsAsync)
+            .WithName("AdminSaveClassLevels")
+            .WithSummary("整份替换职业等级成长");
+
         return app;
     }
 
@@ -953,6 +961,132 @@ public static class AdminEndpoints
 
     private static string? NormalizeOptional(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static async Task<IResult> GetClassLevelsAsync(
+        string classCode,
+        string? systemCode,
+        AppDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var code = NormalizeClassSystemCode(systemCode);
+        var normalized = NormalizeClassCode(classCode);
+
+        var features = await db.ClassLevelFeatures
+            .AsNoTracking()
+            .Where(feature => feature.SystemCode == code && feature.ClassCode == normalized)
+            .OrderBy(feature => feature.Level)
+            .ThenBy(feature => feature.SortOrder)
+            .ToListAsync(cancellationToken);
+
+        return Results.Ok(features.Select(ToAdminClassLevelDto).ToList());
+    }
+
+    private static async Task<IResult> SaveClassLevelsAsync(
+        string classCode,
+        SaveClassLevelsRequest request,
+        AppDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var code = NormalizeClassSystemCode(request.SystemCode);
+        var normalized = NormalizeClassCode(classCode);
+
+        var classEntry = await db.GeneratorEntries
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                entry => entry.SystemCode == code && entry.Kind == GeneratorKind.Class && entry.Category == normalized,
+                cancellationToken);
+
+        if (classEntry is null)
+        {
+            return Results.NotFound(new { message = $"找不到职业「{classCode}」。" });
+        }
+
+        var items = request.Items ?? [];
+        if (items.Count > 200)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["items"] = ["一个职业最多 200 条等级记录。"],
+            });
+        }
+
+        var errors = new Dictionary<string, string[]>();
+        for (var index = 0; index < items.Count; index += 1)
+        {
+            var item = items[index];
+            if (item.Level is < 1 or > 20)
+            {
+                errors[$"items[{index}].level"] = ["等级必须在 1-20 之间。"];
+            }
+
+            var title = item.Title?.Trim() ?? string.Empty;
+            if (title.Length is 0 or > 64)
+            {
+                errors[$"items[{index}].title"] = ["特性名不能为空，最多 64 个字符。"];
+            }
+
+            var description = item.Description?.Trim() ?? string.Empty;
+            if (description.Length is 0 or > 1024)
+            {
+                errors[$"items[{index}].description"] = ["说明不能为空，最多 1024 个字符。"];
+            }
+        }
+
+        if (errors.Count > 0)
+        {
+            return Results.ValidationProblem(errors);
+        }
+
+        var existing = await db.ClassLevelFeatures
+            .Where(feature => feature.SystemCode == code && feature.ClassCode == normalized)
+            .ToListAsync(cancellationToken);
+        db.ClassLevelFeatures.RemoveRange(existing);
+
+        var now = DateTime.UtcNow;
+        foreach (var item in items)
+        {
+            db.ClassLevelFeatures.Add(new ClassLevelFeature
+            {
+                SystemCode = code,
+                ClassCode = normalized,
+                Level = item.Level,
+                Title = item.Title!.Trim(),
+                Description = item.Description!.Trim(),
+                SortOrder = item.SortOrder,
+                IsEnabled = item.IsEnabled,
+                CreatedAt = now,
+                UpdatedAt = now,
+            });
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        var saved = await db.ClassLevelFeatures
+            .AsNoTracking()
+            .Where(feature => feature.SystemCode == code && feature.ClassCode == normalized)
+            .OrderBy(feature => feature.Level)
+            .ThenBy(feature => feature.SortOrder)
+            .ToListAsync(cancellationToken);
+
+        return Results.Ok(saved.Select(ToAdminClassLevelDto).ToList());
+    }
+
+    private static AdminClassLevelFeatureDto ToAdminClassLevelDto(ClassLevelFeature feature) => new(
+        feature.Id,
+        feature.SystemCode,
+        feature.ClassCode,
+        feature.Level,
+        feature.Title,
+        feature.Description,
+        feature.SortOrder,
+        feature.IsEnabled,
+        new DateTimeOffset(DateTime.SpecifyKind(feature.UpdatedAt, DateTimeKind.Utc)));
+
+    private static string NormalizeClassSystemCode(string? systemCode)
+        => string.IsNullOrWhiteSpace(systemCode) ? "dnd5e" : systemCode.Trim().ToLowerInvariant();
+
+    private static string NormalizeClassCode(string? classCode)
+        => (classCode ?? string.Empty).Trim().ToLowerInvariant();
 
     private sealed record NormalizedSystem(
         string Code,

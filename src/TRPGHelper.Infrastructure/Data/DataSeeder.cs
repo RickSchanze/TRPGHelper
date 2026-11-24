@@ -60,6 +60,12 @@ public static class DataSeeder
             db.Keywords.AddRange(GeneratorSeedData.BuildKeywords());
         }
 
+        var hasClassLevels = await db.ClassLevelFeatures.AnyAsync(cancellationToken);
+        if (!hasClassLevels)
+        {
+            db.ClassLevelFeatures.AddRange(GeneratorSeedData.BuildClassLevels());
+        }
+
         await BackfillClassImagesAsync(db, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);

@@ -79,6 +79,32 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Seed_creates_class_level_progression_covering_levels_1_to_20()
+    {
+        await DataSeeder.SeedAsync(_db);
+
+        var rows = await _db.ClassLevelFeatures.ToListAsync();
+
+        Assert.All(rows, row => Assert.True(row.IsEnabled));
+
+        foreach (var classCode in new[] { "ranger", "fighter", "monk", "druid", "paladin" })
+        {
+            var levels = rows
+                .Where(row => row.ClassCode == classCode)
+                .Select(row => row.Level)
+                .Distinct()
+                .OrderBy(level => level)
+                .ToList();
+
+            Assert.Equal(Enumerable.Range(1, 20), levels);
+        }
+
+        var rangerLevelOne = rows.Where(row => row.ClassCode == "ranger" && row.Level == 1).ToList();
+        Assert.Equal(2, rangerLevelOne.Count);
+        Assert.Contains(rangerLevelOne, row => row.Title == "宿敌");
+    }
+
+    [Fact]
     public async Task Seed_backfills_class_images_for_old_entries()
     {
         _db.GameSystems.Add(new GameSystem { Code = "dnd5e", Name = "龙与地下城 5版" });

@@ -128,6 +128,26 @@ export interface SaveKeywordPayload {
   isEnabled: boolean
 }
 
+export interface AdminClassLevelFeature {
+  id: string
+  systemCode: string
+  classCode: string
+  level: number
+  title: string
+  description: string
+  sortOrder: number
+  isEnabled: boolean
+  updatedAt: string
+}
+
+export interface SaveClassLevelItem {
+  level: number
+  title: string
+  description: string
+  sortOrder: number
+  isEnabled: boolean
+}
+
 export interface CreationStepPreview {
   id: string
   kind: CreationStepKindKey
