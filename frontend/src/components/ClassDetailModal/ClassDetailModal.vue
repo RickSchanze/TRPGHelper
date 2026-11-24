@@ -67,6 +67,7 @@
 import { computed, ref, watch } from 'vue'
 import { request } from '../../api/http'
 import { resolveMediaUrl } from '../../utils/media'
+import { ensureKeywords } from '../../stores/keywords'
 import KeywordText from '../KeywordText/KeywordText.vue'
 import type { ClassLevels, ClassOption } from '../../api/types'
 
@@ -139,6 +140,8 @@ watch(
 
     coverFailed.value = false
     levels.value = null
+    // 打开职业详情时强制刷新一次词条，避免刚在管理台加的关键词点不开
+    void ensureKeywords(true)
     void load()
   },
 )

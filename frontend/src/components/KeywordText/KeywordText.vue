@@ -7,7 +7,8 @@
         class="keyword"
         @tap="onKeywordTap(segment.text)"
       >{{ segment.text }}</text>
-      <text v-else>{{ '[' + segment.text + ']' }}</text>
+      <text v-else-if="keywordState.ready">{{ '[' + segment.text + ']' }}</text>
+      <text v-else>{{ segment.text }}</text>
     </template>
   </text>
 </template>
