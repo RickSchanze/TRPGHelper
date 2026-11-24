@@ -72,9 +72,14 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
 
         var keywords = await _db.Keywords.OrderBy(keyword => keyword.SortOrder).ToListAsync();
 
-        Assert.Equal(7, keywords.Count);
+        Assert.Equal(13, keywords.Count);
         Assert.Contains(keywords, keyword => keyword.Key == "敏捷");
         Assert.Contains(keywords, keyword => keyword.Key == "属性检定" && keyword.Content.Contains("[力量]"));
+        foreach (var key in new[] { "弓箭术", "防御", "决斗", "双武器战斗", "法术位", "副职" })
+        {
+            Assert.Contains(keywords, keyword => keyword.Key == key);
+        }
+
         Assert.All(keywords, keyword => Assert.True(keyword.IsEnabled));
     }
 
