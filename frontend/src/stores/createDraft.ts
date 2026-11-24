@@ -1,9 +1,8 @@
-export type CreateStep = 1 | 2
-
 /*** 车新卡的本机草稿：车完之前只存在本地，最后一步才提交给服务器。 */
 export interface CreateDraft {
-  version: 3
-  step: CreateStep
+  version: 4
+  /** 当前步骤序号，从 1 开始；步骤数量由后端的车卡流程配置决定。 */
+  step: number
   systemCode: string | null
   classCode: string | null
   className: string
@@ -11,7 +10,7 @@ export interface CreateDraft {
 }
 
 const STORAGE_KEY = 'trpg_create_draft'
-const DRAFT_VERSION = 3
+const DRAFT_VERSION = 4
 
 export function emptyDraft(): CreateDraft {
   return {
@@ -42,7 +41,7 @@ function normalize(raw: unknown): CreateDraft | null {
 
   return {
     version: DRAFT_VERSION,
-    step: (step === 2 ? 2 : 1) as CreateStep,
+    step: Number.isFinite(step) && step >= 1 ? Math.floor(step) : 1,
     systemCode: typeof draft.systemCode === 'string' && draft.systemCode ? draft.systemCode : null,
     classCode: typeof draft.classCode === 'string' && draft.classCode ? draft.classCode : null,
     className: asString(draft.className),

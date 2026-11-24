@@ -5,7 +5,9 @@
     <view class="profile">
       <view class="avatar">{{ initial }}</view>
       <view class="profile-main">
-        <view class="nickname">{{ session.user?.nickName || '未登录' }}</view>
+        <view class="nickname">
+          <KeywordText :text="session.user?.nickName || '未登录'" />
+        </view>
         <view class="muted sub">{{ session.user ? '本地账号' : '登录后同步你的卡库' }}</view>
       </view>
     </view>
@@ -50,6 +52,7 @@ import { getToken, request } from '../../api/http'
 import { goLogin, logout, refreshMe, session } from '../../stores/session'
 import type { CharacterStats } from '../../api/types'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
+import KeywordText from '../../components/KeywordText/KeywordText.vue'
 
 const stats = ref<CharacterStats | null>(null)
 

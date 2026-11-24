@@ -7,21 +7,10 @@
       <view class="hero-zh">你是谁</view>
     </view>
 
-    <view class="stepper">
-      <view
-        v-for="(label, index) in stepLabels"
-        :key="label"
-        class="step"
-        :class="{ 'step-active': step === index + 1, 'step-done': step > index + 1 }"
-      >
-        <view class="step-dot">{{ step > index + 1 ? '✓' : index + 1 }}</view>
-        <text class="step-label">{{ label }}</text>
-      </view>
-    </view>
-
-    <!-- 第一步：规则书 -->
-    <view v-if="step === 1" class="panel">
+    <!-- 前置条件：选择规则书。它不算车卡流程里的步骤。 -->
+    <view v-if="!draft.systemCode" class="panel">
       <view class="panel-title">选择规则书</view>
+      <view class="muted rulebook-hint">规则书决定属性模板和素材范围，选完才进入车卡流程，它本身不算一步。</view>
 
       <view class="system-grid">
         <view
@@ -46,67 +35,121 @@
           </view>
 
           <view class="system-info">
-            <view class="system-name">{{ system.name }}</view>
-            <view class="system-desc muted">{{ system.description }}</view>
+            <view class="system-name">
+              <KeywordText :text="system.name" />
+            </view>
+            <view class="system-desc muted">
+              <KeywordText :text="system.description" />
+            </view>
           </view>
 
           <text v-if="system.code !== 'dnd5e'" class="system-lock muted">即将开放</text>
           <view v-else-if="draft.systemCode === system.code" class="system-check">✓</view>
         </view>
       </view>
+
+      <view class="rulebook-actions">
+        <button class="btn" :disabled="!draft.systemCode || flowLoading" @tap="startFlow">
+          {{ flowLoading ? '正在加载流程…' : '开始车卡' }}
+        </button>
+      </view>
     </view>
 
-    <!-- 第二步：职业 -->
-    <view v-else class="panel">
-      <view class="panel-title">选择职业</view>
-
-      <view v-if="classesLoading" class="muted">正在加载职业…</view>
-      <view v-else-if="classesError" class="load-error" @tap="loadClasses">
-        <text class="muted">职业加载失败，点这里重试</text>
+    <!-- 车卡流程：步骤数量和顺序来自管理台配置 -->
+    <template v-else>
+      <view v-if="flowLoading" class="panel">
+        <text class="muted">正在加载车卡流程…</text>
       </view>
 
-      <view v-else class="class-list">
-        <view
-          v-for="item in classes"
-          :key="item.code"
-          class="class-card"
-          @tap="pickClass(item)"
-        >
-          <view class="class-cover-wrap">
-            <image
-              v-if="!failedCovers[item.code]"
-              class="class-cover"
-              :src="classArtworkFor(item.code).image"
-              mode="aspectFit"
-              @error="failedCovers[item.code] = true"
-            />
-            <view
-              v-else
-              class="class-cover class-cover-fallback"
-              :style="{ backgroundColor: classArtworkFor(item.code).accent }"
-            >
-              <text>{{ item.name.slice(0, 1) }}</text>
-            </view>
-          </view>
+      <view v-else-if="flowError" class="panel load-error" @tap="loadFlow">
+        <text class="muted">流程加载失败，点这里重试</text>
+      </view>
 
-          <view class="class-body">
-            <view class="class-name">{{ item.name }}</view>
-            <view class="class-sub">生命骰 {{ item.hitDie }} · 主要属性 {{ item.primaryAbility }}</view>
-            <view class="class-desc">{{ item.description }}</view>
-            <view class="feature-list">
-              <view v-for="feature in item.features" :key="feature" class="feature">
-                <text class="feature-dot">◆</text>
-                <text class="feature-text">{{ feature }}</text>
-              </view>
-            </view>
-          </view>
+      <view v-else-if="!steps.length" class="panel">
+        <view class="panel-title">这个规则书还没配置车卡流程</view>
+        <text class="muted">去管理台的「车卡流程」里加一步（比如「选择职业」），再回来刷新。</text>
+      </view>
 
-          <view v-if="draft.classCode === item.code" class="class-ribbon">已选择</view>
+      <template v-else>
+        <view class="stepper">
+          <view
+            v-for="(item, index) in steps"
+            :key="item.id"
+            class="step"
+            :class="{ 'step-active': step === index + 1, 'step-done': step > index + 1 }"
+          >
+            <view class="step-dot">{{ step > index + 1 ? '✓' : index + 1 }}</view>
+            <KeywordText class="step-label" :text="item.title" />
+          </view>
         </view>
-      </view>
-    </view>
 
-    <view v-if="step === 2 && classes.length > 1" class="class-rail">
+        <!-- 职业步骤：唯一已实现的面板 -->
+        <view v-if="isClassStep" class="panel">
+          <view class="panel-title">{{ currentStep?.title || '选择职业' }}</view>
+          <view v-if="currentStep?.description" class="muted step-hint">
+            <KeywordText :text="currentStep.description" />
+          </view>
+
+          <view v-if="classesLoading" class="muted">正在加载职业…</view>
+          <view v-else-if="classesError" class="load-error" @tap="loadClasses">
+            <text class="muted">职业加载失败，点这里重试</text>
+          </view>
+
+          <view v-else class="class-list">
+            <view v-for="item in classes" :key="item.code" class="class-card" @tap="pickClass(item)">
+              <view class="class-cover-wrap">
+                <image
+                  v-if="coverFor(item) && !failedCovers[item.code]"
+                  class="class-cover"
+                  :src="coverFor(item)"
+                  mode="aspectFit"
+                  @error="failedCovers[item.code] = true"
+                />
+                <view
+                  v-else
+                  class="class-cover class-cover-fallback"
+                  :style="{ backgroundColor: classArtworkFor(item.code).accent }"
+                >
+                  <text>{{ item.name.slice(0, 1) }}</text>
+                </view>
+              </view>
+
+              <view class="class-body">
+                <view class="class-name">
+                  <KeywordText :text="item.name" />
+                </view>
+                <view class="class-sub">
+                  <text>生命骰 </text>
+                  <KeywordText :text="item.hitDie" />
+                  <text> · 主要属性 </text>
+                  <KeywordText :text="item.primaryAbility" />
+                </view>
+                <view class="class-desc">
+                  <KeywordText :text="item.description" />
+                </view>
+                <view class="feature-list">
+                  <view v-for="feature in item.features" :key="feature" class="feature">
+                    <text class="feature-dot">◆</text>
+                    <KeywordText class="feature-text" :text="feature" />
+                  </view>
+                </view>
+              </view>
+
+              <view v-if="draft.classCode === item.code" class="class-ribbon">已选择</view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 其它类型的步骤：面板还没做，先按配置占位 -->
+        <view v-else class="panel placeholder-panel">
+          <view class="panel-title">{{ currentStep?.title }}</view>
+          <KeywordText class="muted" :text="currentStep?.description || '这一步的面板还在开发中，先跟着流程往下走。'" />
+          <text class="placeholder-kind muted">步骤类型：{{ currentStep?.kind }}</text>
+        </view>
+      </template>
+    </template>
+
+    <view v-if="isClassStep && classes.length > 1" class="class-rail">
       <view
         v-for="(item, index) in classes"
         :key="item.code"
@@ -119,10 +162,11 @@
       </view>
     </view>
 
-    <view class="wizard-actions">
-      <button v-if="step > 1" class="btn btn-plain" @tap="prev">上一步</button>
-      <button v-if="step === 1" class="btn" :disabled="!draft.systemCode" @tap="next">下一步</button>
-      <button v-else class="btn" :disabled="!draft.classCode || finishing" @tap="finish">下一步</button>
+    <view v-if="draft.systemCode && steps.length" class="wizard-actions">
+      <button class="btn btn-plain" :disabled="finishing" @tap="prev">上一步</button>
+      <button class="btn" :disabled="!canNext || finishing" @tap="next">
+        {{ isLastStep ? (finishing ? '提交中…' : '完成') : '下一步' }}
+      </button>
     </view>
   </view>
 </template>
@@ -133,22 +177,17 @@ import { onHide, onLoad, onPageScroll, onUnload } from '@dcloudio/uni-app'
 import { request } from '../../api/http'
 import { classArtworkFor } from '../../config/classes'
 import { artworkFor } from '../../config/rulebooks'
-import type { ClassOption, GameSystem } from '../../api/types'
-import {
-  clearDraft,
-  emptyDraft,
-  loadDraft,
-  saveDraft,
-  type CreateDraft,
-  type CreateStep,
-} from '../../stores/createDraft'
+import type { ClassOption, CreationFlow, CreationStep, GameSystem } from '../../api/types'
+import { clearDraft, emptyDraft, loadDraft, saveDraft, type CreateDraft } from '../../stores/createDraft'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
-
-const stepLabels = ['规则书', '职业']
+import KeywordText from '../../components/KeywordText/KeywordText.vue'
 
 const draft = ref<CreateDraft>(emptyDraft())
 const systems = ref<GameSystem[]>([])
+const steps = ref<CreationStep[]>([])
 const classes = ref<ClassOption[]>([])
+const flowLoading = ref(false)
+const flowError = ref(false)
 const classesLoading = ref(false)
 const classesError = ref(false)
 const ready = ref(false)
@@ -163,6 +202,16 @@ let jumpTimer: ReturnType<typeof setTimeout> | null = null
 let scrollTimer: ReturnType<typeof setTimeout> | null = null
 
 const step = computed(() => draft.value.step)
+const currentStep = computed<CreationStep | null>(() => steps.value[draft.value.step - 1] ?? null)
+const isClassStep = computed(() => currentStep.value?.kind === 'class')
+const isLastStep = computed(() => steps.value.length > 0 && draft.value.step >= steps.value.length)
+const canNext = computed(() => {
+  if (!currentStep.value) {
+    return false
+  }
+
+  return isClassStep.value ? Boolean(draft.value.classCode) : true
+})
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -263,15 +312,23 @@ async function init(): Promise<void> {
 
   await loadSystems()
 
-  if (!draft.value.systemCode || draft.value.systemCode !== 'dnd5e') {
+  if (draft.value.systemCode && draft.value.systemCode !== 'dnd5e') {
     draft.value.systemCode = null
-    draft.value.step = 1
     draft.value.classCode = null
     draft.value.className = ''
   }
 
   if (draft.value.systemCode) {
+    await loadFlow()
     await loadClasses()
+
+    if (steps.value.length === 0) {
+      draft.value.step = 1
+    } else {
+      draft.value.step = Math.min(Math.max(1, draft.value.step), steps.value.length)
+    }
+  } else {
+    draft.value.step = 1
   }
 
   ready.value = true
@@ -282,6 +339,29 @@ async function loadSystems(): Promise<void> {
     systems.value = await request<GameSystem[]>({ url: '/api/systems', auth: false })
   } catch {
     // 错误提示已统一处理
+  }
+}
+
+async function loadFlow(): Promise<void> {
+  if (!draft.value.systemCode) {
+    steps.value = []
+    return
+  }
+
+  flowLoading.value = true
+  flowError.value = false
+
+  try {
+    const flow = await request<CreationFlow>({
+      url: `/api/creation-flow?systemCode=${draft.value.systemCode}`,
+      auth: false,
+    })
+    steps.value = flow.steps ?? []
+  } catch {
+    flowError.value = true
+    steps.value = []
+  } finally {
+    flowLoading.value = false
   }
 }
 
@@ -305,6 +385,12 @@ async function loadClasses(): Promise<void> {
   }
 }
 
+/** 职业配图：优先后台配置的 imageUrl，没配就用前端本地图。 */
+function coverFor(option: ClassOption): string {
+  const fromServer = (option.imageUrl ?? '').trim()
+  return fromServer || classArtworkFor(option.code).image
+}
+
 function markIconFailed(code: string): void {
   failedIcons.value[code] = true
 }
@@ -314,15 +400,40 @@ function pickSystem(system: GameSystem): void {
     return
   }
 
-  if (draft.value.systemCode === system.code) {
+  if (draft.value.systemCode !== system.code) {
+    draft.value.systemCode = system.code
+    draft.value.classCode = null
+    draft.value.className = ''
+    classes.value = []
+    failedCovers.value = {}
+    void loadFlow()
+    void loadClasses()
+  }
+}
+
+async function startFlow(): Promise<void> {
+  if (!draft.value.systemCode) {
+    toast('先选规则书')
     return
   }
 
-  draft.value.systemCode = system.code
-  draft.value.classCode = null
-  draft.value.className = ''
-  classes.value = []
-  void loadClasses()
+  if (flowLoading.value) {
+    return
+  }
+
+  await loadFlow()
+  if (steps.value.length === 0) {
+    toast('这个规则书还没配置车卡流程')
+    return
+  }
+
+  if (!classes.value.length) {
+    void loadClasses()
+  }
+
+  draft.value.step = 1
+  saveDraft(draft.value)
+  scrollTop()
 }
 
 function pickClass(option: ClassOption): void {
@@ -331,26 +442,33 @@ function pickClass(option: ClassOption): void {
 }
 
 function next(): void {
-  if (step.value === 1 && !draft.value.systemCode) {
-    toast('先选规则书')
+  if (!canNext.value) {
+    toast(isClassStep.value ? '先选一个职业' : '这一步还不能继续')
     return
   }
 
-  if (step.value === 1 && classes.value.length === 0) {
-    void loadClasses()
+  if (isLastStep.value) {
+    void finish()
+    return
   }
 
-  draft.value.step = (step.value + 1) as CreateStep
+  draft.value.step = Math.min(step.value + 1, steps.value.length)
   saveDraft(draft.value)
   scrollTop()
 }
 
 function prev(): void {
-  if (step.value <= 1) {
+  if (step.value > 1) {
+    draft.value.step = step.value - 1
+    saveDraft(draft.value)
+    scrollTop()
     return
   }
 
-  draft.value.step = (step.value - 1) as CreateStep
+  // 第一步再往前 = 回到选规则书（不算步骤），职业选择先留着
+  draft.value.systemCode = null
+  draft.value.step = 1
+  saveDraft(draft.value)
   scrollTop()
 }
 
@@ -501,6 +619,31 @@ function scrollTop(): void {
   margin-bottom: 20rpx;
   font-size: 30rpx;
   font-weight: 600;
+}
+
+.rulebook-hint {
+  margin-bottom: 20rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
+.rulebook-actions {
+  margin-top: 24rpx;
+}
+
+.step-hint {
+  margin: -8rpx 0 20rpx;
+  font-size: 22rpx;
+}
+
+.placeholder-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.placeholder-kind {
+  font-size: 20rpx;
 }
 
 .system-grid {
@@ -804,6 +947,11 @@ function scrollTop(): void {
   .panel-title {
     margin-bottom: 16px;
     font-size: 17px;
+  }
+
+  .rulebook-hint,
+  .step-hint {
+    font-size: 13px;
   }
 
   .system-grid {

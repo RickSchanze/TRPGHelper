@@ -4,19 +4,19 @@
 
     <view class="head">
       <view class="head-main">
-        <view class="name">{{ card.name }}</view>
+        <view class="name">
+          <KeywordText :text="card.name" />
+        </view>
         <view class="muted meta">
-          <text>{{ card.systemName }}</text>
-          <text v-if="card.className"> · {{ card.className }}</text>
-          <text v-if="card.raceName"> · {{ card.raceName }}</text>
-          <text v-if="card.occupation"> · {{ card.occupation }}</text>
-          <text v-if="card.age"> · {{ card.age }} 岁</text>
+          <KeywordText :text="metaText(card)" />
         </view>
       </view>
       <text class="badge" :class="'badge-' + card.status">{{ card.statusLabel }}</text>
     </view>
 
-    <view v-if="card.summary" class="summary">{{ card.summary }}</view>
+    <view v-if="card.summary" class="summary">
+      <KeywordText :text="card.summary" />
+    </view>
 
     <view class="actions">
       <view v-for="status in card.nextStatuses" :key="status" class="action" @tap="changeStatus(status)">
@@ -31,8 +31,12 @@
       <view class="attr-grid">
         <view v-for="attribute in card.sheet.attributes" :key="attribute.key" class="attr">
           <view class="attr-value">{{ attribute.value }}</view>
-          <view class="attr-label muted">{{ attribute.label }}</view>
-          <view v-if="attribute.formula" class="attr-formula muted">{{ attribute.formula }}</view>
+          <view class="attr-label muted">
+            <KeywordText :text="attribute.label" />
+          </view>
+          <view v-if="attribute.formula" class="attr-formula muted">
+            <KeywordText :text="attribute.formula" />
+          </view>
         </view>
       </view>
     </view>
@@ -40,7 +44,7 @@
     <view v-if="card.sheet.skills.length > 0" class="section">
       <view class="section-title">技能</view>
       <view v-for="skill in card.sheet.skills" :key="skill.name" class="skill">
-        <text>{{ skill.name }}</text>
+        <KeywordText :text="skill.name" />
         <text class="muted">{{ skill.value }}</text>
       </view>
     </view>
@@ -53,7 +57,9 @@
           <text class="log-action">{{ log.actionLabel }}</text>
           <text class="muted log-time">{{ formatDateTime(log.createdAt) }}</text>
         </view>
-        <view v-if="log.note" class="log-note">{{ log.note }}</view>
+        <view v-if="log.note" class="log-note">
+          <KeywordText :text="log.note" />
+        </view>
       </view>
     </view>
   </view>
@@ -70,6 +76,7 @@ import { request } from '../../api/http'
 import type { CardStatusKey, CharacterDetail } from '../../api/types'
 import { formatDateTime } from '../../utils/format'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
+import KeywordText from '../../components/KeywordText/KeywordText.vue'
 
 const card = ref<CharacterDetail | null>(null)
 const cardId = ref('')
@@ -84,6 +91,14 @@ const labels: Record<CardStatusKey, string> = {
 
 function actionLabel(status: CardStatusKey): string {
   return labels[status] ?? status
+}
+
+/** 「系统 · 职业 · 种族 · 职业 · 年龄」一行，交给关键词组件统一渲染。 */
+function metaText(detail: CharacterDetail): string {
+  const parts = [detail.systemName, detail.className, detail.raceName, detail.occupation]
+    .filter((part): part is string => Boolean(part && part.trim()))
+  const text = parts.join(' · ')
+  return detail.age ? `${text} · ${detail.age} 岁` : text
 }
 
 async function load(): Promise<void> {

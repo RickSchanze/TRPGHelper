@@ -37,17 +37,15 @@
     <view class="card-list">
       <view v-for="card in items" :key="card.id" class="card" @tap="openDetail(card.id)">
         <view class="card-head">
-          <text class="card-name">{{ card.name }}</text>
+          <KeywordText class="card-name" :text="card.name" />
           <text class="badge" :class="'badge-' + card.status">{{ card.statusLabel }}</text>
         </view>
         <view class="card-meta muted">
-          <text>{{ card.systemName }}</text>
-          <text v-if="card.className"> · {{ card.className }}</text>
-          <text v-if="card.raceName"> · {{ card.raceName }}</text>
-          <text v-if="card.occupation"> · {{ card.occupation }}</text>
-          <text v-if="card.age"> · {{ card.age }} 岁</text>
+          <KeywordText :text="metaText(card)" />
         </view>
-        <view v-if="card.summary" class="card-summary">{{ card.summary }}</view>
+        <view v-if="card.summary" class="card-summary">
+          <KeywordText :text="card.summary" />
+        </view>
         <view v-if="card.retainedAt" class="card-foot muted">留存于 {{ formatDate(card.retainedAt) }}</view>
       </view>
     </view>
@@ -63,6 +61,7 @@ import { getToken, request } from '../../api/http'
 import type { CardStatusKey, CharacterStats, CharacterSummary, PagedResult } from '../../api/types'
 import { formatDate } from '../../utils/format'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
+import KeywordText from '../../components/KeywordText/KeywordText.vue'
 
 const filters: { key: string; label: string }[] = [
   { key: 'all', label: '全部' },
@@ -104,6 +103,14 @@ async function load(): Promise<void> {
 function setFilter(key: string): void {
   active.value = key as CardStatusKey | 'all'
   void load()
+}
+
+/** 卡片的「系统 · 职业 · 种族 · 职业 · 年龄」一行，交给关键词组件统一渲染。 */
+function metaText(card: CharacterSummary): string {
+  const parts = [card.systemName, card.className, card.raceName, card.occupation]
+    .filter((part): part is string => Boolean(part && part.trim()))
+  const text = parts.join(' · ')
+  return card.age ? `${text} · ${card.age} 岁` : text
 }
 
 function openDetail(id: string): void {

@@ -4,6 +4,7 @@ export interface UserDto {
   id: string
   nickName: string
   avatarUrl?: string
+  role: string
   createdAt: string
   lastLoginAt: string
   totalCards: number
@@ -124,6 +125,22 @@ export interface ClassOption {
   hitDie: string
   primaryAbility: string
   features: string[]
+  /** 管理台配置的职业配图，可能为空（为空时用前端本地图） */
+  imageUrl?: string
+}
+
+/** 车卡流程的一步，由管理台配置；规则书选择不在其中。 */
+export interface CreationStep {
+  id: string
+  kind: string
+  title: string
+  description?: string
+}
+
+export interface CreationFlow {
+  systemCode?: string
+  systemName?: string
+  steps: CreationStep[]
 }
 
 export interface RaceOption {
