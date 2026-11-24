@@ -7,7 +7,7 @@
 1. 用同名文件覆盖：
    - `dnd5e.png` → DND 5E
    - `coc7.png` → COC 7E
-2. 或者改 `src/config/rulebooks.ts` 里的 `icon` 路径（也可以加新规则书）。
+2. 图标路径和主色在仓库根目录 `data/systems.xlsx > systems` 的 `iconUrl` / `accent` 列配置，前端不再硬编码。
 
 建议：256px 以上、透明背景 PNG；白/浅色剪影在深色卡片底上效果最好。
 

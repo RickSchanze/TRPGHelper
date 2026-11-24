@@ -28,6 +28,9 @@ export interface GameSystem {
   code: string
   name: string
   description?: string
+  iconUrl?: string
+  accent?: string
+  available: boolean
   attributes: AttributeTemplate[]
 }
 
@@ -125,8 +128,10 @@ export interface ClassOption {
   hitDie: string
   primaryAbility: string
   features: string[]
-  /** 管理台配置的职业配图，可能为空（为空时用前端本地图） */
+  /** 管理台配置的职业配图，可能为空（为空时用主色块） */
   imageUrl?: string
+  /** 管理台配置的主色，例如 #3f5a3a */
+  accent?: string
 }
 
 /** 关键词词条：点击 [关键词] 时弹出的解释。 */

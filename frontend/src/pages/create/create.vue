@@ -19,15 +19,15 @@
           class="system-card"
           :class="{
             'system-selected': draft.systemCode === system.code,
-            'system-locked': system.code !== 'dnd5e',
+            'system-locked': !system.available,
           }"
           @tap="pickSystem(system)"
         >
-          <view class="system-icon-wrap" :style="{ backgroundColor: artworkFor(system.code).accent }">
+          <view class="system-icon-wrap" :style="{ backgroundColor: system.accent || DEFAULT_ACCENT }">
             <image
-              v-if="!failedIcons[system.code]"
+              v-if="system.iconUrl && !failedIcons[system.code]"
               class="system-icon"
-              :src="artworkFor(system.code).icon"
+              :src="system.iconUrl"
               mode="aspectFit"
               @error="markIconFailed(system.code)"
             />
@@ -43,7 +43,7 @@
             </view>
           </view>
 
-          <text v-if="system.code !== 'dnd5e'" class="system-lock muted">即将开放</text>
+          <text v-if="!system.available" class="system-lock muted">即将开放</text>
           <view v-else-if="draft.systemCode === system.code" class="system-check">✓</view>
         </view>
       </view>
@@ -110,7 +110,7 @@
                 <view
                   v-else
                   class="class-cover class-cover-fallback"
-                  :style="{ backgroundColor: classArtworkFor(item.code).accent }"
+                  :style="{ backgroundColor: item.accent || DEFAULT_ACCENT }"
                 >
                   <text>{{ item.name.slice(0, 1) }}</text>
                 </view>
@@ -191,14 +191,15 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { onHide, onLoad, onPageScroll, onUnload } from '@dcloudio/uni-app'
 import { request } from '../../api/http'
-import { classArtworkFor } from '../../config/classes'
-import { artworkFor } from '../../config/rulebooks'
 import type { ClassOption, CreationFlow, CreationStep, GameSystem } from '../../api/types'
 import { clearDraft, emptyDraft, loadDraft, saveDraft, type CreateDraft } from '../../stores/createDraft'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
 import KeywordText from '../../components/KeywordText/KeywordText.vue'
 import KeywordModal from '../../components/KeywordModal/KeywordModal.vue'
 import ClassDetailModal from '../../components/ClassDetailModal/ClassDetailModal.vue'
+
+/** 内容里没配主色时的兜底（纯展示默认值，不是内容） */
+const DEFAULT_ACCENT = '#5b4636'
 
 const draft = ref<CreateDraft>(emptyDraft())
 const systems = ref<GameSystem[]>([])
@@ -407,10 +408,9 @@ async function loadClasses(): Promise<void> {
   }
 }
 
-/** 职业配图：优先后台配置的 imageUrl，没配就用前端本地图。 */
+/** 职业配图完全来自内容配置（generator.xlsx 的 imageUrl），没配就显示主色块。 */
 function coverFor(option: ClassOption): string {
-  const fromServer = (option.imageUrl ?? '').trim()
-  return fromServer || classArtworkFor(option.code).image
+  return (option.imageUrl ?? '').trim()
 }
 
 function markIconFailed(code: string): void {
@@ -418,7 +418,7 @@ function markIconFailed(code: string): void {
 }
 
 function pickSystem(system: GameSystem): void {
-  if (system.code !== 'dnd5e') {
+  if (!system.available) {
     return
   }
 
