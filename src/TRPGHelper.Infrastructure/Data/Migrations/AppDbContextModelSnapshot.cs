@@ -212,6 +212,10 @@ namespace TRPGHelper.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Accent")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("AttributeTemplateJson")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -224,6 +228,15 @@ namespace TRPGHelper.Infrastructure.Data.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("IconUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsAvailable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("IsBuiltin")
                         .HasColumnType("INTEGER");
@@ -304,6 +317,10 @@ namespace TRPGHelper.Infrastructure.Data.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Content")

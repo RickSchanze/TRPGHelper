@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using TRPGHelper.Api.Services;
 using TRPGHelper.Domain.Entities;
+using TRPGHelper.Infrastructure.Content;
 using TRPGHelper.Infrastructure.Data;
 
 namespace TRPGHelper.Tests;
@@ -37,7 +38,7 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
     [Fact]
     public async Task Seed_creates_builtin_systems_and_generator_entries()
     {
-        await DataSeeder.SeedAsync(_db);
+        await SyncContentAsync();
 
         var systems = await _db.GameSystems.OrderBy(system => system.SortOrder).ToListAsync();
         Assert.Equal(2, systems.Count);
@@ -54,7 +55,7 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
     [Fact]
     public async Task Seed_creates_a_default_creation_flow_without_rulebook_step()
     {
-        await DataSeeder.SeedAsync(_db);
+        await SyncContentAsync();
 
         var steps = await _db.CreationSteps.OrderBy(step => step.SortOrder).ToListAsync();
 
@@ -68,7 +69,7 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
     [Fact]
     public async Task Seed_creates_keyword_entries_with_cross_references()
     {
-        await DataSeeder.SeedAsync(_db);
+        await SyncContentAsync();
 
         var keywords = await _db.Keywords.OrderBy(keyword => keyword.SortOrder).ToListAsync();
 
@@ -86,7 +87,7 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
     [Fact]
     public async Task Seed_creates_class_level_progression_covering_levels_1_to_20()
     {
-        await DataSeeder.SeedAsync(_db);
+        await SyncContentAsync();
 
         var rows = await _db.ClassLevelFeatures.ToListAsync();
 
@@ -110,32 +111,31 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Seed_backfills_class_images_for_old_entries()
+    public async Task Content_files_are_loaded_from_the_repo_data_folder()
     {
-        _db.GameSystems.Add(new GameSystem { Code = "dnd5e", Name = "龙与地下城 5版" });
-        _db.GeneratorEntries.Add(new GeneratorEntry
-        {
-            SystemCode = "dnd5e",
-            Kind = GeneratorKind.Class,
-            Category = "ranger",
-            Value = "游侠",
-            ExtraJson = """{"description":"荒野的猎手","hitDie":"d10"}""",
-        });
-        await _db.SaveChangesAsync();
+        var dataPath = ContentPaths.Resolve(null, AppContext.BaseDirectory);
 
-        await DataSeeder.SeedAsync(_db);
+        Assert.NotNull(dataPath);
+        Assert.True(File.Exists(Path.Combine(dataPath!, ContentPaths.SystemsFile)));
+        Assert.True(File.Exists(Path.Combine(dataPath!, ContentPaths.ClassesFile)));
+        Assert.True(File.Exists(Path.Combine(dataPath!, ContentPaths.LevelsFile)));
+        Assert.NotEmpty(Directory.GetFiles(dataPath!, $"{ContentPaths.KeywordFilePrefix}.*.xlsx"));
+    }
 
-        var entry = await _db.GeneratorEntries.SingleAsync(item => item.Category == "ranger");
-        Assert.Contains("/static/classes/ranger.jpg", entry.ExtraJson);
+    private async Task SyncContentAsync()
+    {
+        var dataPath = ContentPaths.FindRequired(null, AppContext.BaseDirectory);
+        var bundle = ContentLoader.Load(dataPath);
+        await ContentSynchronizer.SyncAsync(_db, bundle);
     }
 
     [Fact]
     public async Task Seed_is_idempotent()
     {
-        await DataSeeder.SeedAsync(_db);
+        await SyncContentAsync();
         var firstCount = await _db.GeneratorEntries.CountAsync();
 
-        await DataSeeder.SeedAsync(_db);
+        await SyncContentAsync();
 
         Assert.Equal(2, await _db.GameSystems.CountAsync());
         Assert.Equal(firstCount, await _db.GeneratorEntries.CountAsync());

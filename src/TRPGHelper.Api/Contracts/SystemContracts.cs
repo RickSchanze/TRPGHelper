@@ -7,4 +7,7 @@ public sealed record GameSystemDto(
     string Code,
     string Name,
     string? Description,
+    string? IconUrl,
+    string? Accent,
+    bool Available,
     IReadOnlyList<AttributeTemplateDto> Attributes);

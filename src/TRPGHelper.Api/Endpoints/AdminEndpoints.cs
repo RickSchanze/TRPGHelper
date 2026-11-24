@@ -6,6 +6,7 @@ using TRPGHelper.Api.Services;
 using TRPGHelper.Domain.Cards;
 using TRPGHelper.Domain.Dice;
 using TRPGHelper.Domain.Entities;
+using TRPGHelper.Infrastructure.Content;
 using TRPGHelper.Infrastructure.Data;
 
 namespace TRPGHelper.Api.Endpoints;
@@ -112,6 +113,10 @@ public static class AdminEndpoints
         group.MapPut("/classes/{classCode}/levels", SaveClassLevelsAsync)
             .WithName("AdminSaveClassLevels")
             .WithSummary("整份替换职业等级成长");
+
+        group.MapPost("/content/export", ExportContentAsync)
+            .WithName("AdminExportContent")
+            .WithSummary("把当前内容导出成 data/ 下的人类可读 JSON");
 
         return app;
     }
@@ -826,6 +831,7 @@ public static class AdminEndpoints
         var keyword = new Keyword
         {
             Key = NormalizeKeywordKey(request.Key),
+            Category = request.Category?.Trim() ?? string.Empty,
             Title = NormalizeOptional(request.Title),
             Content = request.Content!.Trim(),
             ImageUrl = NormalizeOptional(request.ImageUrl),
@@ -860,6 +866,7 @@ public static class AdminEndpoints
         }
 
         keyword.Key = NormalizeKeywordKey(request.Key);
+        keyword.Category = request.Category?.Trim() ?? string.Empty;
         keyword.Title = NormalizeOptional(request.Title);
         keyword.Content = request.Content!.Trim();
         keyword.ImageUrl = NormalizeOptional(request.ImageUrl);
@@ -899,6 +906,11 @@ public static class AdminEndpoints
             errors["key"] = ["关键词不能为空，最多 64 个字符（不用写方括号）。"];
         }
 
+        if ((request.Category?.Trim().Length ?? 0) > 32)
+        {
+            errors["category"] = ["分类最多 32 个字符。"];
+        }
+
         if ((request.Title?.Trim().Length ?? 0) > 128)
         {
             errors["title"] = ["标题最多 128 个字符。"];
@@ -935,6 +947,7 @@ public static class AdminEndpoints
     private static AdminKeywordDto ToAdminKeywordDto(Keyword keyword) => new(
         keyword.Id,
         keyword.Key,
+        keyword.Category,
         keyword.Title,
         keyword.Content,
         keyword.ImageUrl,
@@ -1069,6 +1082,17 @@ public static class AdminEndpoints
             .ToListAsync(cancellationToken);
 
         return Results.Ok(saved.Select(ToAdminClassLevelDto).ToList());
+    }
+
+    private static async Task<IResult> ExportContentAsync(
+        AppDbContext db,
+        IWebHostEnvironment environment,
+        IConfiguration configuration,
+        CancellationToken cancellationToken)
+    {
+        var dataPath = ContentPaths.FindRequired(configuration["Content:DataPath"], environment.ContentRootPath);
+        var files = await ContentExporter.ExportAsync(db, dataPath, cancellationToken);
+        return Results.Ok(new { dataPath, files });
     }
 
     private static AdminClassLevelFeatureDto ToAdminClassLevelDto(ClassLevelFeature feature) => new(

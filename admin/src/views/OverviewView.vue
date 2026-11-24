@@ -5,6 +5,7 @@ import { errorMessage, http } from '../api/client'
 import type { AdminOverview } from '../api/types'
 
 const loading = ref(false)
+const exporting = ref(false)
 const overview = ref<AdminOverview | null>(null)
 
 const kindLabels: Record<string, string> = {
@@ -28,6 +29,18 @@ async function load(): Promise<void> {
   }
 }
 
+async function exportContent(): Promise<void> {
+  exporting.value = true
+  try {
+    const { data } = await http.post<{ dataPath: string; files: string[] }>('/api/admin/content/export')
+    ElMessage.success(`已导出 ${data.files.length} 个 xlsx 到 ${data.dataPath}`)
+  } catch (error) {
+    ElMessage.error(errorMessage(error))
+  } finally {
+    exporting.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -36,7 +49,16 @@ onMounted(load)
     <div class="page-title">
       <h2>概览</h2>
       <el-button size="small" @click="load">刷新</el-button>
+      <span class="grow" />
+      <el-button size="small" :loading="exporting" @click="exportContent">导出内容到 data/</el-button>
     </div>
+
+    <el-alert
+      type="info"
+      :closable="false"
+      style="margin-bottom: 16px"
+      title="内容以仓库 data/*.xlsx 为准：改完管理台记得点「导出内容到 data/」，否则重启后会被 xlsx 覆盖。"
+    />
 
     <el-row :gutter="16">
       <el-col :span="4">

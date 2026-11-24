@@ -10,6 +10,7 @@ public sealed record KeywordDto(
 public sealed record AdminKeywordDto(
     Guid Id,
     string Key,
+    string Category,
     string? Title,
     string Content,
     string? ImageUrl,
@@ -20,6 +21,7 @@ public sealed record AdminKeywordDto(
 
 public sealed record SaveKeywordRequest(
     string? Key,
+    string? Category,
     string? Title,
     string? Content,
     string? ImageUrl,

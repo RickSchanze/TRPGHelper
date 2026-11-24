@@ -22,6 +22,9 @@ internal static class Mappings
         system.Code,
         system.Name,
         system.Description,
+        system.IconUrl,
+        system.Accent,
+        system.IsAvailable,
         AttributeTemplateParser.Parse(system.AttributeTemplateJson)
             .Select(t => new AttributeTemplateDto(t.Key, t.Label, t.Formula))
             .ToList());

@@ -34,7 +34,7 @@ dotnet run --project src/TRPGHelper.Api
 ```
 
 - 监听 `http://localhost:5080`
-- 启动时自动建库（SQLite，位于 `src/TRPGHelper.Api/App_Data/trpghelper.db`）并写入 COC 7 版 / DND 5 版两个内置规则
+- 启动时自动建库（SQLite，位于 `src/TRPGHelper.Api/App_Data/trpghelper.db`），并从 `data/*.xlsx` 同步内容（规则系统、素材、车卡流程、关键词、职业等级成长）
 - API 文档（仅 Development）：<http://localhost:5080/scalar/v1>
 - 健康检查：<http://localhost:5080/health>
 
@@ -71,7 +71,7 @@ npm run build      # 产物在 admin/dist
 
 | 页面 | 能改什么 |
 | --- | --- |
-| 概览 | 系统 / 素材 / 用户 / 卡数量，按素材类型分布 |
+| 概览 | 系统 / 素材 / 用户 / 卡数量；右上角「导出内容到 data/」把数据库里的内容写回 xlsx |
 | 车卡流程 | 配置车卡流程有几步、先后顺序、每步的标题与说明；**「选择职业」这一步点「编辑职业」可以逐张改职业的描述和配图**，点「成长」维护该职业 1-20 级获得什么；右侧实时预览前端职业卡；右侧抽屉可以预览前端 stepper（选规则书不算步骤） |
 | 关键词 | 维护 `[方括号]` 词条：关键词、标题、解释正文（可再嵌关键词）、配图（可上传）；弹窗预览与「未定义引用」提示 |
 | 规则系统（暂隐藏） | 属性模板（key + 名称 + 骰子公式）；姓名模板（`{surname}{given}`、`{first}·{epithet}`） |
@@ -87,7 +87,7 @@ npm run build      # 产物在 admin/dist
 - 线上：在 `Admin:BootstrapOpenIds` 里填管理员的微信 openid，该账号登录后自动成为 admin。
 - 其他账号仍可正常用小程序登录，只是拿不到 admin 角色。
 
-数据落在 SQLite 的 `GameSystems` / `GeneratorEntries` / `CreationSteps` 表，首次启动会按 `GeneratorSeedData` 写入出厂素材（180 条）和默认流程（1 步「选择职业」），之后以管理台为准；改完前端下次请求即生效。
+内容以仓库 `data/*.xlsx` 为准：启动时同步进 SQLite（规则系统 / 素材 / 流程 / 关键词 / 职业成长），玩家数据（用户、卡）不受影响。在管理台改完内容要点「概览 → 导出内容到 data/」写回文件，否则下次启动会被 xlsx 覆盖。
 
 ### 4. 登录
 
@@ -109,6 +109,7 @@ npm run build      # 产物在 admin/dist
 | `Auth:EnableDevLogin` | 是否允许本地开发登录，生产环境请设为 false |
 | `Admin:DevLoginIsAdmin` | 本地开发登录是否直接给 admin 角色（默认在 Development 下开启） |
 | `Admin:BootstrapOpenIds` | 自动提升为管理员的微信 openid 白名单 |
+| `Content:DataPath` | 内容目录 `data/` 的路径；留空自动从仓库根目录查找 |
 | `Cors:AllowedOrigins` | 允许的浏览器来源；为空表示允许任意来源（开发环境已含 5173 / 5174） |
 
 前端后端地址通过 `VITE_API_BASE` 覆盖，默认 `http://localhost:5080`（见 `frontend/.env.example`）。
@@ -164,6 +165,7 @@ npm run build      # 产物在 admin/dist
 | DELETE | `/api/admin/keywords/{id}` | 删除关键词词条（前端恢复成原样显示） |
 | GET | `/api/admin/classes/{classCode}/levels` | 职业等级成长（含停用项） |
 | PUT | `/api/admin/classes/{classCode}/levels` | 整份替换职业等级成长 |
+| POST | `/api/admin/content/export` | 把数据库里的内容导出成 `data/*.xlsx`（人类可读） |
 
 素材类型（`kind`）：`namePart`、`occupation`、`background`、`class`、`race`、`inspiration`。职业卡 / 种族的扩展字段放在 `extra` 里，例如职业卡：
 ```json
@@ -177,7 +179,7 @@ npm run build      # 产物在 admin/dist
 1. **规则书**：DND 5E / COC 7E（COC 先标「即将开放」）
 2. **职业**：游侠、战士、武僧、德鲁伊、圣武士五张职业卡（大图单列 + 特点两栏），选中后「下一步」才可用
 
-职业卡配图：`frontend/src/static/classes/ranger.jpg`、`fighter.jpg`、`monk.jpg`、`druid.jpg`、`paladin.jpg`，想换图同名覆盖，或改 `frontend/src/config/classes.ts`。
+职业卡配图：默认用 `frontend/src/static/classes/*.jpg`，路径和主色在 `data/职业.xlsx > classes` 的 `imageUrl` / `accent` 列配置（管理台也能上传替换）。
 
 选择进度存在本机（uni storage，key `trpg_create_draft`），刷新 / 退出再进会恢复；点「完成」才会 `POST /api/characters` 提交，卡名暂由后端随机生成，等后续加上命名步骤再替换。
 
@@ -188,7 +190,7 @@ npm run build      # 产物在 admin/dist
 开发期用的是临时素材，正式版可以随时替换：
 
 - 直接同名覆盖：`frontend/src/static/rulebooks/dnd5e.png`、`coc7.png`
-- 想换文件名或加新规则书：改 `frontend/src/config/rulebooks.ts` 里的 `icon` / `accent`
+- 想换文件名或加新规则书：改 `data/规则系统.xlsx > systems` 的 `iconUrl` / `accent` 列（还可以用 `available` 控制是否已开放）
 
 当前素材来自 [game-icons.net](https://game-icons.net)（Delapouite，CC BY 3.0），说明见 `frontend/src/static/rulebooks/README.md`。COC 的图标先留着，等 COC 车卡流程做好再接回来。
 

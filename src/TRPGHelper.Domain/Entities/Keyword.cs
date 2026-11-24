@@ -12,6 +12,9 @@ public class Keyword
     public string Key { get; set; } = string.Empty;
 
     /// <summary>弹窗标题，为空时用 Key。</summary>
+    /// <summary>分类（例如 属性 / 规则 / 战斗），用于把词条分到不同的 xlsx 文件里。</summary>
+    public string Category { get; set; } = string.Empty;
+
     public string? Title { get; set; }
 
     /// <summary>解释正文，可以包含 [其它关键词]。</summary>

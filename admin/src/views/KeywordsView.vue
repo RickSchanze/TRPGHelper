@@ -14,6 +14,7 @@ const search = ref('')
 
 const form = reactive({
   key: '',
+  category: '属性',
   title: '',
   content: '',
   imageUrl: '',
@@ -80,6 +81,7 @@ async function load(): Promise<void> {
 
 function resetForm(keyword?: AdminKeyword): void {
   form.key = keyword?.key ?? ''
+  form.category = keyword?.category ?? '属性'
   form.title = keyword?.title ?? ''
   form.content = keyword?.content ?? ''
   form.imageUrl = keyword?.imageUrl ?? ''
@@ -124,6 +126,7 @@ async function save(): Promise<void> {
 
   const payload: SaveKeywordPayload = {
     key: form.key.trim(),
+    category: form.category.trim() || '未分类',
     title: form.title.trim() || null,
     content: form.content.trim(),
     imageUrl: form.imageUrl.trim() || null,
@@ -195,7 +198,8 @@ onMounted(load)
     />
 
     <el-table :data="keywords" border size="small">
-      <el-table-column prop="key" label="关键词" width="140" />
+      <el-table-column prop="key" label="关键词" width="130" />
+      <el-table-column prop="category" label="分类" width="110" />
       <el-table-column prop="title" label="标题" width="160">
         <template #default="{ row }">
           <span>{{ row.title || '—' }}</span>
@@ -240,6 +244,9 @@ onMounted(load)
             <div class="form-grid">
               <el-form-item label="关键词（不用写方括号）">
                 <el-input v-model="form.key" placeholder="敏捷" />
+              </el-form-item>
+              <el-form-item label="分类（决定导出到哪个文件）">
+                <el-input v-model="form.category" placeholder="属性 / 规则 / 战斗" />
               </el-form-item>
               <el-form-item label="标题（可留空，默认同关键词）">
                 <el-input v-model="form.title" placeholder="敏捷" />

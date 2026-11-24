@@ -48,6 +48,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             builder.Property(x => x.Name).HasMaxLength(128).IsRequired();
             builder.Property(x => x.Description).HasMaxLength(512);
             builder.Property(x => x.NameTemplate).HasMaxLength(128).HasDefaultValue("{surname}{given}").IsRequired();
+            builder.Property(x => x.IconUrl).HasMaxLength(512);
+            builder.Property(x => x.Accent).HasMaxLength(32);
+            builder.Property(x => x.IsAvailable).HasDefaultValue(true);
             builder.HasIndex(x => x.Code).IsUnique();
         });
 

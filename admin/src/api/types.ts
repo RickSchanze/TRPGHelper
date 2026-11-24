@@ -110,6 +110,7 @@ export interface SaveCreationStepPayload {
 export interface AdminKeyword {
   id: string
   key: string
+  category: string
   title?: string | null
   content: string
   imageUrl?: string | null
@@ -121,6 +122,7 @@ export interface AdminKeyword {
 
 export interface SaveKeywordPayload {
   key: string
+  category: string
   title?: string | null
   content: string
   imageUrl?: string | null
