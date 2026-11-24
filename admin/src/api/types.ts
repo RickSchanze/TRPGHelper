@@ -107,6 +107,27 @@ export interface SaveCreationStepPayload {
   isEnabled: boolean
 }
 
+export interface AdminKeyword {
+  id: string
+  key: string
+  title?: string | null
+  content: string
+  imageUrl?: string | null
+  sortOrder: number
+  isEnabled: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SaveKeywordPayload {
+  key: string
+  title?: string | null
+  content: string
+  imageUrl?: string | null
+  sortOrder: number
+  isEnabled: boolean
+}
+
 export interface CreationStepPreview {
   id: string
   kind: CreationStepKindKey

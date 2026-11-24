@@ -54,6 +54,12 @@ public static class DataSeeder
             db.CreationSteps.AddRange(GeneratorSeedData.BuildCreationSteps());
         }
 
+        var hasKeywords = await db.Keywords.AnyAsync(cancellationToken);
+        if (!hasKeywords)
+        {
+            db.Keywords.AddRange(GeneratorSeedData.BuildKeywords());
+        }
+
         await BackfillClassImagesAsync(db, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);

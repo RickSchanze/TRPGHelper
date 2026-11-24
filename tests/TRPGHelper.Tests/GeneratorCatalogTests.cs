@@ -66,6 +66,19 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Seed_creates_keyword_entries_with_cross_references()
+    {
+        await DataSeeder.SeedAsync(_db);
+
+        var keywords = await _db.Keywords.OrderBy(keyword => keyword.SortOrder).ToListAsync();
+
+        Assert.Equal(7, keywords.Count);
+        Assert.Contains(keywords, keyword => keyword.Key == "敏捷");
+        Assert.Contains(keywords, keyword => keyword.Key == "属性检定" && keyword.Content.Contains("[力量]"));
+        Assert.All(keywords, keyword => Assert.True(keyword.IsEnabled));
+    }
+
+    [Fact]
     public async Task Seed_backfills_class_images_for_old_entries()
     {
         _db.GameSystems.Add(new GameSystem { Code = "dnd5e", Name = "龙与地下城 5版" });

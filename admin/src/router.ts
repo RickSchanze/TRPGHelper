@@ -4,6 +4,7 @@ import AdminLayout from './layouts/AdminLayout.vue'
 import LoginView from './views/LoginView.vue'
 import OverviewView from './views/OverviewView.vue'
 import CreationFlowView from './views/CreationFlowView.vue'
+import KeywordsView from './views/KeywordsView.vue'
 
 export const router = createRouter({
   history: createWebHashHistory(),
@@ -16,6 +17,7 @@ export const router = createRouter({
       children: [
         { path: 'overview', name: 'overview', component: OverviewView },
         { path: 'creation-flow', name: 'creation-flow', component: CreationFlowView },
+        { path: 'keywords', name: 'keywords', component: KeywordsView },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/overview' },

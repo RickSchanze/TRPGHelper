@@ -16,6 +16,7 @@
 | `GameSystems` | 规则系统、属性模板 JSON、姓名模板 `{category}` |
 | `GeneratorEntries` | 生成器素材：`namePart` / `occupation` / `background` / `class` / `race` / `inspiration` |
 | `CreationSteps` | 车卡流程步骤（`Kind` 决定前端渲染哪种面板；规则书选择不在其中） |
+| `Keywords` | 关键词词条：点击 `[关键词]` 弹出解释，解释正文可再嵌关键词 |
 | `GeneratorSeedData.cs` | 出厂素材与默认流程（首次启动写入，之后以管理台为准） |
 | `GeneratorCatalogService.cs` | 公共接口读取素材、按姓名模板拼名字 |
 | `AdminEndpoints.cs` | `/api/admin/*` 增删改查 + 图片上传，要求 `admin` 角色 |
@@ -42,11 +43,20 @@
 
 ### 关键词标记
 
-- 文本里用 `[方括号]` 包起来的部分是**关键词**，前端统一渲染为「斜体 + 粗体」。
-- 解析在 `frontend/src/utils/keywords.ts`（`splitKeywords` / `stripKeywords`），渲染组件是 `frontend/src/components/KeywordText/KeywordText.vue`；管理台的职业卡预览用同样的规则。
+- 文本里用 `[方括号]` 包起来的部分是**关键词**，前端统一渲染为「斜体 + 粗体 + 下划线」，有词条时可以点击。
+- 解析在 `frontend/src/utils/keywords.ts`（`splitKeywords` / `stripKeywords`），渲染组件是 `frontend/src/components/KeywordText/KeywordText.vue`；管理台预览用同样的规则。
 - 覆盖范围：所有**数据驱动的文本**——车卡流程（规则书名称/描述、步骤标题/说明、职业名、生命骰、主属性、描述、特性）、卡库卡片（卡名、系统/职业/种族/职业、简介）、卡详情（卡名、元信息、简介、属性名/公式、技能名、记录备注）、我的（昵称）。纯静态 UI 文案（按钮、分区标题）不接入；`uni.showToast` / `uni.showModal` 是原生弹窗，样式无法定制。
 - 约定：`[]` 为空按普通文本处理；不支持嵌套；未闭合的 `[` 原样保留。
-- 数据里存的是带方括号的原文，关键词列表 / 跳转等交互后续再加。
+
+### 关键词弹窗（WordBook）
+
+- 词条表 `Keywords`：`Key`（不含方括号，大小写不敏感唯一）、`Title`、`Content`、`ImageUrl`、`SortOrder`、`IsEnabled`。
+- 公共接口 `GET /api/keywords` 返回启用中的词条，前端 `stores/keywords.ts` 启动时预加载成 map。
+- 点击关键词会压入**弹窗栈**（`keywordStack`），像 Windows 窗口一层层叠上去：最新的一层在最前面，后面的层依次往左上退一点、变淡；最多同时展示 **10 层**，偏移到上限（手机约 24/56px，桌面约 70/90px）后不再移动，原地叠。
+- 「关闭」播放退场动画后出栈，下一层滑到最前面；「关闭全部」清空整个栈。解释正文里可以再嵌 `[关键词]`，继续点会继续压栈。
+- **没有词条的关键词原样显示 `[关键词]`**（不加下划线、不可点击）；词条接口失败时全部按原样显示。
+- 管理台「关键词」页签：增删改查，支持配图上传；正文里引用到不存在的词条时会提示。
+- 出厂词条：DND 六项属性 + 「属性检定」，互相引用，用来演示弹窗栈。
 
 ### 管理员授予
 

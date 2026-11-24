@@ -213,6 +213,48 @@ public static class GeneratorSeedData
         };
     }
 
+    /// <summary>
+    /// 关键词的出厂词条：DND 六项属性 + 属性检定，互相引用，方便直接看到「点关键词弹解释、解释里还能再点」的效果。
+    /// </summary>
+    public static IReadOnlyList<Keyword> BuildKeywords()
+    {
+        var attributes = new (string Key, string Content)[]
+        {
+            ("力量", "衡量肌肉力量与负荷能力。影响近战攻击与伤害、力量豁免，也决定你能推动或举起多重的物体。"),
+            ("敏捷", "衡量协调、平衡与反应速度。影响护甲等级、先攻、敏捷豁免，以及一切需要身手的动作。"),
+            ("体质", "衡量耐力与健康。影响生命值上限、体质豁免，以及长时间行军与恶劣环境的耐受度。"),
+            ("智力", "衡量记忆、推理与知识储备。影响调查、历史、奥秘这类知识检定。"),
+            ("感知", "衡量专注、直觉与观察力。影响察觉、洞察、生存这类检定，也是牧师、德鲁伊的施法属性。"),
+            ("魅力", "衡量存在感与社交影响力。影响说服、欺骗、威吓，也是术士、圣武士的施法属性。"),
+        };
+
+        var keywords = new List<Keyword>();
+        var sort = 10;
+        foreach (var (key, content) in attributes)
+        {
+            keywords.Add(new Keyword
+            {
+                Key = key,
+                Title = key,
+                Content = $"{content} 需要判定时参与[属性检定]。",
+                SortOrder = sort,
+                IsEnabled = true,
+            });
+            sort += 10;
+        }
+
+        keywords.Add(new Keyword
+        {
+            Key = "属性检定",
+            Title = "属性检定",
+            Content = "掷 d20 加上对应的属性调整值（必要时再加熟练加值），对抗 DM 设定的难度值。六项属性分别是 [力量]、[敏捷]、[体质]、[智力]、[感知]、[魅力]。",
+            SortOrder = sort,
+            IsEnabled = true,
+        });
+
+        return keywords;
+    }
+
     private static IEnumerable<GeneratorEntry> Races()
         => RaceSeeds.Select((seed, index) => new GeneratorEntry
         {

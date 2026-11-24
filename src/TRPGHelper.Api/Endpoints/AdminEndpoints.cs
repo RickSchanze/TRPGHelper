@@ -89,6 +89,22 @@ public static class AdminEndpoints
             .WithSummary("上传图片（职业卡配图等），返回可访问地址")
             .DisableAntiforgery();
 
+        group.MapGet("/keywords", ListKeywordsAsync)
+            .WithName("AdminListKeywords")
+            .WithSummary("关键词词条列表");
+
+        group.MapPost("/keywords", CreateKeywordAsync)
+            .WithName("AdminCreateKeyword")
+            .WithSummary("新增关键词词条");
+
+        group.MapPut("/keywords/{id:guid}", UpdateKeywordAsync)
+            .WithName("AdminUpdateKeyword")
+            .WithSummary("更新关键词词条");
+
+        group.MapDelete("/keywords/{id:guid}", DeleteKeywordAsync)
+            .WithName("AdminDeleteKeyword")
+            .WithSummary("删除关键词词条");
+
         return app;
     }
 
@@ -764,6 +780,179 @@ public static class AdminEndpoints
 
     private static CreationStepKind ParseStepKind(string? raw)
         => TryParseStepKind(raw, out var kind) ? kind : CreationStepKind.Class;
+
+    private static async Task<IResult> ListKeywordsAsync(
+        AppDbContext db,
+        string? keyword,
+        CancellationToken cancellationToken)
+    {
+        var query = db.Keywords.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var value = keyword.Trim();
+            query = query.Where(item => item.Key.Contains(value)
+                || (item.Title != null && item.Title.Contains(value))
+                || item.Content.Contains(value));
+        }
+
+        var items = await query
+            .OrderBy(item => item.SortOrder)
+            .ThenBy(item => item.Key)
+            .ToListAsync(cancellationToken);
+
+        return Results.Ok(items.Select(ToAdminKeywordDto).ToList());
+    }
+
+    private static async Task<IResult> CreateKeywordAsync(
+        SaveKeywordRequest request,
+        AppDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var error = await ValidateKeywordAsync(request, db, null, cancellationToken);
+        if (error is not null)
+        {
+            return error;
+        }
+
+        var now = DateTime.UtcNow;
+        var keyword = new Keyword
+        {
+            Key = NormalizeKeywordKey(request.Key),
+            Title = NormalizeOptional(request.Title),
+            Content = request.Content!.Trim(),
+            ImageUrl = NormalizeOptional(request.ImageUrl),
+            SortOrder = request.SortOrder,
+            IsEnabled = request.IsEnabled,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+
+        db.Keywords.Add(keyword);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Created($"/api/admin/keywords/{keyword.Id}", ToAdminKeywordDto(keyword));
+    }
+
+    private static async Task<IResult> UpdateKeywordAsync(
+        Guid id,
+        SaveKeywordRequest request,
+        AppDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var keyword = await db.Keywords.FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (keyword is null)
+        {
+            return Results.NotFound();
+        }
+
+        var error = await ValidateKeywordAsync(request, db, id, cancellationToken);
+        if (error is not null)
+        {
+            return error;
+        }
+
+        keyword.Key = NormalizeKeywordKey(request.Key);
+        keyword.Title = NormalizeOptional(request.Title);
+        keyword.Content = request.Content!.Trim();
+        keyword.ImageUrl = NormalizeOptional(request.ImageUrl);
+        keyword.SortOrder = request.SortOrder;
+        keyword.IsEnabled = request.IsEnabled;
+        keyword.UpdatedAt = DateTime.UtcNow;
+
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Ok(ToAdminKeywordDto(keyword));
+    }
+
+    private static async Task<IResult> DeleteKeywordAsync(Guid id, AppDbContext db, CancellationToken cancellationToken)
+    {
+        var keyword = await db.Keywords.FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (keyword is null)
+        {
+            return Results.NotFound();
+        }
+
+        db.Keywords.Remove(keyword);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Ok(new { deleted = id });
+    }
+
+    private static async Task<IResult?> ValidateKeywordAsync(
+        SaveKeywordRequest request,
+        AppDbContext db,
+        Guid? currentId,
+        CancellationToken cancellationToken)
+    {
+        var errors = new Dictionary<string, string[]>();
+
+        var key = NormalizeKeywordKey(request.Key);
+        if (key.Length is 0 or > 64)
+        {
+            errors["key"] = ["关键词不能为空，最多 64 个字符（不用写方括号）。"];
+        }
+
+        if ((request.Title?.Trim().Length ?? 0) > 128)
+        {
+            errors["title"] = ["标题最多 128 个字符。"];
+        }
+
+        var content = request.Content?.Trim() ?? string.Empty;
+        if (content.Length is 0 or > 4000)
+        {
+            errors["content"] = ["解释正文不能为空，最多 4000 个字符。"];
+        }
+
+        if ((request.ImageUrl?.Trim().Length ?? 0) > 512)
+        {
+            errors["imageUrl"] = ["图片地址最多 512 个字符。"];
+        }
+
+        if (errors.Count > 0)
+        {
+            return Results.ValidationProblem(errors);
+        }
+
+        var exists = await db.Keywords.AnyAsync(
+            item => item.Key.ToLower() == key.ToLower() && (currentId == null || item.Id != currentId),
+            cancellationToken);
+
+        if (exists)
+        {
+            return Results.Conflict(new { message = $"关键词「{key}」已经存在了。" });
+        }
+
+        return null;
+    }
+
+    private static AdminKeywordDto ToAdminKeywordDto(Keyword keyword) => new(
+        keyword.Id,
+        keyword.Key,
+        keyword.Title,
+        keyword.Content,
+        keyword.ImageUrl,
+        keyword.SortOrder,
+        keyword.IsEnabled,
+        new DateTimeOffset(DateTime.SpecifyKind(keyword.CreatedAt, DateTimeKind.Utc)),
+        new DateTimeOffset(DateTime.SpecifyKind(keyword.UpdatedAt, DateTimeKind.Utc)));
+
+    private static string NormalizeKeywordKey(string? raw)
+    {
+        var value = (raw ?? string.Empty).Trim();
+        if (value.StartsWith('['))
+        {
+            value = value[1..];
+        }
+
+        if (value.EndsWith(']'))
+        {
+            value = value[..^1];
+        }
+
+        return value.Trim();
+    }
+
+    private static string? NormalizeOptional(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private sealed record NormalizedSystem(
         string Code,

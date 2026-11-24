@@ -73,12 +73,13 @@ npm run build      # 产物在 admin/dist
 | --- | --- |
 | 概览 | 系统 / 素材 / 用户 / 卡数量，按素材类型分布 |
 | 车卡流程 | 配置车卡流程有几步、先后顺序、每步的标题与说明；**「选择职业」这一步点「编辑职业」可以逐张改职业的描述和配图，右侧实时预览前端职业卡**；右侧抽屉可以预览前端 stepper（选规则书不算步骤） |
+| 关键词 | 维护 `[方括号]` 词条：关键词、标题、解释正文（可再嵌关键词）、配图（可上传）；弹窗预览与「未定义引用」提示 |
 | 规则系统（暂隐藏） | 属性模板（key + 名称 + 骰子公式）；姓名模板（`{surname}{given}`、`{first}·{epithet}`） |
 | 素材库（暂隐藏） | 姓名片段、职业、背景、职业卡、种族、灵感的增删改查 |
 
 职业卡配图可以填地址（`/static/classes/ranger.jpg`、`https://...`），也可以直接在管理台上传（存到 `App_Data/uploads/`，通过 `/uploads/...` 提供）。
 
-职业卡支持**关键词标记**：描述 / 特性里用 `[方括号]` 包起来的部分，前端渲染成「斜体 + 粗体」（管理台的预览也是同样效果）。例如 `与 [异界存在] 签约，用 [魔契] 换取力量。`。解析逻辑在 `frontend/src/utils/keywords.ts`，渲染组件 `frontend/src/components/KeywordText`，后续的关键词点击 / 详情等功能在这个基础上接。
+职业卡支持**关键词标记**：描述 / 特性 / 主属性 / 生命骰里用 `[方括号]` 包起来的部分，前端渲染成「斜体 + 粗体 + 下划线」。有词条的关键词可以点击，弹出解释（解释正文里还能继续嵌关键词，弹窗是栈式，有「关闭」和「关闭全部」）；没有词条的关键词原样显示 `[关键词]`。词条在管理台「关键词」页签维护，接口是 `GET /api/keywords`。
 
 管理员鉴权复用现有 JWT（`User.Role`，`admin` 角色才放行 `/api/admin/*`）：
 
@@ -136,6 +137,7 @@ npm run build      # 产物在 admin/dist
 | GET | `/api/generator/occupations` | 随机职业（职业 + 背景池） |
 | GET | `/api/generator/inspirations` | 车卡灵感 |
 | GET | `/api/creation-flow` | 车卡流程步骤（按 `systemCode` 过滤；规则书选择不算步骤） |
+| GET | `/api/keywords` | 关键词词条（启用中的，供前端点击弹窗） |
 
 管理台接口（都需要 `admin` 角色，见 `AdminEndpoints.PolicyName`）：
 
@@ -155,6 +157,10 @@ npm run build      # 产物在 admin/dist
 | PUT | `/api/admin/creation-steps/{id}` | 更新流程步骤 |
 | DELETE | `/api/admin/creation-steps/{id}` | 删除流程步骤 |
 | POST | `/api/admin/assets` | 上传图片（multipart，字段名 `file`，≤5 MB），返回 `/uploads/...` 地址 |
+| GET | `/api/admin/keywords` | 关键词词条列表（可按关键字搜索） |
+| POST | `/api/admin/keywords` | 新增关键词词条 |
+| PUT | `/api/admin/keywords/{id}` | 更新关键词词条 |
+| DELETE | `/api/admin/keywords/{id}` | 删除关键词词条（前端恢复成原样显示） |
 
 素材类型（`kind`）：`namePart`、`occupation`、`background`、`class`、`race`、`inspiration`。职业卡 / 种族的扩展字段放在 `extra` 里，例如职业卡：
 ```json

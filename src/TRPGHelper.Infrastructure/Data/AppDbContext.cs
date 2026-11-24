@@ -18,6 +18,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<CreationStep> CreationSteps => Set<CreationStep>();
 
+    public DbSet<Keyword> Keywords => Set<Keyword>();
+
     public DbSet<CharacterCard> CharacterCards => Set<CharacterCard>();
 
     public DbSet<CardLog> CardLogs => Set<CardLog>();
@@ -69,6 +71,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             builder.Property(x => x.Title).HasMaxLength(64).IsRequired();
             builder.Property(x => x.Description).HasMaxLength(512);
             builder.HasIndex(x => new { x.SystemCode, x.IsEnabled, x.SortOrder });
+        });
+
+        modelBuilder.Entity<Keyword>(builder =>
+        {
+            builder.ToTable("Keywords");
+            builder.HasKey(x => x.Id);
+            builder.Property(x => x.Key).HasMaxLength(64).IsRequired();
+            builder.Property(x => x.Title).HasMaxLength(128);
+            builder.Property(x => x.Content).HasMaxLength(4000).IsRequired();
+            builder.Property(x => x.ImageUrl).HasMaxLength(512);
+            builder.HasIndex(x => x.Key).IsUnique();
+            builder.HasIndex(x => x.IsEnabled);
         });
 
         modelBuilder.Entity<CharacterCard>(builder =>

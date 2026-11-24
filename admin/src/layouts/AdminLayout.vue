@@ -10,6 +10,7 @@ const user = computed(() => getStoredUser())
 const pageTitles: Record<string, string> = {
   overview: '概览',
   'creation-flow': '车卡流程',
+  keywords: '关键词',
 }
 
 const pageTitle = computed(() => pageTitles[String(route.name)] ?? '管理台')
@@ -34,6 +35,7 @@ function logout(): void {
       <el-menu :default-active="route.path" router class="admin-menu">
         <el-menu-item index="/overview">概览</el-menu-item>
         <el-menu-item index="/creation-flow">车卡流程</el-menu-item>
+        <el-menu-item index="/keywords">关键词</el-menu-item>
       </el-menu>
 
       <div class="aside-foot">

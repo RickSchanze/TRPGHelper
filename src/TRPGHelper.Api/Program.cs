@@ -80,6 +80,7 @@ app.MapSystemEndpoints();
 app.MapCharacterEndpoints();
 app.MapGeneratorEndpoints();
 app.MapCreationFlowEndpoints();
+app.MapKeywordEndpoints();
 app.MapAdminEndpoints();
 
 await app.InitializeDatabaseAsync();
