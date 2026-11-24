@@ -8,7 +8,7 @@
     </view>
 
     <!-- 前置条件：选择规则书。它不算车卡流程里的步骤。 -->
-    <view v-if="!draft.systemCode" class="panel">
+    <view v-if="!started" class="panel">
       <view class="panel-title">选择规则书</view>
       <view class="muted rulebook-hint">规则书决定属性模板和素材范围，选完才进入车卡流程，它本身不算一步。</view>
 
@@ -162,12 +162,14 @@
       </view>
     </view>
 
-    <view v-if="draft.systemCode && steps.length" class="wizard-actions">
+    <view v-if="started && steps.length" class="wizard-actions">
       <button class="btn btn-plain" :disabled="finishing" @tap="prev">上一步</button>
       <button class="btn" :disabled="!canNext || finishing" @tap="next">
         {{ isLastStep ? (finishing ? '提交中…' : '完成') : '下一步' }}
       </button>
     </view>
+
+    <KeywordModal />
   </view>
 </template>
 
@@ -181,6 +183,7 @@ import type { ClassOption, CreationFlow, CreationStep, GameSystem } from '../../
 import { clearDraft, emptyDraft, loadDraft, saveDraft, type CreateDraft } from '../../stores/createDraft'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
 import KeywordText from '../../components/KeywordText/KeywordText.vue'
+import KeywordModal from '../../components/KeywordModal/KeywordModal.vue'
 
 const draft = ref<CreateDraft>(emptyDraft())
 const systems = ref<GameSystem[]>([])
@@ -191,6 +194,7 @@ const flowError = ref(false)
 const classesLoading = ref(false)
 const classesError = ref(false)
 const ready = ref(false)
+const started = ref(false)
 const finishing = ref(false)
 const failedIcons = ref<Record<string, boolean>>({})
 const failedCovers = ref<Record<string, boolean>>({})
@@ -321,6 +325,7 @@ async function init(): Promise<void> {
   if (draft.value.systemCode) {
     await loadFlow()
     await loadClasses()
+    started.value = true
 
     if (steps.value.length === 0) {
       draft.value.step = 1
@@ -431,6 +436,7 @@ async function startFlow(): Promise<void> {
     void loadClasses()
   }
 
+  started.value = true
   draft.value.step = 1
   saveDraft(draft.value)
   scrollTop()
@@ -466,7 +472,7 @@ function prev(): void {
   }
 
   // 第一步再往前 = 回到选规则书（不算步骤），职业选择先留着
-  draft.value.systemCode = null
+  started.value = false
   draft.value.step = 1
   saveDraft(draft.value)
   scrollTop()

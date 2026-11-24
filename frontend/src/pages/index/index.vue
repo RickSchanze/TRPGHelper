@@ -51,6 +51,8 @@
     </view>
 
     <view class="fab" @tap="goCreate">＋ 车新卡</view>
+
+    <KeywordModal />
   </view>
 </template>
 
@@ -62,6 +64,7 @@ import type { CardStatusKey, CharacterStats, CharacterSummary, PagedResult } fro
 import { formatDate } from '../../utils/format'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
 import KeywordText from '../../components/KeywordText/KeywordText.vue'
+import KeywordModal from '../../components/KeywordModal/KeywordModal.vue'
 
 const filters: { key: string; label: string }[] = [
   { key: 'all', label: '全部' },

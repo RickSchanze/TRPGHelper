@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { onLaunch } from '@dcloudio/uni-app'
 import { refreshMe } from './stores/session'
+import { ensureKeywords } from './stores/keywords'
 
 onLaunch(() => {
   void refreshMe()
+  void ensureKeywords()
 })
 </script>
 

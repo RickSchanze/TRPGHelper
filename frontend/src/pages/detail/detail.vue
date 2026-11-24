@@ -62,6 +62,8 @@
         </view>
       </view>
     </view>
+
+    <KeywordModal />
   </view>
 
   <view v-else class="page">
@@ -77,6 +79,7 @@ import type { CardStatusKey, CharacterDetail } from '../../api/types'
 import { formatDateTime } from '../../utils/format'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
 import KeywordText from '../../components/KeywordText/KeywordText.vue'
+import KeywordModal from '../../components/KeywordModal/KeywordModal.vue'
 
 const card = ref<CharacterDetail | null>(null)
 const cardId = ref('')

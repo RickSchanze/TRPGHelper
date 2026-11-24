@@ -42,6 +42,8 @@
     <button v-else class="btn" @tap="goLogin">去登录</button>
 
     <view class="footer muted">TRPG 卡器 v0.1.0 · 骨架版</view>
+
+    <KeywordModal />
   </view>
 </template>
 
@@ -53,6 +55,7 @@ import { goLogin, logout, refreshMe, session } from '../../stores/session'
 import type { CharacterStats } from '../../api/types'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
 import KeywordText from '../../components/KeywordText/KeywordText.vue'
+import KeywordModal from '../../components/KeywordModal/KeywordModal.vue'
 
 const stats = ref<CharacterStats | null>(null)
 

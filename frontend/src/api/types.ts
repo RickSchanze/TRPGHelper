@@ -129,6 +129,14 @@ export interface ClassOption {
   imageUrl?: string
 }
 
+/** 关键词词条：点击 [关键词] 时弹出的解释。 */
+export interface KeywordEntry {
+  key: string
+  title?: string
+  content: string
+  imageUrl?: string
+}
+
 /** 车卡流程的一步，由管理台配置；规则书选择不在其中。 */
 export interface CreationStep {
   id: string

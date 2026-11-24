@@ -1,4 +1,4 @@
-const BASE_URL: string = import.meta.env.VITE_API_BASE || 'http://localhost:5080'
+export const API_BASE_URL: string = import.meta.env.VITE_API_BASE || 'http://localhost:5080'
 const TOKEN_KEY = 'trpg_token'
 
 export interface RequestOptions {
@@ -43,7 +43,7 @@ export function request<T>(options: RequestOptions): Promise<T> {
 
   return new Promise<T>((resolve, reject) => {
     uni.request({
-      url: BASE_URL + options.url,
+      url: API_BASE_URL + options.url,
       method: options.method || 'GET',
       data: options.data as Record<string, unknown> | undefined,
       header: {
