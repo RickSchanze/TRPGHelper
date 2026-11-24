@@ -186,6 +186,8 @@ npm run build      # 产物在 admin/dist
 
 选择进度存在本机（uni storage，key `trpg_create_draft`），刷新 / 退出再进会恢复；点「完成」才会 `POST /api/characters` 提交，卡名暂由后端随机生成，等后续加上命名步骤再替换。
 
+流程中可以点顶部已完成步骤（或「上一步」）退回去改；每个职业的选择单独存着，切到别的职业、再切回来，之前的子职选择会自动恢复。
+
 职业来自后端：`GET /api/generator/classes?systemCode=dnd5e`
 子职来自后端：`GET /api/generator/subclasses?systemCode=dnd5e&classId=paladin`（提交时随卡存 `subclassName`）
 

@@ -76,7 +76,12 @@
             v-for="(item, index) in steps"
             :key="item.id"
             class="step"
-            :class="{ 'step-active': step === index + 1, 'step-done': step > index + 1 }"
+            :class="{
+              'step-active': step === index + 1,
+              'step-done': step > index + 1,
+              'step-clickable': step > index + 1,
+            }"
+            @tap="jumpToStep(index)"
           >
             <view class="step-dot">{{ step > index + 1 ? '✓' : index + 1 }}</view>
             <KeywordText class="step-label" :text="item.title" />
@@ -541,6 +546,22 @@ async function loadSubclasses(): Promise<void> {
       url: `/api/generator/subclasses?systemCode=${code}&classId=${encodeURIComponent(draft.value.classCode)}`,
       auth: false,
     })
+
+    // 恢复的选择如果已经不在内容里，就清掉，避免下一步卡住
+    if (
+      draft.value.subclassCode &&
+      !subclasses.value.some((item) => item.code === draft.value.subclassCode)
+    ) {
+      draft.value.subclassCode = null
+      draft.value.subclassName = ''
+    }
+
+    if (draft.value.classCode) {
+      draft.value.classStates[draft.value.classCode] = {
+        subclassCode: draft.value.subclassCode,
+        subclassName: draft.value.subclassName,
+      }
+    }
   } catch {
     subclassesError.value = true
     subclasses.value = []
@@ -564,6 +585,7 @@ function pickSystem(system: GameSystem): void {
     draft.value.className = ''
     draft.value.subclassCode = null
     draft.value.subclassName = ''
+    draft.value.classStates = {}
     classes.value = []
     subclasses.value = []
     failedCovers.value = {}
@@ -600,19 +622,48 @@ async function startFlow(): Promise<void> {
 }
 
 function pickClass(option: ClassOption): void {
-  if (draft.value.classCode !== option.code) {
-    draft.value.subclassCode = null
-    draft.value.subclassName = ''
-    subclasses.value = []
+  if (draft.value.classCode === option.code) {
+    return
   }
 
+  // 先把当前职业的子职选择存起来，切回来时还能恢复
+  if (draft.value.classCode) {
+    draft.value.classStates[draft.value.classCode] = {
+      subclassCode: draft.value.subclassCode,
+      subclassName: draft.value.subclassName,
+    }
+  }
+
+  const saved = draft.value.classStates[option.code]
   draft.value.classCode = option.code
   draft.value.className = option.name
+  draft.value.subclassCode = saved?.subclassCode ?? null
+  draft.value.subclassName = saved?.subclassName ?? ''
+  subclasses.value = []
 }
 
 function pickSubclass(option: SubclassOption): void {
   draft.value.subclassCode = option.code
   draft.value.subclassName = option.name
+
+  if (draft.value.classCode) {
+    draft.value.classStates[draft.value.classCode] = {
+      subclassCode: option.code,
+      subclassName: option.name,
+    }
+  }
+}
+
+/** 点 stepper 往回跳；只允许退到前面的步骤，前进仍然走「下一步」。 */
+function jumpToStep(index: number): void {
+  const target = index + 1
+  if (target >= draft.value.step) {
+    return
+  }
+
+  draft.value.step = target
+  saveDraft(draft.value)
+  scrollTop()
 }
 
 function openDetail(option: ClassOption): void {
@@ -785,6 +836,21 @@ function scrollTop(): void {
 .step-active .step-label {
   color: $trpg-ink;
   font-weight: 600;
+}
+
+/* 已完成的步骤可以点回去 */
+.step-clickable {
+  cursor: pointer;
+}
+
+.step-clickable .step-label {
+  color: $trpg-accent-deep;
+  text-decoration: underline dotted;
+  text-underline-offset: 6rpx;
+}
+
+.step-clickable:active {
+  opacity: 0.7;
 }
 
 .panel {
