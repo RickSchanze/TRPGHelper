@@ -113,6 +113,7 @@ export interface AdminKeyword {
   key: string
   category: string
   title?: string | null
+  summary: string
   content: string
   imageUrl?: string | null
   sortOrder: number
@@ -125,6 +126,7 @@ export interface SaveKeywordPayload {
   key: string
   category: string
   title?: string | null
+  summary: string
   content: string
   imageUrl?: string | null
   sortOrder: number

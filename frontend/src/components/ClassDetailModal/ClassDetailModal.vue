@@ -57,7 +57,7 @@
           </view>
         </view>
 
-        <view class="cd-note muted">副职（武术范型 / 德鲁伊结社 / 神圣誓言 / 游侠范型 / 武僧传统）暂未接入。</view>
+        <view class="cd-note muted">子职（武术范型 / 游侠范型 / 宗派 / 结社 / 神圣誓约）暂未接入。</view>
       </scroll-view>
     </view>
   </view>

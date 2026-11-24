@@ -20,6 +20,9 @@ public class Keyword
 
     public string? Title { get; set; }
 
+    /// <summary>简略描述：一句话结论，用于弹窗标题下、词条列表与卡面提示；不嵌 [关键词]。</summary>
+    public string Summary { get; set; } = string.Empty;
+
     /// <summary>解释正文，可以包含 [其它关键词]。</summary>
     public string Content { get; set; } = string.Empty;
 

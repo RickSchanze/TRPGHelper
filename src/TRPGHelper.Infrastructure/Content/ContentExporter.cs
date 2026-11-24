@@ -281,6 +281,7 @@ public static class ContentExporter
                     keyword.Key,
                     group.Key,
                     keyword.Title ?? string.Empty,
+                    keyword.Summary,
                     keyword.Content,
                     keyword.ImageUrl ?? string.Empty,
                     keyword.IsEnabled,
@@ -289,7 +290,7 @@ public static class ContentExporter
 
             using var workbook = new XLWorkbook();
             XlsxHelpers.WriteSheet(workbook, "keywords",
-                ["id", "key", "分类", "title", "content", "imageUrl", "isEnabled"],
+                ["id", "key", "分类", "title", "summary", "content", "imageUrl", "isEnabled"],
                 rows,
                 new Dictionary<string, double>
                 {
@@ -297,11 +298,12 @@ public static class ContentExporter
                     ["key"] = 14,
                     ["分类"] = 12,
                     ["title"] = 14,
+                    ["summary"] = 40,
                     ["content"] = 70,
                     ["imageUrl"] = 28,
                     ["isEnabled"] = 9,
                 },
-                new HashSet<string> { "content" });
+                new HashSet<string> { "summary", "content" });
 
             written.Add(Save(workbook, Path.Combine(dataPath, $"{ContentPaths.KeywordFilePrefix}.{SanitizeFileName(group.Key)}.xlsx")));
         }

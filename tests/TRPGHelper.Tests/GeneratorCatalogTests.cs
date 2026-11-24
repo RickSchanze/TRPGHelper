@@ -73,19 +73,29 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
 
         var keywords = await _db.Keywords.OrderBy(keyword => keyword.SortOrder).ToListAsync();
 
-        Assert.Equal(13, keywords.Count);
+        Assert.True(keywords.Count >= 150);
         Assert.All(keywords, keyword =>
         {
             Assert.Equal(8, keyword.Code.Length);
             Assert.Matches("^[0-9]{8}$", keyword.Code);
+            Assert.False(string.IsNullOrWhiteSpace(keyword.Summary));
+            Assert.DoesNotContain("[", keyword.Summary);
+            Assert.DoesNotContain("]", keyword.Summary);
         });
         Assert.Equal(keywords.Count, keywords.Select(keyword => keyword.Code).Distinct().Count());
 
-        var categoryCodes = new Dictionary<string, string> { ["属性"] = "003", ["规则"] = "004", ["战斗"] = "005" };
+        var categoryCodes = new Dictionary<string, string>
+        {
+            ["法术"] = "001",
+            ["职业"] = "002",
+            ["属性"] = "003",
+            ["规则"] = "004",
+            ["战斗"] = "005",
+        };
         Assert.All(keywords, keyword => Assert.StartsWith(categoryCodes[keyword.Category], keyword.Code));
         Assert.Contains(keywords, keyword => keyword.Key == "敏捷");
         Assert.Contains(keywords, keyword => keyword.Key == "属性检定" && keyword.Content.Contains("[力量]"));
-        foreach (var key in new[] { "弓箭术", "防御", "决斗", "双武器战斗", "法术位", "副职" })
+        foreach (var key in new[] { "箭术", "防御", "对决", "双武器战斗", "法术位", "子职", "奉献之誓", "防护善恶" })
         {
             Assert.Contains(keywords, keyword => keyword.Key == key);
         }

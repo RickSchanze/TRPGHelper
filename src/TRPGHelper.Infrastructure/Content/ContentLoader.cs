@@ -389,7 +389,7 @@ public static class ContentLoader
         }
 
         var codeByName = categories.ToDictionary(category => category.Name, category => category.Code, StringComparer.OrdinalIgnoreCase);
-        var raw = new List<(string Path, string Category, string Key, string Id, string Title, string Content, string? ImageUrl, bool IsEnabled)>();
+        var raw = new List<(string Path, string Category, string Key, string Id, string Title, string Summary, string Content, string? ImageUrl, bool IsEnabled)>();
 
         foreach (var path in files)
         {
@@ -399,7 +399,7 @@ public static class ContentLoader
             foreach (var row in XlsxHelpers.ReadRows(
                          XlsxHelpers.RequireSheet(workbook, path, "keywords"),
                          path,
-                         ["key", "title", "content", "imageUrl", "isEnabled"]))
+                         ["key", "title", "summary", "content", "imageUrl", "isEnabled"]))
             {
                 var category = row["分类"].Trim();
                 if (category.Length == 0)
@@ -412,12 +412,24 @@ public static class ContentLoader
                     row.Fail(path, $"分类「{category}」没有在 {ContentPaths.KeywordCategoriesFile} 里登记。");
                 }
 
+                var summary = row.Required("summary", path);
+                if (summary.Length > 256)
+                {
+                    row.Fail(path, $"关键词「{row["key"].Trim()}」的简略描述超过 256 字。");
+                }
+
+                if (summary.Contains('[') || summary.Contains(']'))
+                {
+                    row.Fail(path, $"关键词「{row["key"].Trim()}」的简略描述里不能写 [方括号]，需要展开的内容放进详细描述。");
+                }
+
                 raw.Add((
                     path,
                     category,
                     row.Required("key", path),
                     row["id"].Trim(),
                     row["title"].Trim(),
+                    summary,
                     row.Required("content", path),
                     row["imageUrl"].Trim(),
                     row.Bool("isEnabled")));
@@ -473,6 +485,7 @@ public static class ContentLoader
                 item.Key,
                 item.Category,
                 item.Title.Length == 0 ? item.Key : item.Title,
+                item.Summary,
                 item.Content,
                 item.ImageUrl.Length == 0 ? null : item.ImageUrl,
                 item.IsEnabled));

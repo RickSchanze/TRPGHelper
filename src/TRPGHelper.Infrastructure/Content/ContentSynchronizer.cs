@@ -129,6 +129,7 @@ public static class ContentSynchronizer
                 Key = keyword.Key,
                 Category = keyword.Category,
                 Title = keyword.Title,
+                Summary = keyword.Summary,
                 Content = keyword.Content,
                 ImageUrl = keyword.ImageUrl,
                 SortOrder = (index + 1) * 10,

@@ -22,7 +22,7 @@ public static class KeywordEndpoints
                     .ToListAsync(cancellationToken);
 
                 return Results.Ok(keywords
-                    .Select(keyword => new KeywordDto(keyword.Code, keyword.Key, keyword.Title, keyword.Content, keyword.ImageUrl))
+                    .Select(keyword => new KeywordDto(keyword.Code, keyword.Key, keyword.Title, keyword.Summary, keyword.Content, keyword.ImageUrl))
                     .ToList());
             })
             .WithTags("Keywords")

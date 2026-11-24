@@ -17,13 +17,13 @@
               <text class="kw-title">{{ card.title }}</text>
               <text v-if="card.isTop" class="kw-x" @tap.stop="handleClose">×</text>
             </view>
-            <text v-if="card.code" class="kw-code">ID {{ card.code }}</text>
-
+            <text v-if="card.summary" class="kw-summary">{{ card.summary }}</text>
             <image
-              v-if="card.imageUrl"
+              v-if="card.imageUrl && !failedImages.has(card.id)"
               class="kw-image"
               :src="card.imageUrl"
               mode="widthFix"
+              @error="onImageError(card.id)"
             />
 
             <view class="kw-body">
@@ -59,6 +59,13 @@ import { resolveMediaUrl } from '../../utils/media'
 const MAX_LAYERS = 10
 
 const closingId = ref<number | null>(null)
+const failedImages = ref<Set<number>>(new Set())
+
+function onImageError(id: number): void {
+  const next = new Set(failedImages.value)
+  next.add(id)
+  failedImages.value = next
+}
 
 const stackDepth = computed(() => keywordStack.items.length)
 
@@ -66,7 +73,7 @@ interface CardView {
   id: number
   key: string
   title: string
-  code: string
+  summary: string
   content: string
   imageUrl: string
   /** 0 = 最前面，数字越大越靠后 */
@@ -86,7 +93,7 @@ const cards = computed<CardView[]>(() => {
       id: item.id,
       key: item.key,
       title: entry?.title || item.key,
-      code: entry?.code || '',
+      summary: entry?.summary || '',
       content: entry?.content || '',
       imageUrl: resolveMediaUrl(entry?.imageUrl),
       depth,
@@ -231,13 +238,14 @@ function handleCloseAll(): void {
   word-break: break-word;
 }
 
-.kw-code {
+.kw-summary {
   display: block;
-  margin-top: -2px;
-  font-size: 11px;
-  letter-spacing: 1px;
-  color: #a08a6c;
-  font-variant-numeric: tabular-nums;
+  padding: 8px 20px 10px;
+  border-bottom: 1px solid #f0e7d9;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #8a7a63;
+  word-break: break-word;
 }
 
 .kw-x {

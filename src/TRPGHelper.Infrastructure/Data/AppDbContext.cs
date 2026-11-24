@@ -87,6 +87,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             builder.Property(x => x.Code).HasMaxLength(16).HasDefaultValue(string.Empty).IsRequired();
             builder.Property(x => x.Key).HasMaxLength(64).IsRequired();
             builder.Property(x => x.Title).HasMaxLength(128);
+            builder.Property(x => x.Summary).HasMaxLength(256).IsRequired();
             builder.Property(x => x.Content).HasMaxLength(4000).IsRequired();
             builder.Property(x => x.ImageUrl).HasMaxLength(512);
             builder.HasIndex(x => x.Key).IsUnique();

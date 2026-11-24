@@ -139,7 +139,7 @@ npm run build      # 产物在 admin/dist
 | GET | `/api/generator/inspirations` | 车卡灵感 |
 | GET | `/api/creation-flow` | 车卡流程步骤（按 `systemCode` 过滤；规则书选择不算步骤） |
 | GET | `/api/keywords` | 关键词词条（启用中的，供前端点击弹窗） |
-| GET | `/api/classes/{classCode}/levels` | 职业等级成长（1-20 级，副职暂未接入） |
+| GET | `/api/classes/{classCode}/levels` | 职业等级成长（1-20 级，子职暂未接入） |
 
 管理台接口（都需要 `admin` 角色，见 `AdminEndpoints.PolicyName`）：
 
@@ -184,6 +184,8 @@ npm run build      # 产物在 admin/dist
 选择进度存在本机（uni storage，key `trpg_create_draft`），刷新 / 退出再进会恢复；点「完成」才会 `POST /api/characters` 提交，卡名暂由后端随机生成，等后续加上命名步骤再替换。
 
 职业来自后端：`GET /api/generator/classes?systemCode=dnd5e`
+
+译名与内容取材以 [5E 不全书](https://5echm.kagangtuya.top) 为准（当前按《玩家手册》2014 译名），约定和易错词表见 [docs/translation.md](docs/translation.md)。
 
 ### 规则书图标替换
 

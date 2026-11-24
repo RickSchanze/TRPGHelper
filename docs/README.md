@@ -6,6 +6,7 @@
 | --- | --- |
 | [architecture.md](architecture.md) | 技术栈、目录结构、内容 / 玩家数据分层、启动流程、接口分组、关键词与车卡流程、本地开发注意 |
 | [content-format.md](content-format.md) | `data/*.xlsx` 每个文件 / 工作表的列定义、id 引用规则、取值约定 |
+| [translation.md](translation.md) | DND 5E 译名与取材约定（以 5E 不全书为准，含易错词表） |
 | [../data/README.md](../data/README.md) | 内容目录速查（怎么改、怎么导出） |
 
 ## 代码位置速查

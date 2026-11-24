@@ -55,6 +55,7 @@ public sealed record ContentKeyword(
     string Key,
     string Category,
     string? Title,
+    string Summary,
     string Content,
     string? ImageUrl,
     bool IsEnabled = true);

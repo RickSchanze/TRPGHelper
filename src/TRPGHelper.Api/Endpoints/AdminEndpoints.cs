@@ -853,6 +853,7 @@ public static class AdminEndpoints
             Key = NormalizeKeywordKey(request.Key),
             Category = request.Category?.Trim() ?? string.Empty,
             Title = NormalizeOptional(request.Title),
+            Summary = request.Summary!.Trim(),
             Content = request.Content!.Trim(),
             ImageUrl = NormalizeOptional(request.ImageUrl),
             SortOrder = request.SortOrder,
@@ -893,6 +894,7 @@ public static class AdminEndpoints
         }
         keyword.Category = request.Category?.Trim() ?? string.Empty;
         keyword.Title = NormalizeOptional(request.Title);
+        keyword.Summary = request.Summary!.Trim();
         keyword.Content = request.Content!.Trim();
         keyword.ImageUrl = NormalizeOptional(request.ImageUrl);
         keyword.SortOrder = request.SortOrder;
@@ -945,6 +947,12 @@ public static class AdminEndpoints
         if (content.Length is 0 or > 4000)
         {
             errors["content"] = ["解释正文不能为空，最多 4000 个字符。"];
+        }
+
+        var summary = request.Summary?.Trim() ?? string.Empty;
+        if (summary.Length is 0 or > 256)
+        {
+            errors["summary"] = ["简略描述不能为空，最多 256 个字符（一句话，不嵌关键词）。"];
         }
 
         if ((request.ImageUrl?.Trim().Length ?? 0) > 512)
@@ -1029,6 +1037,7 @@ public static class AdminEndpoints
         keyword.Key,
         keyword.Category,
         keyword.Title,
+        keyword.Summary,
         keyword.Content,
         keyword.ImageUrl,
         keyword.SortOrder,

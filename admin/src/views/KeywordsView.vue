@@ -17,6 +17,7 @@ const form = reactive({
   key: '',
   category: '属性',
   title: '',
+  summary: '',
   content: '',
   imageUrl: '',
   sortOrder: 10,
@@ -96,6 +97,7 @@ function resetForm(keyword?: AdminKeyword): void {
   form.key = keyword?.key ?? ''
   form.category = keyword?.category ?? '属性'
   form.title = keyword?.title ?? ''
+  form.summary = keyword?.summary ?? ''
   form.content = keyword?.content ?? ''
   form.imageUrl = keyword?.imageUrl ?? ''
   form.sortOrder = keyword?.sortOrder ?? (keywords.value.length + 1) * 10
@@ -132,6 +134,11 @@ async function save(): Promise<void> {
     return
   }
 
+  if (!form.summary.trim()) {
+    ElMessage.warning('简略描述不能为空')
+    return
+  }
+
   if (!form.content.trim()) {
     ElMessage.warning('解释正文不能为空')
     return
@@ -141,6 +148,7 @@ async function save(): Promise<void> {
     key: form.key.trim(),
     category: form.category.trim() || '未分类',
     title: form.title.trim() || null,
+    summary: form.summary.trim(),
     content: form.content.trim(),
     imageUrl: form.imageUrl.trim() || null,
     sortOrder: Number(form.sortOrder) || 0,
@@ -233,6 +241,11 @@ onMounted(() => {
           <span v-else class="muted">—</span>
         </template>
       </el-table-column>
+      <el-table-column prop="summary" label="简略" min-width="200">
+        <template #default="{ row }">
+          <span :class="{ muted: !row.summary }">{{ row.summary || '（缺简略描述）' }}</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="content" label="正文" min-width="280">
         <template #default="{ row }">
           <span class="muted">{{ row.content }}</span>
@@ -277,6 +290,10 @@ onMounted(() => {
               </el-form-item>
             </div>
 
+            <el-form-item label="简略描述（一句话，不嵌关键词；显示在弹窗标题下与词条列表）">
+              <el-input v-model="form.summary" maxlength="80" show-word-limit placeholder="衡量协调与反应，决定 AC、先攻与敏捷豁免。" />
+            </el-form-item>
+
             <el-form-item label="解释正文（支持嵌套 [其它关键词]）">
               <el-input v-model="form.content" type="textarea" :rows="6" />
               <span v-if="missingReferences.length" class="muted" style="font-size: 12px">
@@ -310,6 +327,7 @@ onMounted(() => {
             <div class="kw-preview-head">
               <span class="kw-preview-title">{{ form.title || form.key || '关键词' }}</span>
             </div>
+            <div v-if="form.summary" class="kw-preview-summary">{{ form.summary }}</div>
             <img v-if="imagePreview" class="kw-preview-image" :src="imagePreview" alt="关键词配图" />
             <div class="kw-preview-body">
               <template v-if="form.content">

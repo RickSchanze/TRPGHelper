@@ -5,6 +5,7 @@ public sealed record KeywordDto(
     string Code,
     string Key,
     string? Title,
+    string Summary,
     string Content,
     string? ImageUrl);
 
@@ -14,6 +15,7 @@ public sealed record AdminKeywordDto(
     string Key,
     string Category,
     string? Title,
+    string Summary,
     string Content,
     string? ImageUrl,
     int SortOrder,
@@ -25,6 +27,7 @@ public sealed record SaveKeywordRequest(
     string? Key,
     string? Category,
     string? Title,
+    string? Summary,
     string? Content,
     string? ImageUrl,
     int SortOrder,

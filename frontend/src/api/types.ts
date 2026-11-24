@@ -138,6 +138,7 @@ export interface ClassOption {
 export interface KeywordEntry {
   key: string
   title?: string
+  summary: string
   content: string
   imageUrl?: string
 }
