@@ -59,11 +59,18 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
 
         var steps = await _db.CreationSteps.OrderBy(step => step.SortOrder).ToListAsync();
 
-        var step = Assert.Single(steps);
-        Assert.Equal("dnd5e", step.SystemCode);
-        Assert.Equal(CreationStepKind.Class, step.Kind);
-        Assert.Equal("选择职业", step.Title);
-        Assert.True(step.IsEnabled);
+        Assert.Equal(2, steps.Count);
+
+        var first = steps[0];
+        Assert.Equal("dnd5e", first.SystemCode);
+        Assert.Equal(CreationStepKind.Class, first.Kind);
+        Assert.Equal("选择职业", first.Title);
+        Assert.True(first.IsEnabled);
+
+        var second = steps[1];
+        Assert.Equal(CreationStepKind.Subclass, second.Kind);
+        Assert.Equal("选择子职", second.Title);
+        Assert.True(second.IsEnabled);
     }
 
     [Fact]

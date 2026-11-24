@@ -96,9 +96,9 @@ function actionLabel(status: CardStatusKey): string {
   return labels[status] ?? status
 }
 
-/** 「系统 · 职业 · 种族 · 职业 · 年龄」一行，交给关键词组件统一渲染。 */
+/** 「系统 · 职业 · 子职 · 种族 · 职业 · 年龄」一行，交给关键词组件统一渲染。 */
 function metaText(detail: CharacterDetail): string {
-  const parts = [detail.systemName, detail.className, detail.raceName, detail.occupation]
+  const parts = [detail.systemName, detail.className, detail.subclassName, detail.raceName, detail.occupation]
     .filter((part): part is string => Boolean(part && part.trim()))
   const text = parts.join(' · ')
   return detail.age ? `${text} · ${detail.age} 岁` : text

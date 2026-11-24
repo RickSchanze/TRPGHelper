@@ -22,6 +22,12 @@ public enum GeneratorKind
 
     /// <summary>车卡灵感（故事钩子），Value 是标题，ExtraJson.text 是正文。</summary>
     Inspiration = 5,
+
+    /// <summary>
+    /// 子职（DND 5E），Category 存所属职业 code，Value 是子职名，
+    /// ExtraJson 存 description / imageUrl / accent / features。
+    /// </summary>
+    Subclass = 6,
 }
 
 /// <summary>

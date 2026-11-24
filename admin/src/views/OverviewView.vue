@@ -13,6 +13,7 @@ const kindLabels: Record<string, string> = {
   occupation: '职业',
   background: '背景',
   class: '职业卡',
+  subclass: '子职',
   race: '种族',
   inspiration: '灵感',
 }

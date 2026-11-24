@@ -36,3 +36,12 @@ public sealed record RaceOptionDto(
     string Description,
     string AbilityBonus,
     int Speed);
+
+public sealed record SubclassOptionDto(
+    string Code,
+    string Name,
+    string ClassId,
+    string Description,
+    IReadOnlyList<string> Features,
+    string? ImageUrl,
+    string? Accent);

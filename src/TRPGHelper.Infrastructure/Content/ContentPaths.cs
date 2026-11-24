@@ -15,6 +15,9 @@ public static class ContentPaths
 
     public const string ClassesFile = "职业.xlsx";
 
+    /// <summary>子职（战士范型 / 游侠范型 / 武僧宗派 / 德鲁伊结社 / 圣武士誓约）。</summary>
+    public const string SubclassesFile = "子职.xlsx";
+
     public const string OccupationsFile = "随机职业.xlsx";
 
     public const string RacesFile = "种族.xlsx";

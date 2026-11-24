@@ -133,6 +133,7 @@ npm run build      # 产物在 admin/dist
 | POST | `/api/generator/roll` | 掷骰（`d20`、`4d6kh3`、`3d6*5`、`2d6*5+30`） |
 | POST | `/api/generator/attributes` | 按规则生成属性（掷骰 / 标准数组） |
 | GET | `/api/generator/classes` | 职业卡列表（数据来自素材库，含 `imageUrl`） |
+| GET | `/api/generator/subclasses` | 子职卡列表（按 `classId` 过滤，含 `imageUrl` 与特性） |
 | GET | `/api/generator/races` | 种族列表（数据来自素材库） |
 | GET | `/api/generator/names` | 随机姓名（按系统的姓名模板拼） |
 | GET | `/api/generator/occupations` | 随机职业（职业 + 背景池） |
@@ -174,16 +175,19 @@ npm run build      # 产物在 admin/dist
 
 ## 车新卡流程
 
-目前专注 DND 5E 车卡，页面顶部只写 **WHO ARE YOU / 你是谁**（标题用宋体，其余保持默认字体），流程先做 2 步：
+目前专注 DND 5E 车卡，页面顶部只写 **WHO ARE YOU / 你是谁**（标题用宋体，其余保持默认字体）。选规则书是流程前置条件，不占步骤；流程现在是 2 步：
 
-1. **规则书**：DND 5E / COC 7E（COC 先标「即将开放」）
-2. **职业**：游侠、战士、武僧、德鲁伊、圣武士五张职业卡（大图单列 + 特点两栏），选中后「下一步」才可用
+1. **职业**：游侠、战士、武僧、德鲁伊、圣武士五张职业卡（大图单列 + 特点两栏），选中后「下一步」才可用
+2. **子职**：按所选职业过滤的子职卡（大图 + 描述 + 特性），目前先做了圣武士的三个神圣誓约：奉献 / 古贤 / 复仇；其它职业的子职还在整理，这一步会提示可以直接跳过
 
 职业卡配图：默认用 `frontend/src/static/classes/*.jpg`，路径和主色在 `data/职业.xlsx > classes` 的 `imageUrl` / `accent` 列配置（管理台也能上传替换）。
+
+子职卡配图：`frontend/src/static/subclasses/*.jpg`，路径在 `data/子职.xlsx > subclasses` 配置；生图提示词见 [docs/image-prompts.md](docs/image-prompts.md)。
 
 选择进度存在本机（uni storage，key `trpg_create_draft`），刷新 / 退出再进会恢复；点「完成」才会 `POST /api/characters` 提交，卡名暂由后端随机生成，等后续加上命名步骤再替换。
 
 职业来自后端：`GET /api/generator/classes?systemCode=dnd5e`
+子职来自后端：`GET /api/generator/subclasses?systemCode=dnd5e&classId=paladin`（提交时随卡存 `subclassName`）
 
 译名与内容取材以 [5E 不全书](https://5echm.kagangtuya.top) 为准（当前按《玩家手册》2014 译名），约定和易错词表见 [docs/translation.md](docs/translation.md)。
 

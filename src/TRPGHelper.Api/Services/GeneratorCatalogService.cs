@@ -176,6 +176,40 @@ public sealed class GeneratorCatalogService(AppDbContext db)
             .ThenBy(entry => entry.Value)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<SubclassOptionDto>> SubclassesAsync(
+        string? systemCode,
+        string? classId,
+        CancellationToken cancellationToken)
+    {
+        var system = await ResolveSystemAsync(systemCode, cancellationToken);
+        if (system is null)
+        {
+            return [];
+        }
+
+        var entries = await EntriesAsync(system.Code, [GeneratorKind.Subclass], cancellationToken);
+        var code = classId?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(code))
+        {
+            entries = entries.Where(entry => entry.Category == code).ToList();
+        }
+
+        return entries.Select(ToSubclassOption).ToList();
+    }
+
+    internal static SubclassOptionDto ToSubclassOption(GeneratorEntry entry)
+    {
+        var extra = ParseExtra(entry.ExtraJson);
+        return new SubclassOptionDto(
+            ReadString(extra, "code") ?? entry.Value,
+            entry.Value,
+            entry.Category,
+            ReadString(extra, "description") ?? string.Empty,
+            ReadStringList(extra, "features"),
+            ReadString(extra, "imageUrl"),
+            ReadString(extra, "accent"));
+    }
+
     internal static ClassOptionDto ToClassOption(GeneratorEntry entry)
     {
         var extra = ParseExtra(entry.ExtraJson);

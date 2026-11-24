@@ -92,6 +92,10 @@ namespace TRPGHelper.Infrastructure.Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("SubclassName")
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Summary")
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");

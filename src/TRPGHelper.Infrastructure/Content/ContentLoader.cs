@@ -24,6 +24,7 @@ public static class ContentLoader
         LoadSimpleValues(dataPath, ContentPaths.OccupationsFile, "occupations", GeneratorKind.Occupation, systems, entries);
         LoadSimpleValues(dataPath, ContentPaths.BackgroundsFile, "backgrounds", GeneratorKind.Background, systems, entries);
         LoadClasses(dataPath, systems, entries);
+        LoadSubclasses(dataPath, systems, entries);
         LoadRaces(dataPath, systems, entries);
         LoadInspirations(dataPath, systems, entries);
 
@@ -227,6 +228,67 @@ public static class ContentLoader
         }
     }
 
+    private static void LoadSubclasses(
+        string dataPath,
+        IReadOnlyList<ContentSystem> systems,
+        List<GeneratorEntryContent> entries)
+    {
+        var path = Path.Combine(dataPath, ContentPaths.SubclassesFile);
+        if (!File.Exists(path))
+        {
+            return;
+        }
+
+        using var workbook = OpenWorkbook(path);
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var classCodes = entries
+            .Where(entry => entry.Kind == JsonKey(GeneratorKind.Class))
+            .Select(entry => entry.Category)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var index = 0;
+
+        foreach (var row in XlsxHelpers.ReadRows(
+                     XlsxHelpers.RequireSheet(workbook, path, "subclasses"),
+                     path,
+                     ["systemId", "id", "classId", "name", "description", "imageUrl", "accent", "features"]))
+        {
+            var id = row.Required("id", path).ToLowerInvariant();
+            if (!ids.Add(id))
+            {
+                row.Fail(path, $"子职 id「{id}」重复。");
+            }
+
+            var systemId = RequireSystem(row, systems, path);
+            var classId = row.Required("classId", path).ToLowerInvariant();
+            if (!classCodes.Contains(classId))
+            {
+                row.Fail(path, $"子职「{id}」的 classId「{classId}」在 {ContentPaths.ClassesFile} 里不存在。");
+            }
+
+            var features = row["features"]
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList();
+            var imageUrl = row["imageUrl"].Trim();
+            var accent = row["accent"].Trim();
+
+            entries.Add(new GeneratorEntryContent(
+                systemId,
+                JsonKey(GeneratorKind.Subclass),
+                classId,
+                row.Required("name", path),
+                JsonSerializer.Serialize(new
+                {
+                    code = id,
+                    description = row["description"].Trim(),
+                    features,
+                    imageUrl = imageUrl.Length == 0 ? null : imageUrl,
+                    accent = accent.Length == 0 ? null : accent,
+                }, JsonOptions),
+                (index + 1) * 10));
+            index += 1;
+        }
+    }
+
     private static void LoadRaces(
         string dataPath,
         IReadOnlyList<ContentSystem> systems,
@@ -316,7 +378,7 @@ public static class ContentLoader
             var kind = ParseStepKind(row.Required("kind", path));
             if (kind is null)
             {
-                row.Fail(path, $"步骤类型「{row["kind"]}」不认识，可用：class / race / attributes / name / summary。");
+                row.Fail(path, $"步骤类型「{row["kind"]}」不认识，可用：class / subclass / race / attributes / name / summary。");
             }
 
             steps.Add(new ContentCreationStep(

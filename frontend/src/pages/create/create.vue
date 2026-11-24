@@ -145,6 +145,68 @@
           </view>
         </view>
 
+        <!-- 子职步骤：卡片式，必须配图 -->
+        <view v-else-if="isSubclassStep" class="panel">
+          <view class="panel-title">
+            <KeywordText :text="currentStep?.title || '选择子职'" />
+          </view>
+          <view v-if="currentStep?.description" class="muted step-hint">
+            <KeywordText :text="currentStep.description" />
+          </view>
+
+          <view v-if="subclassesLoading" class="muted">正在加载子职…</view>
+          <view v-else-if="subclassesError" class="load-error" @tap="loadSubclasses">
+            <text class="muted">子职加载失败，点这里重试</text>
+          </view>
+          <view v-else-if="!draft.classCode" class="muted">先回上一步选好职业。</view>
+          <view v-else-if="!subclasses.length" class="muted subclass-empty">
+            「{{ draft.className }}」的子职还在整理中，这一步先跳过，直接点「下一步」。
+          </view>
+
+          <view v-else class="subclass-list">
+            <view
+              v-for="item in subclasses"
+              :key="item.code"
+              class="subclass-card"
+              @tap="pickSubclass(item)"
+            >
+              <view class="subclass-cover-wrap">
+                <image
+                  v-if="subclassCover(item) && !failedSubclassCovers[item.code]"
+                  class="subclass-cover"
+                  :src="subclassCover(item)"
+                  mode="aspectFill"
+                  @error="failedSubclassCovers[item.code] = true"
+                />
+                <view
+                  v-else
+                  class="subclass-cover subclass-cover-fallback"
+                  :style="{ backgroundColor: item.accent || DEFAULT_ACCENT }"
+                >
+                  <text>{{ item.name.slice(0, 1) }}</text>
+                </view>
+              </view>
+
+              <view class="subclass-body">
+                <view class="subclass-name">
+                  <KeywordText :text="item.name" />
+                </view>
+                <view class="subclass-desc">
+                  <KeywordText :text="item.description" />
+                </view>
+                <view class="feature-list subclass-features">
+                  <view v-for="feature in item.features" :key="feature" class="feature">
+                    <text class="feature-dot">◆</text>
+                    <KeywordText class="feature-text" :text="feature" />
+                  </view>
+                </view>
+              </view>
+
+              <view v-if="draft.subclassCode === item.code" class="class-ribbon">已选择</view>
+            </view>
+          </view>
+        </view>
+
         <!-- 其它类型的步骤：面板还没做，先按配置占位 -->
         <view v-else class="panel placeholder-panel">
           <view class="panel-title">
@@ -191,7 +253,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { onHide, onLoad, onPageScroll, onUnload } from '@dcloudio/uni-app'
 import { request } from '../../api/http'
-import type { ClassOption, CreationFlow, CreationStep, GameSystem } from '../../api/types'
+import type { ClassOption, CreationFlow, CreationStep, GameSystem, SubclassOption } from '../../api/types'
 import { clearDraft, emptyDraft, loadDraft, saveDraft, type CreateDraft } from '../../stores/createDraft'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
 import KeywordText from '../../components/KeywordText/KeywordText.vue'
@@ -205,15 +267,19 @@ const draft = ref<CreateDraft>(emptyDraft())
 const systems = ref<GameSystem[]>([])
 const steps = ref<CreationStep[]>([])
 const classes = ref<ClassOption[]>([])
+const subclasses = ref<SubclassOption[]>([])
 const flowLoading = ref(false)
 const flowError = ref(false)
 const classesLoading = ref(false)
 const classesError = ref(false)
+const subclassesLoading = ref(false)
+const subclassesError = ref(false)
 const ready = ref(false)
 const started = ref(false)
 const finishing = ref(false)
 const failedIcons = ref<Record<string, boolean>>({})
 const failedCovers = ref<Record<string, boolean>>({})
+const failedSubclassCovers = ref<Record<string, boolean>>({})
 const activeClassIndex = ref(0)
 const cardTops = ref<number[]>([])
 const jumping = ref(false)
@@ -226,13 +292,23 @@ let scrollTimer: ReturnType<typeof setTimeout> | null = null
 const step = computed(() => draft.value.step)
 const currentStep = computed<CreationStep | null>(() => steps.value[draft.value.step - 1] ?? null)
 const isClassStep = computed(() => currentStep.value?.kind === 'class')
+const isSubclassStep = computed(() => currentStep.value?.kind === 'subclass')
 const isLastStep = computed(() => steps.value.length > 0 && draft.value.step >= steps.value.length)
 const canNext = computed(() => {
   if (!currentStep.value) {
     return false
   }
 
-  return isClassStep.value ? Boolean(draft.value.classCode) : true
+  if (isClassStep.value) {
+    return Boolean(draft.value.classCode)
+  }
+
+  if (isSubclassStep.value) {
+    // 该职业还没配置子职时允许跳过
+    return subclasses.value.length === 0 || Boolean(draft.value.subclassCode)
+  }
+
+  return true
 })
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null
@@ -252,6 +328,21 @@ function scheduleSave(): void {
 }
 
 watch(draft, scheduleSave, { deep: true })
+
+watch(
+  () => draft.value.step,
+  (value) => {
+    const item = steps.value[value - 1]
+    if (item?.kind === 'subclass') {
+      void loadSubclasses()
+    }
+
+    if (item?.kind === 'class') {
+      // 从子职步骤退回时卡片会重新挂载，重新量一次顶部位置
+      void nextTick(() => setTimeout(measureCards, 60))
+    }
+  },
+)
 
 onHide(() => {
   if (ready.value) {
@@ -303,11 +394,6 @@ function measureCards(): void {
 }
 
 function scrollToClass(index: number): void {
-  const top = cardTops.value[index]
-  if (top === undefined) {
-    return
-  }
-
   jumping.value = true
   activeClassIndex.value = index
 
@@ -319,10 +405,24 @@ function scrollToClass(index: number): void {
     jumping.value = false
   }, 420)
 
-  const isDesktop = uni.getSystemInfoSync().windowWidth >= 900
-  uni.pageScrollTo({
-    scrollTop: Math.max(0, top - (isDesktop ? 96 : 24)),
-    duration: 300,
+  // 每次点击都现量一次，避免图片加载 / 步骤切换后缓存的位置过期
+  const query = uni.createSelectorQuery()
+  query.selectAll('.class-card').boundingClientRect()
+  query.selectViewport().scrollOffset()
+  query.exec((result) => {
+    const rects = (result?.[0] ?? []) as Array<{ top: number }>
+    const scrollTop = (result?.[1]?.scrollTop ?? 0) as number
+    const rect = rects[index]
+    if (!rect) {
+      measureCards()
+      return
+    }
+
+    const isDesktop = uni.getSystemInfoSync().windowWidth >= 900
+    uni.pageScrollTo({
+      scrollTop: Math.max(0, rect.top + scrollTop - (isDesktop ? 96 : 24)),
+      duration: 300,
+    })
   })
 }
 
@@ -355,6 +455,10 @@ async function init(): Promise<void> {
   }
 
   ready.value = true
+
+  if (currentStep.value?.kind === 'subclass') {
+    void loadSubclasses()
+  }
 }
 
 async function loadSystems(): Promise<void> {
@@ -413,6 +517,38 @@ function coverFor(option: ClassOption): string {
   return (option.imageUrl ?? '').trim()
 }
 
+/** 子职配图来自 子职.xlsx 的 imageUrl；没配时显示主色块。 */
+function subclassCover(option: SubclassOption): string {
+  return (option.imageUrl ?? '').trim()
+}
+
+async function loadSubclasses(): Promise<void> {
+  if (!draft.value.classCode) {
+    subclasses.value = []
+    return
+  }
+
+  if (subclassesLoading.value) {
+    return
+  }
+
+  subclassesLoading.value = true
+  subclassesError.value = false
+
+  try {
+    const code = draft.value.systemCode ?? 'dnd5e'
+    subclasses.value = await request<SubclassOption[]>({
+      url: `/api/generator/subclasses?systemCode=${code}&classId=${encodeURIComponent(draft.value.classCode)}`,
+      auth: false,
+    })
+  } catch {
+    subclassesError.value = true
+    subclasses.value = []
+  } finally {
+    subclassesLoading.value = false
+  }
+}
+
 function markIconFailed(code: string): void {
   failedIcons.value[code] = true
 }
@@ -426,8 +562,12 @@ function pickSystem(system: GameSystem): void {
     draft.value.systemCode = system.code
     draft.value.classCode = null
     draft.value.className = ''
+    draft.value.subclassCode = null
+    draft.value.subclassName = ''
     classes.value = []
+    subclasses.value = []
     failedCovers.value = {}
+    failedSubclassCovers.value = {}
     void loadFlow()
     void loadClasses()
   }
@@ -460,8 +600,19 @@ async function startFlow(): Promise<void> {
 }
 
 function pickClass(option: ClassOption): void {
+  if (draft.value.classCode !== option.code) {
+    draft.value.subclassCode = null
+    draft.value.subclassName = ''
+    subclasses.value = []
+  }
+
   draft.value.classCode = option.code
   draft.value.className = option.name
+}
+
+function pickSubclass(option: SubclassOption): void {
+  draft.value.subclassCode = option.code
+  draft.value.subclassName = option.name
 }
 
 function openDetail(option: ClassOption): void {
@@ -471,7 +622,7 @@ function openDetail(option: ClassOption): void {
 
 function next(): void {
   if (!canNext.value) {
-    toast(isClassStep.value ? '先选一个职业' : '这一步还不能继续')
+    toast(isClassStep.value ? '先选一个职业' : isSubclassStep.value ? '先选一个子职' : '这一步还不能继续')
     return
   }
 
@@ -526,6 +677,7 @@ async function finish(): Promise<void> {
         systemCode: draft.value.systemCode,
         name: name || '未命名冒险者',
         className: draft.value.className,
+        subclassName: draft.value.subclassName || null,
       },
     })
 
@@ -931,6 +1083,73 @@ function scrollTop(): void {
   color: $trpg-accent;
 }
 
+.subclass-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.subclass-card {
+  position: relative;
+  overflow: hidden;
+  border: 2rpx solid $trpg-line;
+  border-radius: 20rpx;
+  background: #fff;
+}
+
+.subclass-cover-wrap {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-top: 56.25%;
+  overflow: hidden;
+  background: #2b211a;
+}
+
+.subclass-cover {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.subclass-cover-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fffaf0;
+  font-size: 64rpx;
+}
+
+.subclass-body {
+  padding: 20rpx;
+}
+
+.subclass-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+}
+
+.subclass-desc {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: #4a4238;
+}
+
+.subclass-features {
+  grid-template-columns: 1fr;
+}
+
+.subclass-empty {
+  line-height: 1.6;
+}
+
 .btn[disabled] {
   opacity: 0.4;
 }
@@ -1056,6 +1275,36 @@ function scrollTop(): void {
 
   .class-list {
     gap: 18px;
+  }
+
+  .subclass-list {
+    gap: 18px;
+  }
+
+  .subclass-card {
+    border-width: 1px;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .subclass-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(91, 70, 54, 0.14);
+  }
+
+  .subclass-body {
+    padding: 16px;
+  }
+
+  .subclass-name {
+    font-size: 22px;
+    letter-spacing: 1px;
+  }
+
+  .subclass-desc {
+    margin-top: 8px;
+    font-size: 13px;
   }
 
   .feature-list {

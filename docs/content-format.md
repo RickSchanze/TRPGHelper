@@ -55,6 +55,22 @@
 | `features` | 否 | 职业卡上的特性列表，**一行一条**（Excel 单元格内 Alt+Enter 换行） |
 | `accent` | 否 | 职业卡主色（没配图时用色块），例如 `#3f5a3a` |
 
+## 子职.xlsx（工作表 subclasses）
+
+车卡流程「选择子职」这一步的卡片数据，按职业分组。
+
+| 列 | 必填 | 说明 |
+| --- | --- | --- |
+| `id` | 是 | 子职 id（小写，例如 `devotion`），同一职业内唯一 |
+| `classId` | 是 | 所属职业 id，例如 `paladin`，会在 `职业.xlsx` 里校验 |
+| `name` | 是 | 子职名，例如「奉献之誓」 |
+| `description` | 否 | 一句话定位（支持 `[关键词]`） |
+| `imageUrl` | 是 | 卡片配图，例如 `/static/subclasses/paladin-devotion.jpg`；没图会退化成色块，但正式内容要求配图 |
+| `accent` | 否 | 没配图时的色块颜色 |
+| `features` | 否 | 卡片上的特性列表，**一行一条**（Excel 单元格内 Alt+Enter 换行） |
+
+配图提示词见 [image-prompts.md](image-prompts.md)。
+
 ## 随机职业.xlsx（工作表 occupations）
 
 | 列 | 必填 | 说明 |
@@ -94,7 +110,7 @@
 | 列 | 必填 | 说明 |
 | --- | --- | --- |
 | `systemId` | 否 | 引用 `systems.id`；留空表示通用 |
-| `kind` | 是 | 步骤类型：`class` / `race` / `attributes` / `name` / `summary` |
+| `kind` | 是 | 步骤类型：`class` / `subclass` / `race` / `attributes` / `name` / `summary` |
 | `title` | 是 | 步骤标题（stepper 上显示） |
 | `description` | 否 | 步骤说明 |
 | `isEnabled` | 否 | 是否启用 |

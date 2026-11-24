@@ -33,6 +33,10 @@ public static class GeneratorEndpoints
                 Results.Ok(await catalog.ClassesAsync(systemCode, cancellationToken)))
             .WithSummary("职业列表（管理台可维护）");
 
+        group.MapGet("/subclasses", async (string? systemCode, string? classId, GeneratorCatalogService catalog, CancellationToken cancellationToken) =>
+                Results.Ok(await catalog.SubclassesAsync(systemCode, classId, cancellationToken)))
+            .WithSummary("子职列表（按职业过滤）");
+
         group.MapGet("/races", async (string? systemCode, GeneratorCatalogService catalog, CancellationToken cancellationToken) =>
                 Results.Ok(await catalog.RacesAsync(systemCode, cancellationToken)))
             .WithSummary("种族列表（管理台可维护）");

@@ -122,6 +122,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             builder.Property(x => x.Name).HasMaxLength(64).IsRequired();
             builder.Property(x => x.Occupation).HasMaxLength(64);
             builder.Property(x => x.ClassName).HasMaxLength(40);
+            builder.Property(x => x.SubclassName).HasMaxLength(40);
             builder.Property(x => x.RaceName).HasMaxLength(40);
             builder.Property(x => x.Summary).HasMaxLength(512);
             builder.Property(x => x.PortraitUrl).HasMaxLength(512);

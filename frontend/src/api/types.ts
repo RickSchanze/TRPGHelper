@@ -60,6 +60,7 @@ export interface CharacterSummary {
   name: string
   occupation?: string
   className?: string
+  subclassName?: string
   raceName?: string
   age?: number
   summary?: string
@@ -177,4 +178,15 @@ export interface RaceOption {
   description: string
   abilityBonus: string
   speed: number
+}
+
+/** 子职选项（圣武士的三个神圣誓约等）。 */
+export interface SubclassOption {
+  code: string
+  name: string
+  classId: string
+  description: string
+  features: string[]
+  imageUrl?: string
+  accent?: string
 }

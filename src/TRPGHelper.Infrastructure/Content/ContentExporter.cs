@@ -119,6 +119,25 @@ public static class ContentExporter
             })
             .ToList();
 
+        var subclassRows = entries
+            .Where(entry => entry.Kind == GeneratorKind.Subclass)
+            .Select(entry =>
+            {
+                var extra = ParseExtra(entry.ExtraJson);
+                return new object?[]
+                {
+                    entry.SystemCode ?? "dnd5e",
+                    ReadString(extra, "code") ?? entry.Category,
+                    entry.Category,
+                    entry.Value,
+                    ReadString(extra, "description") ?? string.Empty,
+                    ReadString(extra, "imageUrl") ?? string.Empty,
+                    ReadString(extra, "accent") ?? string.Empty,
+                    string.Join('\n', ReadStringList(extra, "features")),
+                };
+            })
+            .ToList();
+
         var raceRows = entries
             .Where(entry => entry.Kind == GeneratorKind.Race)
             .Select(entry =>
@@ -172,6 +191,26 @@ public static class ContentExporter
                 },
                 new HashSet<string> { "description", "features" });
             written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.ClassesFile)));
+        }
+
+        using (var workbook = new XLWorkbook())
+        {
+            XlsxHelpers.WriteSheet(workbook, "subclasses",
+                ["systemId", "id", "classId", "name", "description", "imageUrl", "accent", "features"],
+                subclassRows,
+                new Dictionary<string, double>
+                {
+                    ["systemId"] = 12,
+                    ["id"] = 14,
+                    ["classId"] = 12,
+                    ["name"] = 14,
+                    ["description"] = 56,
+                    ["imageUrl"] = 34,
+                    ["accent"] = 12,
+                    ["features"] = 64,
+                },
+                new HashSet<string> { "description", "features" });
+            written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.SubclassesFile)));
         }
 
         using (var workbook = new XLWorkbook())

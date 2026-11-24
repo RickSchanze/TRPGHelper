@@ -25,6 +25,9 @@ public class CharacterCard
     /// <summary>规则系统里的职业，例如 DND 的「战士」。</summary>
     public string? ClassName { get; set; }
 
+    /// <summary>子职，例如圣武士的「奉献之誓」。</summary>
+    public string? SubclassName { get; set; }
+
     /// <summary>规则系统里的种族，例如 DND 的「半精灵」。</summary>
     public string? RaceName { get; set; }
 

@@ -46,6 +46,7 @@ export type GeneratorKindKey =
   | 'occupation'
   | 'background'
   | 'class'
+  | 'subclass'
   | 'race'
   | 'inspiration'
 
@@ -84,7 +85,7 @@ export interface AdminKindCount {
   count: number
 }
 
-export type CreationStepKindKey = 'class' | 'race' | 'attributes' | 'name' | 'summary'
+export type CreationStepKindKey = 'class' | 'subclass' | 'race' | 'attributes' | 'name' | 'summary'
 
 export interface AdminCreationStep {
   id: string

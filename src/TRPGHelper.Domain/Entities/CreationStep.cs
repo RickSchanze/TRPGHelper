@@ -9,6 +9,9 @@ public enum CreationStepKind
     /// <summary>选职业（第一阶段唯一实现了面板的类型）。</summary>
     Class = 0,
 
+    /// <summary>选子职（例如圣武士的神圣誓约）。</summary>
+    Subclass = 5,
+
     /// <summary>选种族。</summary>
     Race = 1,
 

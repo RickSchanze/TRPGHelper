@@ -176,6 +176,11 @@ public static class CharacterEndpoints
             errors["className"] = ["职业最多 40 个字符。"];
         }
 
+        if (request.SubclassName?.Trim().Length > 40)
+        {
+            errors["subclassName"] = ["子职最多 40 个字符。"];
+        }
+
         if (request.RaceName?.Trim().Length > 40)
         {
             errors["raceName"] = ["种族最多 40 个字符。"];
@@ -238,6 +243,7 @@ public static class CharacterEndpoints
             Name = request.Name.Trim(),
             Occupation = NormalizeOptional(request.Occupation),
             ClassName = NormalizeOptional(request.ClassName),
+            SubclassName = NormalizeOptional(request.SubclassName),
             RaceName = NormalizeOptional(request.RaceName),
             Age = request.Age,
             Summary = NormalizeOptional(request.Summary),
@@ -342,6 +348,21 @@ public static class CharacterEndpoints
             if (className != card.ClassName)
             {
                 card.ClassName = className;
+                changed = true;
+            }
+        }
+
+        if (request.SubclassName is not null)
+        {
+            var subclassName = NormalizeOptional(request.SubclassName);
+            if (subclassName?.Length > 40)
+            {
+                return Validation("subclassName", "子职最多 40 个字符。");
+            }
+
+            if (subclassName != card.SubclassName)
+            {
+                card.SubclassName = subclassName;
                 changed = true;
             }
         }

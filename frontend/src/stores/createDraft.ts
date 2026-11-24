@@ -1,16 +1,18 @@
 /*** 车新卡的本机草稿：车完之前只存在本地，最后一步才提交给服务器。 */
 export interface CreateDraft {
-  version: 4
+  version: 5
   /** 当前步骤序号，从 1 开始；步骤数量由后端的车卡流程配置决定。 */
   step: number
   systemCode: string | null
   classCode: string | null
   className: string
+  subclassCode: string | null
+  subclassName: string
   updatedAt: string
 }
 
 const STORAGE_KEY = 'trpg_create_draft'
-const DRAFT_VERSION = 4
+const DRAFT_VERSION = 5
 
 export function emptyDraft(): CreateDraft {
   return {
@@ -19,6 +21,8 @@ export function emptyDraft(): CreateDraft {
     systemCode: null,
     classCode: null,
     className: '',
+    subclassCode: null,
+    subclassName: '',
     updatedAt: new Date().toISOString(),
   }
 }
@@ -45,6 +49,8 @@ function normalize(raw: unknown): CreateDraft | null {
     systemCode: typeof draft.systemCode === 'string' && draft.systemCode ? draft.systemCode : null,
     classCode: typeof draft.classCode === 'string' && draft.classCode ? draft.classCode : null,
     className: asString(draft.className),
+    subclassCode: typeof draft.subclassCode === 'string' && draft.subclassCode ? draft.subclassCode : null,
+    subclassName: asString(draft.subclassName),
     updatedAt: typeof draft.updatedAt === 'string' ? draft.updatedAt : new Date().toISOString(),
   }
 }
