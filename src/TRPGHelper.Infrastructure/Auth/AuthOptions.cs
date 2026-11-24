@@ -34,3 +34,14 @@ public sealed class AuthOptions
     /// <summary>仅本地开发用：跳过微信登录，直接用昵称换 token。</summary>
     public bool EnableDevLogin { get; set; }
 }
+
+public sealed class AdminOptions
+{
+    public const string SectionName = "Admin";
+
+    /// <summary>本地开发登录的账号是否直接获得管理员角色（仅 Development 生效时建议开启）。</summary>
+    public bool DevLoginIsAdmin { get; set; } = true;
+
+    /// <summary>登录时自动提升为管理员的 openid 白名单，用来给首个管理员开门。</summary>
+    public string[] BootstrapOpenIds { get; set; } = [];
+}

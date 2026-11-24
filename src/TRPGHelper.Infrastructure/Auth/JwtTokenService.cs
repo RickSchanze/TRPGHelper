@@ -24,6 +24,7 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options)
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Name, user.NickName),
             new("openid", user.OpenId),
+            new(ClaimTypes.Role, string.IsNullOrWhiteSpace(user.Role) ? UserRoles.User : user.Role),
         };
 
         var expiresAt = DateTimeOffset.UtcNow.AddMinutes(jwt.AccessTokenMinutes > 0 ? jwt.AccessTokenMinutes : 60 * 24 * 7);

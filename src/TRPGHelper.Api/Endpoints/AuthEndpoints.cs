@@ -47,6 +47,7 @@ public static class AuthEndpoints
         AppDbContext db,
         WeChatAuthClient weChat,
         JwtTokenService jwt,
+        IOptions<AdminOptions> adminOptions,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Code))
@@ -110,6 +111,7 @@ public static class AuthEndpoints
             }
         }
 
+        ApplyAdminBootstrap(user, adminOptions.Value, isDevLogin: false);
         await db.SaveChangesAsync(cancellationToken);
         return await BuildLoginResponseAsync(user, db, jwt, cancellationToken);
     }
@@ -119,6 +121,7 @@ public static class AuthEndpoints
         AppDbContext db,
         JwtTokenService jwt,
         IOptions<AuthOptions> authOptions,
+        IOptions<AdminOptions> adminOptions,
         CancellationToken cancellationToken)
     {
         if (!authOptions.Value.EnableDevLogin)
@@ -151,6 +154,7 @@ public static class AuthEndpoints
             }
         }
 
+        ApplyAdminBootstrap(user, adminOptions.Value, isDevLogin: true);
         await db.SaveChangesAsync(cancellationToken);
         return await BuildLoginResponseAsync(user, db, jwt, cancellationToken);
     }
@@ -215,6 +219,27 @@ public static class AuthEndpoints
         var (total, retained) = await UserStats.GetAsync(db, user.Id, cancellationToken);
         var (token, expiresAt) = jwt.CreateToken(user);
         return Results.Ok(new LoginResponse(token, expiresAt, Mappings.ToUserDto(user, total, retained)));
+    }
+
+    /// <summary>
+    /// 首个管理员的开门方式：openid 白名单里的账号登录即提升为 admin；
+    /// 本地开发登录在 Admin:DevLoginIsAdmin 开启时也直接给管理员。
+    /// </summary>
+    private static void ApplyAdminBootstrap(User user, AdminOptions adminOptions, bool isDevLogin)
+    {
+        if (UserRoles.IsAdmin(user.Role))
+        {
+            return;
+        }
+
+        var whitelisted = (adminOptions.BootstrapOpenIds ?? []).Any(openId =>
+            !string.IsNullOrWhiteSpace(openId)
+            && string.Equals(openId.Trim(), user.OpenId, StringComparison.OrdinalIgnoreCase));
+
+        if (whitelisted || (isDevLogin && adminOptions.DevLoginIsAdmin))
+        {
+            user.Role = UserRoles.Admin;
+        }
     }
 
     private static string? NormalizeNickName(string? nickName)

@@ -11,6 +11,7 @@ internal static class Mappings
         user.Id,
         user.NickName,
         user.AvatarUrl,
+        string.IsNullOrWhiteSpace(user.Role) ? UserRoles.User : user.Role,
         AsOffset(user.CreatedAt),
         AsOffset(user.LastLoginAt),
         totalCards,

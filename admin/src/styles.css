@@ -1,0 +1,535 @@
+/* ------------------------------------------------------------------
+   TRPGHelper 管理台主题
+   配色取「羊皮纸 + 墨 + 铜」，和前端卡器的视觉保持一致。
+------------------------------------------------------------------ */
+
+:root {
+  --trpg-ink: #2b211a;
+  --trpg-accent: #8a5a2b;
+  --trpg-gold: #c8a96a;
+  --trpg-paper: #f6f1e7;
+  --trpg-line: #e7ddcc;
+
+  /* Element Plus 主题色换成铜棕色 */
+  --el-color-primary: #8a5a2b;
+  --el-color-primary-light-3: #a9764a;
+  --el-color-primary-light-5: #c39a72;
+  --el-color-primary-light-7: #dcc3a6;
+  --el-color-primary-light-8: #e8d7c2;
+  --el-color-primary-light-9: #f4ecdf;
+  --el-color-primary-dark-2: #6f4823;
+  --el-border-radius-base: 10px;
+  --el-border-color-lighter: #efe6d8;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  color: var(--trpg-ink);
+  background:
+    radial-gradient(1200px 600px at 100% -10%, rgba(200, 169, 106, 0.18), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(138, 90, 43, 0.1), transparent 60%),
+    var(--trpg-paper);
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------------- 外壳 ---------------- */
+
+.admin-shell {
+  height: 100vh;
+}
+
+.admin-aside {
+  display: flex;
+  flex-direction: column;
+  color: #f4ece1;
+  background: linear-gradient(180deg, #2b211a 0%, #3a2b1f 55%, #46352a 100%);
+  box-shadow: 6px 0 30px rgba(43, 33, 26, 0.18);
+}
+
+.brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 22px 20px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.brand-badge {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #2b211a;
+  background: linear-gradient(135deg, #e8d3a8, #c8a96a);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+}
+
+.brand-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.brand-sub {
+  margin-top: 2px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: rgba(244, 236, 225, 0.55);
+}
+
+.admin-menu {
+  flex: 1;
+  padding: 14px 10px;
+  border-right: none;
+  background: transparent;
+}
+
+.admin-menu .el-menu-item {
+  height: 44px;
+  line-height: 44px;
+  margin-bottom: 6px;
+  padding-left: 16px !important;
+  border-radius: 10px;
+  color: rgba(244, 236, 225, 0.72);
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.admin-menu .el-menu-item:hover {
+  color: #fff;
+  background: rgba(200, 169, 106, 0.12);
+}
+
+.admin-menu .el-menu-item.is-active {
+  color: #fff;
+  background: linear-gradient(90deg, rgba(200, 169, 106, 0.3), rgba(200, 169, 106, 0.08));
+  box-shadow: inset 0 0 0 1px rgba(200, 169, 106, 0.25);
+}
+
+.aside-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 20px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: rgba(244, 236, 225, 0.4);
+}
+
+.aside-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--trpg-gold);
+  box-shadow: 0 0 10px rgba(200, 169, 106, 0.9);
+}
+
+.admin-body {
+  background: transparent;
+}
+
+.admin-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 28px;
+  background: rgba(255, 253, 248, 0.86);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--trpg-line);
+}
+
+.header-crumb {
+  font-size: 13px;
+  color: #a3947f;
+}
+
+.header-sep {
+  margin: 0 8px;
+  color: #cfc3b0;
+}
+
+.header-page {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-main {
+  padding: 26px 28px 44px;
+}
+
+/* ---------------- 通用 ---------------- */
+
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.page-title h2 {
+  position: relative;
+  margin: 0;
+  padding-left: 14px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.page-title h2::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--trpg-gold), var(--trpg-accent));
+  transform: translateY(-50%);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--trpg-line);
+  border-radius: 14px;
+  background: #fffdf8;
+}
+
+.grow {
+  flex: 1;
+}
+
+.muted {
+  color: #9c8f7d;
+  font-size: 13px;
+}
+
+/* ---------------- 卡片 / 统计 ---------------- */
+
+.el-card {
+  border: 1px solid var(--trpg-line);
+  border-radius: 16px;
+  background: #fffdf8;
+  box-shadow: 0 10px 30px rgba(43, 33, 26, 0.06);
+}
+
+.el-card__header {
+  border-bottom: 1px solid #f0e7d9;
+  font-weight: 600;
+}
+
+.el-card__body {
+  padding: 20px;
+}
+
+.stat-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--trpg-gold), var(--trpg-accent));
+}
+
+.stat-card .value {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--trpg-ink);
+}
+
+.stat-card .label {
+  margin-top: 6px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #9b8f7e;
+}
+
+/* ---------------- 表格 ---------------- */
+
+.el-table {
+  --el-table-border-color: #efe6d8;
+  --el-table-header-bg-color: #faf4e9;
+  border-radius: 12px;
+}
+
+.el-table th.el-table__cell {
+  font-weight: 600;
+  color: #6b5c49;
+  background: #faf4e9 !important;
+}
+
+.el-table .el-table__row:hover > td {
+  background: #fdf8ef !important;
+}
+
+/* ---------------- 按钮 / 表单 ---------------- */
+
+.el-button {
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.el-button--primary {
+  border-color: #7d5126;
+  background: linear-gradient(180deg, #96652f, #7d5126);
+  box-shadow: 0 6px 14px rgba(125, 81, 38, 0.22);
+}
+
+.el-button--primary:hover {
+  border-color: #875a2b;
+  background: linear-gradient(180deg, #a4713a, #875a2b);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* ---------------- 弹窗 / 抽屉 ---------------- */
+
+.el-dialog {
+  overflow: hidden;
+  border-radius: 18px;
+}
+
+.el-dialog__header {
+  margin-right: 0;
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid #f0e7d9;
+}
+
+.el-dialog__title {
+  font-weight: 700;
+}
+
+.el-dialog__body {
+  padding: 20px 24px;
+}
+
+.el-drawer__header {
+  margin-bottom: 0;
+  padding: 20px 24px 14px;
+  font-weight: 600;
+  color: var(--trpg-ink);
+  border-bottom: 1px solid #f0e7d9;
+}
+
+.el-drawer__body {
+  padding: 20px 24px;
+}
+
+/* ---------------- 登录页 ---------------- */
+
+.login-page {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(135deg, #241a13, #3a2b1f 55%, #4a3524);
+}
+
+.login-page::before,
+.login-page::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+}
+
+.login-page::before {
+  top: -160px;
+  left: -140px;
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, rgba(200, 169, 106, 0.28), transparent 65%);
+}
+
+.login-page::after {
+  right: -200px;
+  bottom: -240px;
+  width: 620px;
+  height: 620px;
+  background: radial-gradient(circle, rgba(138, 90, 43, 0.35), transparent 60%);
+}
+
+.login-card {
+  position: relative;
+  z-index: 1;
+  width: 400px;
+  border: none;
+  border-radius: 20px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+}
+
+.login-card .el-card__header {
+  background: transparent;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.login-brand .brand-badge {
+  width: 34px;
+  height: 34px;
+  font-size: 16px;
+}
+
+.login-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.login-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #9c8f7d;
+}
+
+/* ---------------- 表单细节 ---------------- */
+
+.code-editor textarea {
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 12px;
+}
+
+.image-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+}
+
+/* ---------------- 职业卡编辑器 ---------------- */
+
+.class-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 24px;
+}
+
+.class-editor-form {
+  min-width: 0;
+}
+
+.class-editor-preview {
+  padding-left: 20px;
+  border-left: 1px solid #f0e7d9;
+}
+
+.preview-title {
+  margin-bottom: 8px;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.card-preview {
+  overflow: hidden;
+  border: 1px solid #e7ddcc;
+  border-radius: 14px;
+  background: #fffdf8;
+  box-shadow: 0 12px 30px rgba(43, 33, 26, 0.08);
+}
+
+.card-cover {
+  position: relative;
+  padding-top: 56.25%;
+  background: #2b211a;
+}
+
+.card-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-cover-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  color: #fffaf0;
+}
+
+.card-body {
+  padding: 14px;
+}
+
+.card-name {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.card-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #9c8f7d;
+}
+
+.card-desc {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #4a4238;
+}
+
+.card-features {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.card-feature {
+  font-size: 12px;
+  color: #9c8f7d;
+}
+
+/* 关键词：文本里用 [方括号] 包起来的部分 */
+.kw {
+  font-style: italic;
+  font-weight: 700;
+}

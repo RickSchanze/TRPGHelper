@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<WeChatOptions>(configuration.GetSection(WeChatOptions.SectionName));
         services.Configure<AuthOptions>(configuration.GetSection(AuthOptions.SectionName));
+        services.Configure<AdminOptions>(configuration.GetSection(AdminOptions.SectionName));
 
         var connectionString = ResolveConnectionString(
             configuration.GetConnectionString("Default"),

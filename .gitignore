@@ -21,6 +21,8 @@ frontend/dist/
 frontend/unpackage/
 frontend/.vite/
 frontend/.hbuilderx/
+admin/dist/
+admin/.vite/
 *.log
 npm-debug.log*
 pnpm-debug.log*
@@ -36,3 +38,6 @@ appsettings.Local.json
 # ---- OS ----
 .DS_Store
 Thumbs.db
+
+# ---- 本地临时目录 ----
+.tmp/

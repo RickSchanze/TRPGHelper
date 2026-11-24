@@ -115,6 +115,49 @@ namespace TRPGHelper.Infrastructure.Data.Migrations
                     b.ToTable("CharacterCards", (string)null);
                 });
 
+            modelBuilder.Entity("TRPGHelper.Domain.Entities.CreationStep", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SystemCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SystemCode", "IsEnabled", "SortOrder");
+
+                    b.ToTable("CreationSteps", (string)null);
+                });
+
             modelBuilder.Entity("TRPGHelper.Domain.Entities.GameSystem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -142,6 +185,13 @@ namespace TRPGHelper.Infrastructure.Data.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("NameTemplate")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("{surname}{given}");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("INTEGER");
 
@@ -151,6 +201,55 @@ namespace TRPGHelper.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("GameSystems", (string)null);
+                });
+
+            modelBuilder.Entity("TRPGHelper.Domain.Entities.GeneratorEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExtraJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SystemCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kind", "Category");
+
+                    b.HasIndex("SystemCode", "Kind", "IsEnabled");
+
+                    b.ToTable("GeneratorEntries", (string)null);
                 });
 
             modelBuilder.Entity("TRPGHelper.Domain.Entities.User", b =>
@@ -178,6 +277,13 @@ namespace TRPGHelper.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("user");
 
                     b.Property<string>("UnionId")
                         .HasMaxLength(64)

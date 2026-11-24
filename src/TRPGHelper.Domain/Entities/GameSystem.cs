@@ -17,6 +17,12 @@ public class GameSystem
     /// <summary>属性模板 JSON：数组，元素为 { key, label, formula }。</summary>
     public string AttributeTemplateJson { get; set; } = "[]";
 
+    /// <summary>
+    /// 姓名生成模板，用 {category} 占位符引用 GeneratorEntries 里 NamePart 的分组，
+    /// 例如 COC 的 "{surname}{given}"、DND 的 "{first}·{epithet}"。
+    /// </summary>
+    public string NameTemplate { get; set; } = "{surname}{given}";
+
     public bool IsBuiltin { get; set; }
 
     public int SortOrder { get; set; }

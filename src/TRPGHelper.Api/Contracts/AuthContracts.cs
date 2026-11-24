@@ -4,6 +4,7 @@ public sealed record UserDto(
     Guid Id,
     string NickName,
     string? AvatarUrl,
+    string Role,
     DateTimeOffset CreatedAt,
     DateTimeOffset LastLoginAt,
     int TotalCards,

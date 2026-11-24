@@ -6,7 +6,9 @@
 
 - 后端：.NET 10（ASP.NET Core Minimal API + EF Core + SQLite）
 - 前端：uni-app（Vue 3 + TypeScript + Vite），一套代码编译到微信小程序和 H5
+- 管理台：Vue 3 + Vite + Element Plus（`admin/`），维护规则系统、属性模板与生成器素材
 - 当前是**骨架版**：登录、卡库、新建向导、状态流转（留卡）、辅助素材（属性/姓名/职业/灵感）已跑通，业务细节后续逐个补。
+- 素材已经**全部可配置**：姓名片段、职业、背景、职业卡、种族、灵感都存在 SQLite 里，由管理台维护。
 
 ## 目录结构
 
@@ -16,8 +18,9 @@ TRPGHelper/
 │  ├─ TRPGHelper.Api/             # Web API 入口（端点、DTO、鉴权、Swagger/Scalar）
 │  ├─ TRPGHelper.Domain/          # 实体、骰子引擎、卡规则、属性生成
 │  └─ TRPGHelper.Infrastructure/  # EF Core DbContext、迁移、JWT、微信登录客户端
-├─ tests/TRPGHelper.Tests/        # 骰子 / 状态流转 / 属性生成的单元测试
+├─ tests/TRPGHelper.Tests/        # 骰子 / 状态流转 / 属性生成 / 素材库的单元测试
 ├─ frontend/                      # uni-app 前端（微信小程序 + H5）
+├─ admin/                         # 后台管理台（Vue 3 + Element Plus）
 ├─ docs/
 └─ TRPGHelper.slnx
 ```
@@ -49,12 +52,43 @@ npm run dev:h5          # 浏览器预览 http://localhost:5173
 
 H5 在桌面浏览器下也有适配：宽度 ≥ 900px 时使用居中版心（最大 1100px）、固定顶栏、卡片网格和鼠标悬停反馈，隐藏小程序式的导航条与底部 tabBar。
 
-已经启动的两个地址：
+已经启动的地址：
 
 - 后端：<http://localhost:5080>（健康检查 /health，文档 /scalar/v1）
 - 前端 H5：<http://localhost:5173>
+- 管理台：<http://localhost:5174>
 
-### 3. 登录
+### 3. 管理台（内容配置）
+
+```powershell
+cd admin
+npm install
+npm run dev        # http://localhost:5174，/api 代理到 5080
+npm run build      # 产物在 admin/dist
+```
+
+管什么（当前阶段先只开放「概览」和「车卡流程」；素材库、规则系统页面暂时从菜单隐藏，代码保留）：
+
+| 页面 | 能改什么 |
+| --- | --- |
+| 概览 | 系统 / 素材 / 用户 / 卡数量，按素材类型分布 |
+| 车卡流程 | 配置车卡流程有几步、先后顺序、每步的标题与说明；**「选择职业」这一步点「编辑职业」可以逐张改职业的描述和配图，右侧实时预览前端职业卡**；右侧抽屉可以预览前端 stepper（选规则书不算步骤） |
+| 规则系统（暂隐藏） | 属性模板（key + 名称 + 骰子公式）；姓名模板（`{surname}{given}`、`{first}·{epithet}`） |
+| 素材库（暂隐藏） | 姓名片段、职业、背景、职业卡、种族、灵感的增删改查 |
+
+职业卡配图可以填地址（`/static/classes/ranger.jpg`、`https://...`），也可以直接在管理台上传（存到 `App_Data/uploads/`，通过 `/uploads/...` 提供）。
+
+职业卡支持**关键词标记**：描述 / 特性里用 `[方括号]` 包起来的部分，前端渲染成「斜体 + 粗体」（管理台的预览也是同样效果）。例如 `与 [异界存在] 签约，用 [魔契] 换取力量。`。解析逻辑在 `frontend/src/utils/keywords.ts`，渲染组件 `frontend/src/components/KeywordText`，后续的关键词点击 / 详情等功能在这个基础上接。
+
+管理员鉴权复用现有 JWT（`User.Role`，`admin` 角色才放行 `/api/admin/*`）：
+
+- 本地开发：`appsettings.Development.json` 里 `Admin:DevLoginIsAdmin = true`，管理台点「本地开发登录」直接进。
+- 线上：在 `Admin:BootstrapOpenIds` 里填管理员的微信 openid，该账号登录后自动成为 admin。
+- 其他账号仍可正常用小程序登录，只是拿不到 admin 角色。
+
+数据落在 SQLite 的 `GameSystems` / `GeneratorEntries` / `CreationSteps` 表，首次启动会按 `GeneratorSeedData` 写入出厂素材（180 条）和默认流程（1 步「选择职业」），之后以管理台为准；改完前端下次请求即生效。
+
+### 4. 登录
 
 - 本地开发：登录页点「本地开发登录」（需要 `ASPNETCORE_ENVIRONMENT=Development`，即默认 `dotnet run` 的环境，`appsettings.Development.json` 里 `Auth:EnableDevLogin = true`）。
 - 微信小程序：在 `src/TRPGHelper.Api/appsettings.json` 填入
@@ -72,7 +106,9 @@ H5 在桌面浏览器下也有适配：宽度 ≥ 900px 时使用居中版心（
 | `Jwt:AccessTokenMinutes` | 登录有效期，默认 7 天 |
 | `WeChat:AppId` / `WeChat:AppSecret` | 微信小程序登录（code2session） |
 | `Auth:EnableDevLogin` | 是否允许本地开发登录，生产环境请设为 false |
-| `Cors:AllowedOrigins` | 允许的浏览器来源；为空表示允许任意来源 |
+| `Admin:DevLoginIsAdmin` | 本地开发登录是否直接给 admin 角色（默认在 Development 下开启） |
+| `Admin:BootstrapOpenIds` | 自动提升为管理员的微信 openid 白名单 |
+| `Cors:AllowedOrigins` | 允许的浏览器来源；为空表示允许任意来源（开发环境已含 5173 / 5174） |
 
 前端后端地址通过 `VITE_API_BASE` 覆盖，默认 `http://localhost:5080`（见 `frontend/.env.example`）。
 
@@ -94,11 +130,36 @@ H5 在桌面浏览器下也有适配：宽度 ≥ 900px 时使用居中版心（
 | POST | `/api/characters/{id}/notes` | 加一条备注 |
 | POST | `/api/generator/roll` | 掷骰（`d20`、`4d6kh3`、`3d6*5`、`2d6*5+30`） |
 | POST | `/api/generator/attributes` | 按规则生成属性（掷骰 / 标准数组） |
-| GET | `/api/generator/classes` | DND 5E 职业列表 |
-| GET | `/api/generator/races` | DND 5E 种族列表 |
-| GET | `/api/generator/names` | 随机姓名 |
-| GET | `/api/generator/occupations` | 随机职业 |
+| GET | `/api/generator/classes` | 职业卡列表（数据来自素材库，含 `imageUrl`） |
+| GET | `/api/generator/races` | 种族列表（数据来自素材库） |
+| GET | `/api/generator/names` | 随机姓名（按系统的姓名模板拼） |
+| GET | `/api/generator/occupations` | 随机职业（职业 + 背景池） |
 | GET | `/api/generator/inspirations` | 车卡灵感 |
+| GET | `/api/creation-flow` | 车卡流程步骤（按 `systemCode` 过滤；规则书选择不算步骤） |
+
+管理台接口（都需要 `admin` 角色，见 `AdminEndpoints.PolicyName`）：
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/admin/overview` | 概览统计（系统 / 素材 / 用户 / 卡 / 各类型素材数） |
+| GET | `/api/admin/systems` | 规则系统列表（含属性模板、姓名模板） |
+| POST | `/api/admin/systems` | 新建规则系统 |
+| PUT | `/api/admin/systems/{id}` | 更新规则系统（改 code 会同步搬移素材） |
+| DELETE | `/api/admin/systems/{id}` | 删除规则系统（有卡引用时 409） |
+| GET | `/api/admin/generator` | 素材列表（`kind` / `systemCode` / `keyword` / `enabled` / 分页） |
+| POST | `/api/admin/generator` | 新增素材 |
+| PUT | `/api/admin/generator/{id}` | 更新素材（含启停） |
+| DELETE | `/api/admin/generator/{id}` | 删除素材 |
+| GET | `/api/admin/creation-steps` | 车卡流程步骤列表 |
+| POST | `/api/admin/creation-steps` | 新增流程步骤 |
+| PUT | `/api/admin/creation-steps/{id}` | 更新流程步骤 |
+| DELETE | `/api/admin/creation-steps/{id}` | 删除流程步骤 |
+| POST | `/api/admin/assets` | 上传图片（multipart，字段名 `file`，≤5 MB），返回 `/uploads/...` 地址 |
+
+素材类型（`kind`）：`namePart`、`occupation`、`background`、`class`、`race`、`inspiration`。职业卡 / 种族的扩展字段放在 `extra` 里，例如职业卡：
+```json
+{ "description": "荒野的猎手", "hitDie": "d10", "primaryAbility": "敏捷 / 感知", "features": ["宿敌", "战斗风格"] }
+```
 
 ## 车新卡流程
 

@@ -15,6 +15,9 @@ public class User
 
     public string? AvatarUrl { get; set; }
 
+    /// <summary>角色：user / admin。管理员由配置项或管理台授予。</summary>
+    public string Role { get; set; } = UserRoles.User;
+
     /// <summary>UTC 时间，SQLite 原生支持排序与范围比较。</summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

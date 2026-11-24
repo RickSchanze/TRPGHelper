@@ -14,6 +14,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<GameSystem> GameSystems => Set<GameSystem>();
 
+    public DbSet<GeneratorEntry> GeneratorEntries => Set<GeneratorEntry>();
+
+    public DbSet<CreationStep> CreationSteps => Set<CreationStep>();
+
     public DbSet<CharacterCard> CharacterCards => Set<CharacterCard>();
 
     public DbSet<CardLog> CardLogs => Set<CardLog>();
@@ -28,6 +32,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             builder.Property(x => x.UnionId).HasMaxLength(64);
             builder.Property(x => x.NickName).HasMaxLength(64).IsRequired();
             builder.Property(x => x.AvatarUrl).HasMaxLength(512);
+            builder.Property(x => x.Role).HasMaxLength(16).HasDefaultValue(UserRoles.User).IsRequired();
             builder.HasIndex(x => x.OpenId).IsUnique();
         });
 
@@ -38,7 +43,32 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             builder.Property(x => x.Code).HasMaxLength(32).IsRequired();
             builder.Property(x => x.Name).HasMaxLength(128).IsRequired();
             builder.Property(x => x.Description).HasMaxLength(512);
+            builder.Property(x => x.NameTemplate).HasMaxLength(128).HasDefaultValue("{surname}{given}").IsRequired();
             builder.HasIndex(x => x.Code).IsUnique();
+        });
+
+        modelBuilder.Entity<GeneratorEntry>(builder =>
+        {
+            builder.ToTable("GeneratorEntries");
+            builder.HasKey(x => x.Id);
+            builder.Property(x => x.SystemCode).HasMaxLength(32);
+            builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(32);
+            builder.Property(x => x.Category).HasMaxLength(32).IsRequired();
+            builder.Property(x => x.Value).HasMaxLength(256).IsRequired();
+            builder.Property(x => x.ExtraJson).HasColumnType("TEXT");
+            builder.HasIndex(x => new { x.SystemCode, x.Kind, x.IsEnabled });
+            builder.HasIndex(x => new { x.Kind, x.Category });
+        });
+
+        modelBuilder.Entity<CreationStep>(builder =>
+        {
+            builder.ToTable("CreationSteps");
+            builder.HasKey(x => x.Id);
+            builder.Property(x => x.SystemCode).HasMaxLength(32);
+            builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(32);
+            builder.Property(x => x.Title).HasMaxLength(64).IsRequired();
+            builder.Property(x => x.Description).HasMaxLength(512);
+            builder.HasIndex(x => new { x.SystemCode, x.IsEnabled, x.SortOrder });
         });
 
         modelBuilder.Entity<CharacterCard>(builder =>

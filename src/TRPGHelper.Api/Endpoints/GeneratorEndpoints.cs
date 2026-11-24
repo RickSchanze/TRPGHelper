@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TRPGHelper.Api.Contracts;
-using TRPGHelper.Api.Data;
+using TRPGHelper.Api.Services;
 using TRPGHelper.Domain.Cards;
 using TRPGHelper.Domain.Dice;
 using TRPGHelper.Infrastructure.Data;
@@ -21,29 +21,24 @@ public static class GeneratorEndpoints
         group.MapPost("/attributes", GenerateAttributes)
             .WithSummary("按规则系统生成一组初始属性（辅助车卡）");
 
-        group.MapGet("/names", (string? systemCode, int? count) =>
-                Results.Ok(GeneratorData.Names(systemCode, count ?? 5)))
-            .WithSummary("随机姓名");
+        group.MapGet("/names", async (string? systemCode, int? count, GeneratorCatalogService catalog, CancellationToken cancellationToken) =>
+                Results.Ok(await catalog.NamesAsync(systemCode, count ?? 5, null, cancellationToken)))
+            .WithSummary("随机姓名（素材来自管理台配置）");
 
-        group.MapGet("/occupations", (string? systemCode, int? count) =>
-                Results.Ok(GeneratorData.Occupations(systemCode, count ?? 5)))
+        group.MapGet("/occupations", async (string? systemCode, int? count, GeneratorCatalogService catalog, CancellationToken cancellationToken) =>
+                Results.Ok(await catalog.OccupationsAsync(systemCode, count ?? 5, null, cancellationToken)))
             .WithSummary("随机职业 / 职业与背景");
 
-        group.MapGet("/classes", (string? systemCode) =>
-                Results.Ok(GeneratorData.Classes(systemCode)))
-            .WithSummary("职业列表（目前只有 DND 5E）");
+        group.MapGet("/classes", async (string? systemCode, GeneratorCatalogService catalog, CancellationToken cancellationToken) =>
+                Results.Ok(await catalog.ClassesAsync(systemCode, cancellationToken)))
+            .WithSummary("职业列表（管理台可维护）");
 
-        group.MapGet("/races", (string? systemCode) =>
-                Results.Ok(GeneratorData.Races(systemCode)))
-            .WithSummary("种族列表（目前只有 DND 5E）");
+        group.MapGet("/races", async (string? systemCode, GeneratorCatalogService catalog, CancellationToken cancellationToken) =>
+                Results.Ok(await catalog.RacesAsync(systemCode, cancellationToken)))
+            .WithSummary("种族列表（管理台可维护）");
 
-        group.MapGet("/inspirations", (string? systemCode, int? count) =>
-            {
-                var items = GeneratorData.Inspirations(systemCode, count ?? 3)
-                    .Select(item => new InspirationDto(item.Title, item.Text))
-                    .ToList();
-                return Results.Ok(items);
-            })
+        group.MapGet("/inspirations", async (string? systemCode, int? count, GeneratorCatalogService catalog, CancellationToken cancellationToken) =>
+                Results.Ok(await catalog.InspirationsAsync(systemCode, count ?? 3, null, cancellationToken)))
             .WithSummary("车卡灵感（故事钩子）");
 
         return app;
