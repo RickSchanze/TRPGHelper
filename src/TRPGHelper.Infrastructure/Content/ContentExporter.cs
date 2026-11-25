@@ -153,6 +153,7 @@ public static class ContentExporter
                     ReadString(extra, "description") ?? string.Empty,
                     ReadString(extra, "abilityBonus") ?? string.Empty,
                     ReadInt(extra, "speed") ?? 30,
+                    string.Join('\n', ReadStringList(extra, "traits")),
                 };
             })
             .ToList();
@@ -220,7 +221,7 @@ public static class ContentExporter
         using (var workbook = new XLWorkbook())
         {
             XlsxHelpers.WriteSheet(workbook, "races",
-                ["id", "systemId", "name", "description", "abilityBonus", "speed"],
+                ["id", "systemId", "name", "description", "abilityBonus", "speed", "traits"],
                 raceRows,
                 new Dictionary<string, double>
                 {
@@ -230,8 +231,9 @@ public static class ContentExporter
                     ["description"] = 48,
                     ["abilityBonus"] = 20,
                     ["speed"] = 8,
+                    ["traits"] = 64,
                 },
-                new HashSet<string> { "description" });
+                new HashSet<string> { "description", "traits" });
             written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.RacesFile)));
         }
 

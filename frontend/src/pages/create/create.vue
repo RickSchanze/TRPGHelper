@@ -212,78 +212,69 @@
           </view>
         </view>
 
-        <!-- 属性步骤：投骰子或自己填 -->
-        <view v-else-if="isAttributesStep" class="panel">
+        <!-- 种族步骤：核心种族卡片 -->
+        <view v-else-if="isRaceStep" class="panel">
           <view class="panel-title">
-            <KeywordText :text="currentStep?.title || '决定属性'" />
+            <KeywordText :text="currentStep?.title || '选择种族'" />
           </view>
           <view v-if="currentStep?.description" class="muted step-hint">
             <KeywordText :text="currentStep.description" />
           </view>
 
-          <view class="attr-modes">
+          <view
+            class="race-house-rule"
+            :class="{ 'race-house-rule-on': draft.houseRuleAbilityScores }"
+            @tap="toggleHouseRule"
+          >
+            <view class="house-rule-body">
+              <view class="house-rule-title">可选：任意两项 +2 / +1</view>
+              <view class="house-rule-hint muted">
+                可选规则。开启后不采用各族的固定属性加值，所有种族都改为自选两项属性分别 +2 / +1。
+              </view>
+            </view>
+            <view class="house-rule-switch" :class="{ on: draft.houseRuleAbilityScores }">
+              <view class="house-rule-knob" />
+            </view>
+          </view>
+
+          <view v-if="racesLoading" class="muted">正在加载种族…</view>
+          <view v-else-if="racesError" class="load-error" @tap="loadRaces">
+            <text class="muted">种族加载失败，点这里重试</text>
+          </view>
+          <view v-else-if="!races.length" class="muted race-empty">
+            这个规则书还没配置种族，这一步可以先跳过，直接点「下一步」。
+          </view>
+
+          <view v-else class="race-list">
             <view
-              class="attr-mode"
-              :class="{ active: draft.attributesMethod === 'roll' }"
-              @tap="setAttributeMethod('roll')"
+              v-for="item in races"
+              :key="item.code"
+              class="race-card"
+              :class="{ 'race-selected': draft.raceCode === item.code }"
+              @tap="pickRace(item)"
             >
-              投骰子
-            </view>
-            <view
-              class="attr-mode"
-              :class="{ active: draft.attributesMethod === 'manual' }"
-              @tap="setAttributeMethod('manual')"
-            >
-              自己填
-            </view>
-          </view>
-
-          <view v-if="draft.attributesMethod === 'roll'" class="attr-panel">
-            <view class="attr-grid">
-              <view v-for="attr in draft.attributes" :key="attr.key" class="attr-cell">
-                <view class="attr-name">
-                  <KeywordText :text="attr.label" />
+              <view class="race-head">
+                <view class="race-name">
+                  <KeywordText :text="item.name" />
                 </view>
-                <view class="attr-value">{{ attr.value || '—' }}</view>
-                <view class="attr-mod">{{ modifierText(attr.value) }}</view>
+                <view v-if="draft.raceCode === item.code" class="race-check">✓</view>
               </view>
-            </view>
-
-            <button class="btn attr-roll-btn" :disabled="rolling" @tap="rollAttributes">
-              {{ rolling ? '投骰中…' : draft.attributes.length ? '重新投骰' : '投骰子' }}
-            </button>
-            <KeywordText class="muted attr-hint" text="4d6 取高 3，六项各掷一次；不满意可以重投。" />
-          </view>
-
-          <view v-else class="attr-panel">
-            <view class="attr-grid">
-              <view v-for="(attr, index) in draft.attributes" :key="attr.key" class="attr-cell">
-                <view class="attr-name">
-                  <KeywordText :text="attr.label" />
+              <view class="race-meta">
+                <text v-if="abilityText(item)" class="race-badge">
+                  <KeywordText :text="abilityText(item)" />
+                </text>
+                <KeywordText class="race-speed" :text="`[速度] ${item.speed} 尺`" />
+              </view>
+              <view class="race-desc">
+                <KeywordText :text="item.description" />
+              </view>
+              <view v-if="visibleTraits(item).length" class="feature-list race-features">
+                <view v-for="trait in visibleTraits(item)" :key="trait" class="feature">
+                  <text class="feature-dot">◆</text>
+                  <KeywordText class="feature-text" :text="trait" />
                 </view>
-                <input
-                  class="attr-input"
-                  type="number"
-                  :value="attr.value ? String(attr.value) : ''"
-                  placeholder="3-18"
-                  @input="setAttributeValue(index, $event)"
-                />
-                <view class="attr-mod">{{ modifierText(attr.value) }}</view>
               </view>
             </view>
-            <KeywordText class="muted attr-hint" text="手动填写 3–18，之后所有 [属性检定] 都用这组数值。" />
-          </view>
-
-          <view v-if="derived.length" class="derived">
-            <view class="derived-title">属性衍生</view>
-            <view v-for="row in derived" :key="row.label" class="derived-row">
-              <view class="derived-label">
-                <KeywordText :text="row.label" />
-              </view>
-              <view class="derived-value">{{ row.value }}</view>
-              <view class="derived-note">{{ row.note }}</view>
-            </view>
-            <view class="muted derived-hint">按 1 级、无甲、无武器计算；种族加值还没计入。</view>
           </view>
         </view>
 
@@ -298,16 +289,16 @@
       </template>
     </template>
 
-    <view v-if="isClassStep && classes.length > 1" class="class-rail">
+    <view v-if="railOptions.length > 1" class="class-rail">
       <view
-        v-for="(item, index) in classes"
+        v-for="(item, index) in railOptions"
         :key="item.code"
         class="rail-item"
-        :class="{ active: activeClassIndex === index }"
-        @tap="scrollToClass(index)"
+        :class="{ active: activeRailIndex === index }"
+        @tap="scrollToRail(index)"
       >
         <KeywordText class="rail-name" :text="item.name" />
-        <text v-if="draft.classCode === item.code" class="rail-check">✓</text>
+        <text v-if="railSelectedCode === item.code" class="rail-check">✓</text>
       </view>
     </view>
 
@@ -333,7 +324,14 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { onHide, onLoad, onPageScroll, onUnload } from '@dcloudio/uni-app'
 import { request } from '../../api/http'
-import type { ClassOption, CreationFlow, CreationStep, GameSystem, SubclassOption } from '../../api/types'
+import type {
+  ClassOption,
+  CreationFlow,
+  CreationStep,
+  GameSystem,
+  RaceOption,
+  SubclassOption,
+} from '../../api/types'
 import { clearDraft, emptyDraft, loadDraft, saveDraft, type CreateDraft } from '../../stores/createDraft'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
 import KeywordText from '../../components/KeywordText/KeywordText.vue'
@@ -348,22 +346,23 @@ const systems = ref<GameSystem[]>([])
 const steps = ref<CreationStep[]>([])
 const classes = ref<ClassOption[]>([])
 const subclasses = ref<SubclassOption[]>([])
+const races = ref<RaceOption[]>([])
 const flowLoading = ref(false)
 const flowError = ref(false)
 const classesLoading = ref(false)
 const classesError = ref(false)
 const subclassesLoading = ref(false)
 const subclassesError = ref(false)
-const attributesError = ref(false)
-const rolling = ref(false)
+const racesLoading = ref(false)
+const racesError = ref(false)
 const ready = ref(false)
 const started = ref(false)
 const finishing = ref(false)
 const failedIcons = ref<Record<string, boolean>>({})
 const failedCovers = ref<Record<string, boolean>>({})
 const failedSubclassCovers = ref<Record<string, boolean>>({})
-const activeClassIndex = ref(0)
-const cardTops = ref<number[]>([])
+const activeRailIndex = ref(0)
+const railTops = ref<number[]>([])
 const jumping = ref(false)
 const detailVisible = ref(false)
 const detailClass = ref<ClassOption | null>(null)
@@ -375,7 +374,23 @@ const step = computed(() => draft.value.step)
 const currentStep = computed<CreationStep | null>(() => steps.value[draft.value.step - 1] ?? null)
 const isClassStep = computed(() => currentStep.value?.kind === 'class')
 const isSubclassStep = computed(() => currentStep.value?.kind === 'subclass')
-const isAttributesStep = computed(() => currentStep.value?.kind === 'attributes')
+const isRaceStep = computed(() => currentStep.value?.kind === 'race')
+/** 右侧卡片进度条：职业和种族都用同一套 */
+const railOptions = computed(() => {
+  if (isClassStep.value) {
+    return classes.value
+  }
+
+  if (isRaceStep.value) {
+    return races.value
+  }
+
+  return []
+})
+const railSelectedCode = computed(() =>
+  isClassStep.value ? draft.value.classCode : isRaceStep.value ? draft.value.raceCode : null,
+)
+const railSelector = computed(() => (isClassStep.value ? '.class-card' : '.race-card'))
 const isLastStep = computed(() => steps.value.length > 0 && draft.value.step >= steps.value.length)
 const canNext = computed(() => {
   if (!currentStep.value) {
@@ -391,12 +406,9 @@ const canNext = computed(() => {
     return subclasses.value.length === 0 || Boolean(draft.value.subclassCode)
   }
 
-  if (isAttributesStep.value) {
-    if (!draft.value.attributes.length) {
-      return true
-    }
-
-    return draft.value.attributes.every((item) => item.value >= 3 && item.value <= 18)
+  if (isRaceStep.value) {
+    // 没配种族时允许跳过
+    return races.value.length === 0 || Boolean(draft.value.raceCode)
   }
 
   return true
@@ -424,18 +436,21 @@ watch(
   () => draft.value.step,
   (value) => {
     const item = steps.value[value - 1]
+    // 换步骤后旧的卡片位置全部作废
+    railTops.value = []
+    activeRailIndex.value = 0
+
     if (item?.kind === 'subclass') {
       void loadSubclasses()
     }
 
     if (item?.kind === 'class') {
       // 从子职步骤退回时卡片会重新挂载，重新量一次顶部位置
-      void nextTick(() => setTimeout(measureCards, 60))
+      void nextTick(() => setTimeout(measureRail, 60))
     }
 
-    if (item?.kind === 'attributes') {
-      ensureAttributes()
-      syncClassState()
+    if (item?.kind === 'race') {
+      void loadRaces()
     }
   },
 )
@@ -458,7 +473,7 @@ onLoad(() => {
 
 onPageScroll((event) => {
   // 跳转动画期间不跟着滚动事件改高亮，避免来回闪
-  if (jumping.value || cardTops.value.length === 0) {
+  if (jumping.value || railTops.value.length === 0) {
     return
   }
 
@@ -469,29 +484,35 @@ onPageScroll((event) => {
   scrollTimer = setTimeout(() => {
     const threshold = event.scrollTop + 160
     let index = 0
-    cardTops.value.forEach((top, position) => {
+    railTops.value.forEach((top, position) => {
       if (top <= threshold) {
         index = position
       }
     })
-    activeClassIndex.value = index
+    activeRailIndex.value = index
   }, 60)
 })
 
-function measureCards(): void {
+function measureRail(): void {
+  const selector = railSelector.value
+  if (!railOptions.value.length) {
+    railTops.value = []
+    return
+  }
+
   const query = uni.createSelectorQuery()
-  query.selectAll('.class-card').boundingClientRect()
+  query.selectAll(selector).boundingClientRect()
   query.selectViewport().scrollOffset()
   query.exec((result) => {
     const rects = (result?.[0] ?? []) as Array<{ top: number }>
     const scrollTop = (result?.[1]?.scrollTop ?? 0) as number
-    cardTops.value = rects.map((rect) => rect.top + scrollTop)
+    railTops.value = rects.map((rect) => rect.top + scrollTop)
   })
 }
 
-function scrollToClass(index: number): void {
+function scrollToRail(index: number): void {
   jumping.value = true
-  activeClassIndex.value = index
+  activeRailIndex.value = index
 
   if (jumpTimer) {
     clearTimeout(jumpTimer)
@@ -503,14 +524,14 @@ function scrollToClass(index: number): void {
 
   // 每次点击都现量一次，避免图片加载 / 步骤切换后缓存的位置过期
   const query = uni.createSelectorQuery()
-  query.selectAll('.class-card').boundingClientRect()
+  query.selectAll(railSelector.value).boundingClientRect()
   query.selectViewport().scrollOffset()
   query.exec((result) => {
     const rects = (result?.[0] ?? []) as Array<{ top: number }>
     const scrollTop = (result?.[1]?.scrollTop ?? 0) as number
     const rect = rects[index]
     if (!rect) {
-      measureCards()
+      measureRail()
       return
     }
 
@@ -556,8 +577,8 @@ async function init(): Promise<void> {
     void loadSubclasses()
   }
 
-  if (currentStep.value?.kind === 'attributes') {
-    ensureAttributes()
+  if (currentStep.value?.kind === 'race') {
+    void loadRaces()
   }
 }
 
@@ -604,7 +625,7 @@ async function loadClasses(): Promise<void> {
     })
 
     await nextTick()
-    setTimeout(measureCards, 250)
+    setTimeout(measureRail, 250)
   } catch {
     classesError.value = true
   } finally {
@@ -660,30 +681,7 @@ async function loadSubclasses(): Promise<void> {
   }
 }
 
-const attributeTemplates = computed(() => {
-  const system = systems.value.find((item) => item.code === draft.value.systemCode)
-  return system?.attributes ?? []
-})
-
-/** 用规则系统的属性模板补齐 key / label，已填的数值保留。 */
-function ensureAttributes(): void {
-  const templates = attributeTemplates.value
-  if (!templates.length) {
-    return
-  }
-
-  const existing = new Map(draft.value.attributes.map((item) => [item.key, item]))
-  draft.value.attributes = templates.map((template) => {
-    const saved = existing.get(template.key)
-    return {
-      key: template.key,
-      label: template.label,
-      value: saved?.value ?? 0,
-    }
-  })
-}
-
-/** 把当前职业的所有选择（子职 + 属性）存进该职业自己的位置。 */
+/** 把当前职业的子职选择存进该职业自己的位置，来回切职业时不丢。 */
 function syncClassState(): void {
   const code = draft.value.classCode
   if (!code) {
@@ -693,159 +691,64 @@ function syncClassState(): void {
   draft.value.classStates[code] = {
     subclassCode: draft.value.subclassCode,
     subclassName: draft.value.subclassName,
-    attributes: draft.value.attributes.map((item) => ({ ...item })),
-    attributesMethod: draft.value.attributesMethod,
   }
 }
 
-function setAttributeMethod(method: 'roll' | 'manual'): void {
-  draft.value.attributesMethod = method
-  syncClassState()
-
-  if (
-    method === 'roll' &&
-    draft.value.attributes.length > 0 &&
-    draft.value.attributes.every((item) => !item.value)
-  ) {
-    void rollAttributes()
-  }
-}
-
-function setAttributeValue(index: number, event: { detail?: { value?: string } }): void {
-  const raw = String(event?.detail?.value ?? '').trim()
-  const parsed = Number.parseInt(raw, 10)
-  draft.value.attributes[index].value = Number.isFinite(parsed) ? Math.max(0, Math.min(30, parsed)) : 0
-  syncClassState()
-}
-
-/** 5E：调整值 =（属性值 - 10）除以 2 向下取整。 */
-function modifierText(value: number): string {
-  if (!value) {
-    return ''
+async function loadRaces(): Promise<void> {
+  if (racesLoading.value) {
+    return
   }
 
-  const modifier = Math.floor((value - 10) / 2)
-  return modifier >= 0 ? `+${modifier}` : String(modifier)
-}
-
-const selectedClass = computed<ClassOption | null>(
-  () => classes.value.find((item) => item.code === draft.value.classCode) ?? null,
-)
-
-function attributeKeyByLabel(label?: string): string {
-  if (!label) {
-    return ''
-  }
-
-  return attributeTemplates.value.find((item) => item.label === label)?.key ?? ''
-}
-
-function formatBonus(value: number): string {
-  return value >= 0 ? `+${value}` : String(value)
-}
-
-/** 1 级的人物衍生数值：生命值、先攻、AC、攻击加值、被动察觉、豁免（+ 施法数值）。 */
-const derived = computed(() => {
-  const characterClass = selectedClass.value
-  if (!characterClass || !draft.value.attributes.length) {
-    return [] as Array<{ label: string; value: string; note: string }>
-  }
-
-  // 六项都填好（3–18）才算，避免零值时先显示一堆无意义的数
-  if (draft.value.attributes.some((item) => item.value < 3 || item.value > 18)) {
-    return [] as Array<{ label: string; value: string; note: string }>
-  }
-
-  const valueOf = (key: string) => draft.value.attributes.find((item) => item.key === key)?.value ?? 0
-  const modOf = (key: string) => {
-    const value = valueOf(key)
-    return value ? Math.floor((value - 10) / 2) : 0
-  }
-
-  const proficiency = 2;
-  const hitDie = Number.parseInt((characterClass.hitDie ?? '').replace(/[^0-9]/g, ''), 10)
-  const constitution = modOf('CON')
-  const dexterity = modOf('DEX')
-  const wisdom = modOf('WIS')
-  const strength = modOf('STR')
-  const saves = (characterClass.savingThrows ?? '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0)
-
-  const saveText = draft.value.attributes
-    .map((item) => {
-      const modifier = modOf(item.key) + (saves.includes(item.label) ? proficiency : 0)
-      return `${item.label} ${formatBonus(modifier)}`
-    })
-    .join(' · ')
-
-  const rows = [
-    {
-      label: '[生命值]上限',
-      value: `${(Number.isFinite(hitDie) ? hitDie : 0) + constitution}`,
-      note: `${characterClass.hitDie} + 体质 ${formatBonus(constitution)}`,
-    },
-    { label: '[先攻]', value: formatBonus(dexterity), note: '敏捷调整值' },
-    { label: '[护甲等级]（无甲）', value: `${10 + dexterity}`, note: '10 + 敏捷调整值' },
-    {
-      label: '[攻击加值]（近战 / 远程）',
-      value: `${formatBonus(strength + proficiency)} / ${formatBonus(dexterity + proficiency)}`,
-      note: '熟练 +2 + 力量 / 敏捷',
-    },
-    { label: '[被动察觉]', value: `${10 + wisdom}`, note: '10 + 感知调整值（未计熟练）' },
-    {
-      label: '[豁免]',
-      value: saveText,
-      note: saves.length ? `熟练：${saves.join('、')}` : '本职业无豁免熟练',
-    },
-  ]
-
-  if (characterClass.spellcastingAbility) {
-    const modifier = modOf(attributeKeyByLabel(characterClass.spellcastingAbility))
-    rows.push({
-      label: '[法术豁免DC]',
-      value: `${8 + proficiency + modifier}`,
-      note: `8 + 熟练 + ${characterClass.spellcastingAbility}`,
-    })
-    rows.push({
-      label: '法术攻击加值',
-      value: formatBonus(proficiency + modifier),
-      note: `熟练 + ${characterClass.spellcastingAbility}`,
-    })
-  }
-
-  return rows
-})
-
-async function rollAttributes(): Promise<void> {
-  if (!draft.value.attributes.length) {
-    ensureAttributes()
-  }
-
-  rolling.value = true
-  attributesError.value = false
+  racesLoading.value = true
+  racesError.value = false
 
   try {
-    const result = await request<{ attributes: Array<{ key: string; label: string; value: number }> }>({
-      url: '/api/generator/attributes',
-      method: 'POST',
+    const code = draft.value.systemCode ?? 'dnd5e'
+    races.value = await request<RaceOption[]>({
+      url: `/api/generator/races?systemCode=${code}`,
       auth: false,
-      data: { systemCode: draft.value.systemCode, method: 'roll' },
     })
 
-    const byKey = new Map(result.attributes.map((item) => [item.key, item.value]))
-    draft.value.attributes = draft.value.attributes.map((item) => ({
-      ...item,
-      value: byKey.get(item.key) ?? item.value,
-    }))
-    syncClassState()
+    // 恢复的选择如果已经不在内容里，就清掉，避免下一步卡住
+    if (draft.value.raceCode && !races.value.some((item) => item.code === draft.value.raceCode)) {
+      draft.value.raceCode = null
+      draft.value.raceName = ''
+    }
+
+    await nextTick()
+    setTimeout(measureRail, 250)
   } catch {
-    attributesError.value = true
-    toast('投骰失败，稍后再试')
+    racesError.value = true
+    races.value = []
   } finally {
-    rolling.value = false
+    racesLoading.value = false
   }
+}
+
+function pickRace(option: RaceOption): void {
+  draft.value.raceCode = option.code
+  draft.value.raceName = option.name
+}
+
+/** 可选规则：所有种族改用「任意两项 +2 / +1」，替换各族的固定属性加值。 */
+const HOUSE_RULE_BONUS = '[属性值加成]：任意两项 +2 / +1'
+
+function abilityText(option: RaceOption): string {
+  return draft.value.houseRuleAbilityScores ? HOUSE_RULE_BONUS : option.abilityBonus
+}
+
+/** 开启可选规则后，卡面上的固定「属性值加成」那一条不再适用，收起来。 */
+function visibleTraits(option: RaceOption): string[] {
+  if (!draft.value.houseRuleAbilityScores) {
+    return option.traits
+  }
+
+  return option.traits.filter((trait) => !trait.startsWith('[属性值加成]'))
+}
+
+function toggleHouseRule(): void {
+  draft.value.houseRuleAbilityScores = !draft.value.houseRuleAbilityScores
+  saveDraft(draft.value)
 }
 
 function markIconFailed(code: string): void {
@@ -863,11 +766,12 @@ function pickSystem(system: GameSystem): void {
     draft.value.className = ''
     draft.value.subclassCode = null
     draft.value.subclassName = ''
-    draft.value.attributes = []
-    draft.value.attributesMethod = 'roll'
+    draft.value.raceCode = null
+    draft.value.raceName = ''
     draft.value.classStates = {}
     classes.value = []
     subclasses.value = []
+    races.value = []
     failedCovers.value = {}
     failedSubclassCovers.value = {}
     void loadFlow()
@@ -914,11 +818,7 @@ function pickClass(option: ClassOption): void {
   draft.value.className = option.name
   draft.value.subclassCode = saved?.subclassCode ?? null
   draft.value.subclassName = saved?.subclassName ?? ''
-  draft.value.attributes = saved?.attributes?.map((item) => ({ ...item })) ?? []
-  draft.value.attributesMethod = saved?.attributesMethod ?? 'roll'
   subclasses.value = []
-
-  ensureAttributes()
 }
 
 function pickSubclass(option: SubclassOption): void {
@@ -946,7 +846,15 @@ function openDetail(option: ClassOption): void {
 
 function next(): void {
   if (!canNext.value) {
-    toast(isClassStep.value ? '先选一个职业' : isSubclassStep.value ? '先选一个子职' : '这一步还不能继续')
+    toast(
+      isClassStep.value
+        ? '先选一个职业'
+        : isSubclassStep.value
+          ? '先选一个子职'
+          : isRaceStep.value
+            ? '先选一个种族'
+            : '这一步还不能继续',
+    )
     return
   }
 
@@ -1002,10 +910,9 @@ async function finish(): Promise<void> {
         name: name || '未命名冒险者',
         className: draft.value.className,
         subclassName: draft.value.subclassName || null,
+        raceName: draft.value.raceName || null,
         sheet: {
-          attributes: draft.value.attributes
-            .filter((item) => item.value > 0)
-            .map((item) => ({ key: item.key, label: item.label, value: item.value })),
+          attributes: [],
           skills: [],
           items: [],
         },
@@ -1496,125 +1403,138 @@ function scrollTop(): void {
   line-height: 1.6;
 }
 
-.attr-modes {
+.race-list {
   display: flex;
-  gap: 16rpx;
-  margin-bottom: 24rpx;
+  flex-direction: column;
+  gap: 20rpx;
 }
 
-.attr-mode {
-  flex: 1;
-  padding: 16rpx 0;
+.race-card {
+  padding: 20rpx;
   border: 2rpx solid $trpg-line;
-  border-radius: 999rpx;
+  border-radius: 16rpx;
   background: #fff;
-  color: $trpg-muted;
-  font-size: 24rpx;
-  text-align: center;
 }
 
-.attr-mode.active {
+.race-selected {
   border-color: $trpg-accent;
-  background: $trpg-accent;
-  color: #fffaf0;
+  box-shadow: 0 8rpx 24rpx rgba(91, 70, 54, 0.12);
 }
 
-.attr-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+.race-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.race-features {
+  grid-template-columns: 1fr;
+  margin-top: 10rpx;
+}
+
+.race-house-rule {
+  display: flex;
+  align-items: center;
   gap: 16rpx;
-}
-
-.attr-cell {
-  padding: 16rpx 12rpx;
-  border: 2rpx solid $trpg-line;
+  padding: 16rpx 18rpx;
+  margin-bottom: 20rpx;
+  border: 2rpx dashed #d8c6a5;
   border-radius: 14rpx;
   background: #fff;
-  text-align: center;
 }
 
-.attr-name {
-  font-size: 22rpx;
-  color: $trpg-muted;
+.race-house-rule-on {
+  border-style: solid;
+  border-color: $trpg-accent;
+  background: #f7efe1;
 }
 
-.attr-value {
-  margin-top: 6rpx;
-  font-size: 44rpx;
+.house-rule-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.house-rule-title {
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.house-rule-hint {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  line-height: 1.5;
+}
+
+.house-rule-switch {
+  flex-shrink: 0;
+  width: 76rpx;
+  height: 40rpx;
+  padding: 4rpx;
+  border-radius: 999rpx;
+  background: #e4dccd;
+}
+
+.house-rule-switch.on {
+  background: $trpg-accent;
+}
+
+.house-rule-knob {
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 50%;
+  background: #fffdf8;
+  transition: transform 0.15s ease;
+}
+
+.house-rule-switch.on .house-rule-knob {
+  transform: translateX(36rpx);
+}
+
+.race-name {
+  font-size: 30rpx;
   font-weight: 600;
   letter-spacing: 2rpx;
 }
 
-.attr-input {
-  box-sizing: border-box;
-  width: 100%;
-  height: 64rpx;
-  margin-top: 8rpx;
-  border: 2rpx solid $trpg-line;
-  border-radius: 10rpx;
-  font-size: 32rpx;
-  text-align: center;
-}
-
-.attr-mod {
-  margin-top: 4rpx;
-  font-size: 20rpx;
-  color: $trpg-accent-deep;
-}
-
-.attr-roll-btn {
-  margin-top: 24rpx;
-}
-
-.attr-hint {
-  display: block;
-  margin-top: 14rpx;
-  font-size: 20rpx;
-  line-height: 1.5;
-}
-
-.derived {
-  margin-top: 28rpx;
-  padding-top: 20rpx;
-  border-top: 2rpx dashed $trpg-line;
-}
-
-.derived-title {
-  margin-bottom: 10rpx;
-  font-size: 26rpx;
-  font-weight: 600;
-}
-
-.derived-row {
+.race-check {
   display: flex;
-  align-items: baseline;
-  gap: 12rpx;
-  padding: 10rpx 0;
-  border-bottom: 1rpx solid #f0e7d9;
-}
-
-.derived-label {
-  flex: 0 0 42%;
+  align-items: center;
+  justify-content: center;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: $trpg-accent;
+  color: #fffaf0;
   font-size: 22rpx;
 }
 
-.derived-value {
-  font-size: 26rpx;
-  font-weight: 600;
-}
-
-.derived-note {
-  flex: 1;
-  font-size: 18rpx;
+.race-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 8rpx;
+  font-size: 20rpx;
   color: $trpg-muted;
-  text-align: right;
 }
 
-.derived-hint {
-  display: block;
+.race-badge {
+  padding: 2rpx 12rpx;
+  border: 2rpx solid #d8c6a5;
+  border-radius: 999rpx;
+  color: $trpg-accent-deep;
+}
+
+.race-desc {
   margin-top: 10rpx;
-  font-size: 18rpx;
+  font-size: 22rpx;
   line-height: 1.5;
+  color: #4a4238;
+}
+
+.race-empty {
+  line-height: 1.6;
 }
 
 .btn[disabled] {
@@ -1774,68 +1694,81 @@ function scrollTop(): void {
     font-size: 13px;
   }
 
-  .attr-grid {
-    grid-template-columns: repeat(6, 1fr);
-    gap: 10px;
+  .race-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
   }
 
-  .attr-cell {
-    padding: 12px 8px;
+  .race-card {
+    padding: 16px;
+    border-width: 1px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .race-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(91, 70, 54, 0.1);
+  }
+
+  .race-name {
+    font-size: 18px;
+    letter-spacing: 1px;
+  }
+
+  .race-meta {
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 12px;
+  }
+
+  .race-badge {
+    padding: 1px 8px;
+    border-width: 1px;
+  }
+
+  .race-desc {
+    margin-top: 8px;
+    font-size: 13px;
+  }
+
+  .race-check {
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+  }
+
+  .race-house-rule {
+    padding: 12px 14px;
+    margin-bottom: 16px;
     border-width: 1px;
     border-radius: 10px;
-  }
-
-  .attr-name {
-    font-size: 12px;
-  }
-
-  .attr-value {
-    font-size: 30px;
-  }
-
-  .attr-input {
-    height: 44px;
-    border-width: 1px;
-    font-size: 20px;
-  }
-
-  .attr-mod {
-    font-size: 12px;
-  }
-
-  .attr-mode {
-    padding: 8px 0;
-    border-width: 1px;
-    font-size: 13px;
     cursor: pointer;
   }
 
-  .attr-hint {
+  .house-rule-title {
+    font-size: 14px;
+  }
+
+  .house-rule-hint {
     font-size: 12px;
   }
 
-  .derived-title {
-    font-size: 16px;
+  .house-rule-switch {
+    width: 44px;
+    height: 24px;
+    padding: 2px;
   }
 
-  .derived-row {
-    padding: 8px 0;
+  .house-rule-knob {
+    width: 20px;
+    height: 20px;
   }
 
-  .derived-label {
-    font-size: 13px;
-  }
-
-  .derived-value {
-    font-size: 15px;
-  }
-
-  .derived-note {
-    font-size: 12px;
-  }
-
-  .derived-hint {
-    font-size: 12px;
+  .house-rule-switch.on .house-rule-knob {
+    transform: translateX(20px);
   }
 
   .feature-list {

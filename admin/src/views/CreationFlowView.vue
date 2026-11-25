@@ -24,8 +24,8 @@ interface StepKindOption {
 const kindOptions: StepKindOption[] = [
   { key: 'class', label: '选择职业', hint: '选职业卡（已实现面板）' },
   { key: 'subclass', label: '选择子职', hint: '选子职卡，需要配图（圣武士誓约已实现）' },
-  { key: 'race', label: '选择种族', hint: '种族面板（占位，待实现）' },
-  { key: 'attributes', label: '分配属性', hint: '掷骰 / 标准数组（占位，待实现）' },
+  { key: 'race', label: '选择种族', hint: '种族卡列表，数据来自 种族.xlsx（已实现）' },
+  { key: 'attributes', label: '分配属性', hint: '面板暂未实现（本轮已从默认流程移除）' },
   { key: 'name', label: '起名', hint: '卡名与背景（占位，待实现）' },
   { key: 'summary', label: '确认卡面', hint: '提交前总览（占位，待实现）' },
 ]

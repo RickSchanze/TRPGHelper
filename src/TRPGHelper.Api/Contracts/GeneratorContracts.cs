@@ -37,7 +37,8 @@ public sealed record RaceOptionDto(
     string Name,
     string Description,
     string AbilityBonus,
-    int Speed);
+    int Speed,
+    IReadOnlyList<string> Traits);
 
 public sealed record SubclassOptionDto(
     string Code,

@@ -303,10 +303,13 @@ public static class ContentLoader
         foreach (var row in XlsxHelpers.ReadRows(
                      XlsxHelpers.RequireSheet(workbook, path, "races"),
                      path,
-                     ["id", "systemId", "name", "description", "abilityBonus", "speed"]))
+                     ["id", "systemId", "name", "description", "abilityBonus", "speed", "traits"]))
         {
             var id = row.Required("id", path).ToLowerInvariant();
             var systemId = RequireSystem(row, systems, path);
+            var traits = row["traits"]
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList();
 
             entries.Add(new GeneratorEntryContent(
                 systemId,
@@ -318,6 +321,7 @@ public static class ContentLoader
                     description = row["description"].Trim(),
                     abilityBonus = row["abilityBonus"].Trim(),
                     speed = row.Int("speed", 30),
+                    traits,
                 }, JsonOptions),
                 (index + 1) * 10));
             index += 1;

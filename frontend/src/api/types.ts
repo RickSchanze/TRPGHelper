@@ -182,6 +182,7 @@ export interface RaceOption {
   description: string
   abilityBonus: string
   speed: number
+  traits: string[]
 }
 
 /** 子职选项（圣武士的三个神圣誓约等）。 */

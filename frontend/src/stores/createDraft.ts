@@ -1,21 +1,11 @@
 /*** 车新卡的本机草稿：车完之前只存在本地，最后一步才提交给服务器。 */
-export interface DraftAttribute {
-  key: string
-  label: string
-  value: number
-}
-
-export type AttributeMethod = 'roll' | 'manual'
-
 export interface ClassSelectionState {
   subclassCode: string | null
   subclassName: string
-  attributes: DraftAttribute[]
-  attributesMethod: AttributeMethod
 }
 
 export interface CreateDraft {
-  version: 7
+  version: 9
   /** 当前步骤序号，从 1 开始；步骤数量由后端的车卡流程配置决定。 */
   step: number
   systemCode: string | null
@@ -23,15 +13,18 @@ export interface CreateDraft {
   className: string
   subclassCode: string | null
   subclassName: string
-  attributes: DraftAttribute[]
-  attributesMethod: AttributeMethod
-  /** 每个职业各自保留的选择，来回切职业时不丢 */
+  /** 种族不跟随职业，单独存一份 */
+  raceCode: string | null
+  raceName: string
+  /** 可选规则：种族属性加值改为任意两项 +2 / +1 */
+  houseRuleAbilityScores: boolean
+  /** 每个职业各自保留的子职选择，来回切职业时不丢 */
   classStates: Record<string, ClassSelectionState>
   updatedAt: string
 }
 
 const STORAGE_KEY = 'trpg_create_draft'
-const DRAFT_VERSION = 7
+const DRAFT_VERSION = 9
 
 export function emptyDraft(): CreateDraft {
   return {
@@ -42,8 +35,9 @@ export function emptyDraft(): CreateDraft {
     className: '',
     subclassCode: null,
     subclassName: '',
-    attributes: [],
-    attributesMethod: 'roll',
+    raceCode: null,
+    raceName: '',
+    houseRuleAbilityScores: false,
     classStates: {},
     updatedAt: new Date().toISOString(),
   }
@@ -53,34 +47,8 @@ function asString(value: unknown): string {
   return typeof value === 'string' ? value : ''
 }
 
-function readAttributes(raw: unknown): DraftAttribute[] {
-  if (!Array.isArray(raw)) {
-    return []
-  }
-
-  const attributes: DraftAttribute[] = []
-  for (const item of raw) {
-    if (!item || typeof item !== 'object') {
-      continue
-    }
-
-    const entry = item as Partial<DraftAttribute>
-    if (typeof entry.key !== 'string' || !entry.key) {
-      continue
-    }
-
-    attributes.push({
-      key: entry.key,
-      label: asString(entry.label) || entry.key,
-      value: Number.isFinite(Number(entry.value)) ? Math.trunc(Number(entry.value)) : 0,
-    })
-  }
-
-  return attributes
-}
-
-function readMethod(raw: unknown): AttributeMethod {
-  return raw === 'manual' ? 'manual' : 'roll'
+function asCode(value: unknown): string | null {
+  return typeof value === 'string' && value ? value : null
 }
 
 function readClassStates(raw: unknown): Record<string, ClassSelectionState> {
@@ -96,10 +64,8 @@ function readClassStates(raw: unknown): Record<string, ClassSelectionState> {
 
     const item = value as Partial<ClassSelectionState>
     states[code] = {
-      subclassCode: typeof item.subclassCode === 'string' && item.subclassCode ? item.subclassCode : null,
+      subclassCode: asCode(item.subclassCode),
       subclassName: asString(item.subclassName),
-      attributes: readAttributes(item.attributes),
-      attributesMethod: readMethod(item.attributesMethod),
     }
   }
 
@@ -113,36 +79,33 @@ function normalize(raw: unknown): CreateDraft | null {
 
   const draft = raw as Partial<CreateDraft> & { version?: number }
   const version = Number(draft.version)
-  // 5 / 6 / 7：旧草稿都能升上来，缺的字段补默认值
-  if (![5, 6, DRAFT_VERSION].includes(version)) {
+  // 5 - 9：旧草稿都能升上来，缺的字段补默认值（v7 的属性选择在 v8 里丢弃）
+  if (![5, 6, 7, 8, DRAFT_VERSION].includes(version)) {
     return null
   }
 
   const step = Number(draft.step)
-  const classCode = typeof draft.classCode === 'string' && draft.classCode ? draft.classCode : null
+  const classCode = asCode(draft.classCode)
   const classStates = readClassStates(draft.classStates)
-  const attributes = readAttributes(draft.attributes)
-  const attributesMethod = readMethod(draft.attributesMethod)
 
   if (classCode && !classStates[classCode]) {
     classStates[classCode] = {
-      subclassCode: typeof draft.subclassCode === 'string' && draft.subclassCode ? draft.subclassCode : null,
+      subclassCode: asCode(draft.subclassCode),
       subclassName: asString(draft.subclassName),
-      attributes,
-      attributesMethod,
     }
   }
 
   return {
     version: DRAFT_VERSION,
     step: Number.isFinite(step) && step >= 1 ? Math.floor(step) : 1,
-    systemCode: typeof draft.systemCode === 'string' && draft.systemCode ? draft.systemCode : null,
+    systemCode: asCode(draft.systemCode),
     classCode,
     className: asString(draft.className),
-    subclassCode: typeof draft.subclassCode === 'string' && draft.subclassCode ? draft.subclassCode : null,
+    subclassCode: asCode(draft.subclassCode),
     subclassName: asString(draft.subclassName),
-    attributes,
-    attributesMethod,
+    raceCode: asCode(draft.raceCode),
+    raceName: asString(draft.raceName),
+    houseRuleAbilityScores: draft.houseRuleAbilityScores === true,
     classStates,
     updatedAt: typeof draft.updatedAt === 'string' ? draft.updatedAt : new Date().toISOString(),
   }

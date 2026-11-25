@@ -73,8 +73,8 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
         Assert.True(second.IsEnabled);
 
         var third = steps[2];
-        Assert.Equal(CreationStepKind.Attributes, third.Kind);
-        Assert.Equal("决定属性", third.Title);
+        Assert.Equal(CreationStepKind.Race, third.Kind);
+        Assert.Equal("选择种族", third.Title);
         Assert.True(third.IsEnabled);
     }
 
@@ -103,6 +103,7 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
             ["属性"] = "003",
             ["规则"] = "004",
             ["战斗"] = "005",
+            ["种族"] = "006",
         };
         Assert.All(keywords, keyword => Assert.StartsWith(categoryCodes[keyword.Category], keyword.Code));
         Assert.Contains(keywords, keyword => keyword.Key == "敏捷");

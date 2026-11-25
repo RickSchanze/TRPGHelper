@@ -179,7 +179,7 @@ npm run build      # 产物在 admin/dist
 
 1. **职业**：游侠、战士、武僧、德鲁伊、圣武士五张职业卡（大图单列 + 特点两栏），选中后「下一步」才可用
 2. **子职**：按所选职业过滤的子职卡（大图 + 描述 + 特性），目前先做了圣武士的三个神圣誓约：奉献 / 古贤 / 复仇；其它职业的子职还在整理，这一步会提示可以直接跳过
-3. **决定属性**：可以投骰子（4d6 取高 3）或自己填 3–18；面板下方实时算出 1 级衍生数值——生命值上限、先攻、无甲 AC、近战/远程攻击加值、被动察觉、六项豁免（职业豁免熟练的加熟练加值），1 级就能施法的职业额外显示法术豁免 DC 与法术攻击加值
+3. **选择种族**：人类、精灵、矮人、半身人、龙裔、侏儒、半精灵、半兽人、提夫林九个核心种族（数据来自 `data/种族.xlsx`）。卡片上写属性加值、速度和种族特质，描述与特质按职业卡的写法用 `[关键词]` 标出可点词条（黑暗视觉、妖精血统、吐息武器、地狱遗赠…）；右侧有和职业一样的进度条，可以点着跳到对应种族。面板顶部有一个可选开关「任意两项 +2 / +1」，打开后不再使用各族的固定属性加值，所有种族都改为自选两项属性分别 +2 / +1。选中后「下一步」才可用
 
 职业卡配图：默认用 `frontend/src/static/classes/*.jpg`，路径和主色在 `data/职业.xlsx > classes` 的 `imageUrl` / `accent` 列配置（管理台也能上传替换）。
 
@@ -191,6 +191,7 @@ npm run build      # 产物在 admin/dist
 
 职业来自后端：`GET /api/generator/classes?systemCode=dnd5e`
 子职来自后端：`GET /api/generator/subclasses?systemCode=dnd5e&classId=paladin`（提交时随卡存 `subclassName`）
+种族来自后端：`GET /api/generator/races?systemCode=dnd5e`（提交时随卡存 `raceName`）
 
 译名与内容取材以 [5E 不全书](https://5echm.kagangtuya.top) 为准（当前按《玩家手册》2014 译名），约定和易错词表见 [docs/translation.md](docs/translation.md)。
 
@@ -220,6 +221,7 @@ npm run build      # 产物在 admin/dist
 dotnet build TRPGHelper.slnx          # 构建
 dotnet test TRPGHelper.slnx           # 单元测试
 dotnet ef migrations add <Name> --project src/TRPGHelper.Infrastructure --startup-project src/TRPGHelper.Api --output-dir Data/Migrations
+python tools/build_race_content.py    # 重新生成种族词条与 traits（需要 openpyxl，说明见 docs/race-content.md）
 ```
 
 ## 下一步（待一点一点加）

@@ -234,7 +234,8 @@ public sealed class GeneratorCatalogService(AppDbContext db)
             entry.Value,
             ReadString(extra, "description") ?? string.Empty,
             ReadString(extra, "abilityBonus") ?? string.Empty,
-            ReadInt(extra, "speed") ?? 30);
+            ReadInt(extra, "speed") ?? 30,
+            ReadStringList(extra, "traits"));
     }
 
     internal static JsonElement? ParseExtra(string? json)
