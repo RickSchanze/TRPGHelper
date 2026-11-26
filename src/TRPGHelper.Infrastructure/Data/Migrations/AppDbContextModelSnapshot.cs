@@ -52,6 +52,9 @@ namespace TRPGHelper.Infrastructure.Data.Migrations
                     b.Property<int?>("Age")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("AlignmentName")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ClassName")
                         .HasMaxLength(40)
                         .HasColumnType("TEXT");

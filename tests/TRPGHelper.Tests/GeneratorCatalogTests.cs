@@ -59,7 +59,7 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
 
         var steps = await _db.CreationSteps.OrderBy(step => step.SortOrder).ToListAsync();
 
-        Assert.Equal(4, steps.Count);
+        Assert.Equal(5, steps.Count);
 
         var first = steps[0];
         Assert.Equal("dnd5e", first.SystemCode);
@@ -81,6 +81,11 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
         Assert.Equal(CreationStepKind.Subrace, fourth.Kind);
         Assert.Equal("选择亚种", fourth.Title);
         Assert.True(fourth.IsEnabled);
+
+        var fifth = steps[4];
+        Assert.Equal(CreationStepKind.Background, fifth.Kind);
+        Assert.Equal("决定背景", fifth.Title);
+        Assert.True(fifth.IsEnabled);
     }
 
     [Fact]
@@ -109,6 +114,7 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
             ["规则"] = "004",
             ["战斗"] = "005",
             ["种族"] = "006",
+            ["阵营"] = "007",
         };
         Assert.All(keywords, keyword => Assert.StartsWith(categoryCodes[keyword.Category], keyword.Code));
         Assert.Contains(keywords, keyword => keyword.Key == "敏捷");
@@ -116,6 +122,17 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
         foreach (var key in new[] { "箭术", "防御", "对决", "双武器战斗", "法术位", "子职", "奉献之誓", "防护善恶" })
         {
             Assert.Contains(keywords, keyword => keyword.Key == key);
+        }
+
+        // 阵营：九宫格九个 + 两条坐标轴上的五个词，前端点名字就能看解释
+        foreach (var key in new[]
+                 {
+                     "守序善良", "中立善良", "混乱善良", "守序中立", "绝对中立",
+                     "混乱中立", "守序邪恶", "中立邪恶", "混乱邪恶",
+                     "守序", "混乱", "善良", "邪恶", "中立",
+                 })
+        {
+            Assert.Contains(keywords, keyword => keyword.Key == key && keyword.Category == "阵营");
         }
 
         Assert.All(keywords, keyword => Assert.True(keyword.IsEnabled));
@@ -165,6 +182,28 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
         var dataPath = ContentPaths.FindRequired(null, AppContext.BaseDirectory);
         var bundle = ContentLoader.Load(dataPath);
         await ContentSynchronizer.SyncAsync(_db, bundle);
+    }
+
+    [Fact]
+    public async Task Alignments_carry_icon_and_accent()
+    {
+        await SyncContentAsync();
+
+        var catalog = new GeneratorCatalogService(_db);
+        var list = await catalog.AlignmentsAsync("dnd5e", CancellationToken.None);
+
+        Assert.Equal(9, list.Count);
+
+        var lawfulGood = Assert.Single(list, item => item.Code == "lawful-good");
+        Assert.Equal("守序善良", lawfulGood.Name);
+        Assert.Equal("/static/alignments/lawful-good.svg", lawfulGood.IconUrl);
+        Assert.False(string.IsNullOrWhiteSpace(lawfulGood.Accent));
+
+        // 九宫格按「守序 / 中立 / 混乱」三行排列，读起来是 3×3
+        Assert.Equal(
+            new[] { "lawful-good", "neutral-good", "chaotic-good" },
+            list.Skip(0).Take(3).Select(item => item.Code));
+        Assert.Equal("chaotic-evil", list[^1].Code);
     }
 
     [Fact]

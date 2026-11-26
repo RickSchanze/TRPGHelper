@@ -27,6 +27,7 @@ public static class ContentLoader
         LoadSubclasses(dataPath, systems, entries);
         LoadRaces(dataPath, systems, entries);
         LoadSubraces(dataPath, systems, entries);
+        LoadAlignments(dataPath, systems, entries);
         LoadInspirations(dataPath, systems, entries);
 
         var steps = LoadSteps(dataPath, systems);
@@ -386,6 +387,56 @@ public static class ContentLoader
         }
     }
 
+    /// <summary>
+    /// 阵营（九宫格）。Category 存 code，ExtraJson 存 iconUrl / accent，
+    /// 具体解释放在关键词里（[守序善良] 之类可以直接点开）。
+    /// </summary>
+    private static void LoadAlignments(
+        string dataPath,
+        IReadOnlyList<ContentSystem> systems,
+        List<GeneratorEntryContent> entries)
+    {
+        var path = Path.Combine(dataPath, ContentPaths.AlignmentsFile);
+        if (!File.Exists(path))
+        {
+            return;
+        }
+
+        using var workbook = OpenWorkbook(path);
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var index = 0;
+
+        foreach (var row in XlsxHelpers.ReadRows(
+                     XlsxHelpers.RequireSheet(workbook, path, "alignments"),
+                     path,
+                     ["systemId", "id", "name", "iconUrl", "accent"]))
+        {
+            var id = row.Required("id", path).ToLowerInvariant();
+            if (!ids.Add(id))
+            {
+                row.Fail(path, $"阵营 id「{id}」重复。");
+            }
+
+            var systemId = RequireSystem(row, systems, path);
+            var iconUrl = row["iconUrl"].Trim();
+            var accent = row["accent"].Trim();
+
+            entries.Add(new GeneratorEntryContent(
+                systemId,
+                JsonKey(GeneratorKind.Alignment),
+                id,
+                row.Required("name", path),
+                JsonSerializer.Serialize(new
+                {
+                    code = id,
+                    iconUrl = iconUrl.Length == 0 ? null : iconUrl,
+                    accent = accent.Length == 0 ? null : accent,
+                }, JsonOptions),
+                (index + 1) * 10));
+            index += 1;
+        }
+    }
+
     private static void LoadInspirations(
         string dataPath,
         IReadOnlyList<ContentSystem> systems,
@@ -442,7 +493,7 @@ public static class ContentLoader
             var kind = ParseStepKind(row.Required("kind", path));
             if (kind is null)
             {
-                row.Fail(path, $"步骤类型「{row["kind"]}」不认识，可用：class / subclass / race / attributes / name / summary。");
+                row.Fail(path, $"步骤类型「{row["kind"]}」不认识，可用：class / subclass / race / subrace / background / attributes / name / summary。");
             }
 
             steps.Add(new ContentCreationStep(

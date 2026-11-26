@@ -242,6 +242,30 @@ public sealed class GeneratorCatalogService(AppDbContext db)
             ReadStringList(extra, "traits"));
     }
 
+    public async Task<IReadOnlyList<AlignmentOptionDto>> AlignmentsAsync(
+        string? systemCode,
+        CancellationToken cancellationToken)
+    {
+        var system = await ResolveSystemAsync(systemCode, cancellationToken);
+        if (system is null)
+        {
+            return [];
+        }
+
+        var entries = await EntriesAsync(system.Code, [GeneratorKind.Alignment], cancellationToken);
+        return entries.Select(ToAlignmentOption).ToList();
+    }
+
+    internal static AlignmentOptionDto ToAlignmentOption(GeneratorEntry entry)
+    {
+        var extra = ParseExtra(entry.ExtraJson);
+        return new AlignmentOptionDto(
+            ReadString(extra, "code") ?? entry.Category,
+            entry.Value,
+            ReadString(extra, "iconUrl"),
+            ReadString(extra, "accent"));
+    }
+
     internal static ClassOptionDto ToClassOption(GeneratorEntry entry)
     {
         var extra = ParseExtra(entry.ExtraJson);

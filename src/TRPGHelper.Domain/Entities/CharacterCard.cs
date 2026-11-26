@@ -34,6 +34,9 @@ public class CharacterCard
     /// <summary>亚种，例如「高等精灵」「山地矮人」。</summary>
     public string? SubraceName { get; set; }
 
+    /// <summary>阵营，例如「守序善良」「混乱中立」。</summary>
+    public string? AlignmentName { get; set; }
+
     public int? Age { get; set; }
 
     public string? Summary { get; set; }

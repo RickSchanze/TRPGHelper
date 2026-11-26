@@ -191,6 +191,11 @@ public static class CharacterEndpoints
             errors["subraceName"] = ["亚种最多 40 个字符。"];
         }
 
+        if (request.AlignmentName?.Trim().Length > 40)
+        {
+            errors["alignmentName"] = ["阵营最多 40 个字符。"];
+        }
+
         if (request.Summary?.Trim().Length > 500)
         {
             errors["summary"] = ["简介最多 500 个字符。"];
@@ -251,6 +256,7 @@ public static class CharacterEndpoints
             SubclassName = NormalizeOptional(request.SubclassName),
             RaceName = NormalizeOptional(request.RaceName),
             SubraceName = NormalizeOptional(request.SubraceName),
+            AlignmentName = NormalizeOptional(request.AlignmentName),
             Age = request.Age,
             Summary = NormalizeOptional(request.Summary),
             PortraitUrl = NormalizeOptional(request.PortraitUrl),
@@ -399,6 +405,21 @@ public static class CharacterEndpoints
             if (subraceName != card.SubraceName)
             {
                 card.SubraceName = subraceName;
+                changed = true;
+            }
+        }
+
+        if (request.AlignmentName is not null)
+        {
+            var alignmentName = NormalizeOptional(request.AlignmentName);
+            if (alignmentName?.Length > 40)
+            {
+                return Validation("alignmentName", "阵营最多 40 个字符。");
+            }
+
+            if (alignmentName != card.AlignmentName)
+            {
+                card.AlignmentName = alignmentName;
                 changed = true;
             }
         }

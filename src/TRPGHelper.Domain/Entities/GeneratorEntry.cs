@@ -34,6 +34,12 @@ public enum GeneratorKind
     /// ExtraJson 存 description / traits。
     /// </summary>
     Subrace = 7,
+
+    /// <summary>
+    /// 阵营（DND 5E 九宫格），Category 存阵营 code（如 lawful-good），
+    /// Value 是阵营名，ExtraJson 存 iconUrl / accent。
+    /// </summary>
+    Alignment = 8,
 }
 
 /// <summary>

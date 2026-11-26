@@ -175,6 +175,22 @@ public static class ContentExporter
             })
             .ToList();
 
+        var alignmentRows = entries
+            .Where(entry => entry.Kind == GeneratorKind.Alignment)
+            .Select(entry =>
+            {
+                var extra = ParseExtra(entry.ExtraJson);
+                return new object?[]
+                {
+                    entry.SystemCode ?? "dnd5e",
+                    ReadString(extra, "code") ?? entry.Category,
+                    entry.Value,
+                    ReadString(extra, "iconUrl") ?? string.Empty,
+                    ReadString(extra, "accent") ?? string.Empty,
+                };
+            })
+            .ToList();
+
         var inspirationRows = entries
             .Where(entry => entry.Kind == GeneratorKind.Inspiration)
             .Select(entry => new object?[]
@@ -270,6 +286,22 @@ public static class ContentExporter
                 },
                 new HashSet<string> { "description", "traits" });
             written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.SubracesFile)));
+        }
+
+        using (var workbook = new XLWorkbook())
+        {
+            XlsxHelpers.WriteSheet(workbook, "alignments",
+                ["systemId", "id", "name", "iconUrl", "accent"],
+                alignmentRows,
+                new Dictionary<string, double>
+                {
+                    ["systemId"] = 12,
+                    ["id"] = 18,
+                    ["name"] = 14,
+                    ["iconUrl"] = 34,
+                    ["accent"] = 12,
+                });
+            written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.AlignmentsFile)));
         }
 
         using (var workbook = new XLWorkbook())

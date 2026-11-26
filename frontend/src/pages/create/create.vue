@@ -350,6 +350,61 @@
           </view>
         </view>
 
+        <!-- 决定背景：第一个是阵营（九宫格），后面再加背景本身 -->
+        <view v-else-if="isBackgroundStep" class="panel">
+          <view class="panel-title">
+            <KeywordText :text="currentStep?.title || '决定背景'" />
+          </view>
+          <view v-if="currentStep?.description" class="muted step-hint">
+            <KeywordText :text="currentStep.description" />
+          </view>
+
+          <view v-if="alignmentsLoading" class="muted">正在加载阵营…</view>
+          <view v-else-if="alignmentsError" class="load-error" @tap="loadAlignments">
+            <text class="muted">阵营加载失败，点这里重试</text>
+          </view>
+          <view v-else-if="!alignments.length" class="muted background-empty">
+            这个规则书还没配置阵营，这一步可以先跳过，直接点「下一步」。
+          </view>
+
+          <view v-else class="background-fields">
+            <view
+              class="bg-field"
+              :class="{ 'bg-field-filled': Boolean(pickedAlignment) }"
+              @tap="openAlignmentSheet"
+            >
+              <view class="bg-field-body">
+                <view class="bg-field-label">阵营</view>
+                <view v-if="pickedAlignment" class="bg-field-value">
+                  <image
+                    v-if="pickedAlignment.iconUrl && !failedAlignmentIcons[pickedAlignment.code]"
+                    class="bg-field-icon"
+                    :src="pickedAlignment.iconUrl"
+                    mode="aspectFit"
+                    @error="markAlignmentIconFailed(pickedAlignment.code)"
+                  />
+                  <view
+                    v-else
+                    class="bg-field-icon bg-field-icon-fallback"
+                    :style="{ backgroundColor: pickedAlignment.accent || DEFAULT_ACCENT }"
+                  >
+                    <text>{{ pickedAlignment.name.slice(0, 1) }}</text>
+                  </view>
+                  <view class="bg-field-name" @tap.stop>
+                    <KeywordText :text="'[' + pickedAlignment.name + ']'" />
+                  </view>
+                </view>
+                <view v-else class="bg-field-value muted">点这里，从九宫格里挑一个</view>
+              </view>
+              <text class="bg-field-arrow">›</text>
+            </view>
+
+            <view class="muted bg-field-tip">
+              点阵营名可以看词条解释；守序 ↔ 混乱是做事的方式，善良 ↔ 邪恶是动机。
+            </view>
+          </view>
+        </view>
+
         <!-- 其它类型的步骤：面板还没做，先按配置占位 -->
         <view v-else class="panel placeholder-panel">
           <view class="panel-title">
@@ -402,6 +457,52 @@
       </button>
     </view>
 
+    <!-- 阵营九宫格：点阵营那一栏弹出来选，选完自动收起 -->
+    <view v-if="alignmentSheetVisible" class="align-mask" @tap="closeAlignmentSheet">
+      <view class="align-sheet" @tap.stop>
+        <view class="align-sheet-head">
+          <view class="align-sheet-title">阵营</view>
+          <text class="align-sheet-close" @tap="closeAlignmentSheet">×</text>
+        </view>
+        <view class="muted align-sheet-hint">
+          守序 ↔ 混乱是做事的方式，善良 ↔ 邪恶是动机；点右上角的「i」看每格的解释。
+        </view>
+
+        <view class="align-grid">
+          <view
+            v-for="item in alignments"
+            :key="item.code"
+            class="align-cell"
+            :class="{ 'align-cell-selected': draft.alignmentCode === item.code }"
+            :style="{ borderTopColor: item.accent || DEFAULT_ACCENT }"
+            @tap="pickAlignment(item)"
+          >
+            <image
+              v-if="item.iconUrl && !failedAlignmentIcons[item.code]"
+              class="align-icon"
+              :src="item.iconUrl"
+              mode="aspectFit"
+              @error="markAlignmentIconFailed(item.code)"
+            />
+            <view
+              v-else
+              class="align-icon align-icon-fallback"
+              :style="{ backgroundColor: item.accent || DEFAULT_ACCENT }"
+            >
+              <text>{{ item.name.slice(0, 1) }}</text>
+            </view>
+            <view class="align-name">{{ item.name }}</view>
+            <view
+              v-if="hasAlignmentKeyword(item.name)"
+              class="align-info"
+              @tap.stop="openAlignmentKeyword(item)"
+            >i</view>
+            <view v-if="draft.alignmentCode === item.code" class="align-check">✓</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <KeywordModal />
 
     <ClassDetailModal
@@ -418,6 +519,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { onHide, onLoad, onPageScroll, onUnload } from '@dcloudio/uni-app'
 import { request } from '../../api/http'
 import type {
+  AlignmentOption,
   ClassOption,
   CreationFlow,
   CreationStep,
@@ -427,6 +529,7 @@ import type {
   SubraceOption,
 } from '../../api/types'
 import { clearDraft, emptyDraft, loadDraft, saveDraft, type CreateDraft } from '../../stores/createDraft'
+import { ensureKeywords, findKeyword, openKeyword } from '../../stores/keywords'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
 import KeywordText from '../../components/KeywordText/KeywordText.vue'
 import KeywordModal from '../../components/KeywordModal/KeywordModal.vue'
@@ -442,6 +545,10 @@ const classes = ref<ClassOption[]>([])
 const subclasses = ref<SubclassOption[]>([])
 const races = ref<RaceOption[]>([])
 const subraces = ref<SubraceOption[]>([])
+/** 阵营（九宫格）：不跟随职业 / 种族，单独一份 */
+const alignments = ref<AlignmentOption[]>([])
+const alignmentsLoaded = ref(false)
+const alignmentSheetVisible = ref(false)
 /** 子职 / 亚种列表是按哪个职业 / 种族加载的，用来判断「没有内容」是不是真的 */
 const subclassCatalogCode = ref<string | null>(null)
 const subraceCatalogCode = ref<string | null>(null)
@@ -455,12 +562,15 @@ const racesLoading = ref(false)
 const racesError = ref(false)
 const subracesLoading = ref(false)
 const subracesError = ref(false)
+const alignmentsLoading = ref(false)
+const alignmentsError = ref(false)
 const ready = ref(false)
 const started = ref(false)
 const finishing = ref(false)
 const failedIcons = ref<Record<string, boolean>>({})
 const failedCovers = ref<Record<string, boolean>>({})
 const failedSubclassCovers = ref<Record<string, boolean>>({})
+const failedAlignmentIcons = ref<Record<string, boolean>>({})
 const activeRailIndex = ref(0)
 const railTops = ref<number[]>([])
 const jumping = ref(false)
@@ -493,6 +603,21 @@ const isClassStep = computed(() => currentStep.value?.kind === 'class')
 const isSubclassStep = computed(() => currentStep.value?.kind === 'subclass')
 const isRaceStep = computed(() => currentStep.value?.kind === 'race')
 const isSubraceStep = computed(() => currentStep.value?.kind === 'subrace')
+const isBackgroundStep = computed(() => currentStep.value?.kind === 'background')
+/** 选中的阵营：内容还没加载完（旧草稿）时先用草稿里的名字兜底 */
+const pickedAlignment = computed<AlignmentOption | null>(() => {
+  const code = draft.value.alignmentCode
+  if (!code) {
+    return null
+  }
+
+  return (
+    alignments.value.find((item) => item.code === code) ?? {
+      code,
+      name: draft.value.alignmentName,
+    }
+  )
+})
 /** 右侧卡片进度条：职业、种族、亚种都用同一套 */
 const railOptions = computed(() => {
   if (isClassStep.value) {
@@ -574,6 +699,15 @@ const canNext = computed(() => {
     return subraces.value.length === 0 || Boolean(draft.value.subraceCode)
   }
 
+  if (isBackgroundStep.value) {
+    if (alignmentsLoading.value && !draft.value.alignmentCode) {
+      return false
+    }
+
+    // 还没配阵营内容时允许跳过
+    return alignments.value.length === 0 || Boolean(draft.value.alignmentCode)
+  }
+
   return true
 })
 
@@ -607,6 +741,8 @@ function isStepDone(index: number): boolean {
           subraceCatalogCode.value === draft.value.raceCode &&
           subraces.value.length === 0)
       )
+    case 'background':
+      return Boolean(draft.value.alignmentCode) || (alignmentsLoaded.value && alignments.value.length === 0)
     default:
       return false
   }
@@ -637,6 +773,8 @@ watch(
     // 换步骤后旧的卡片位置全部作废
     railTops.value = []
     activeRailIndex.value = 0
+    // 九宫格只在当前步骤里开，切步骤就收起来
+    alignmentSheetVisible.value = false
     // 步骤条跟着当前步骤走，保证它落在一屏三个里
     syncStepperToStep()
 
@@ -655,6 +793,10 @@ watch(
 
     if (item?.kind === 'subrace') {
       void loadSubraces()
+    }
+
+    if (item?.kind === 'background') {
+      void loadAlignments()
     }
   },
 )
@@ -966,6 +1108,10 @@ async function init(): Promise<void> {
   if (currentStep.value?.kind === 'subrace') {
     void loadSubraces()
   }
+
+  if (currentStep.value?.kind === 'background') {
+    void loadAlignments()
+  }
 }
 
 async function loadSystems(): Promise<void> {
@@ -1180,6 +1326,79 @@ function pickSubrace(option: SubraceOption): void {
   draft.value.subraceName = option.name
 }
 
+/* ---------------- 决定背景：阵营九宫格 ---------------- */
+
+async function loadAlignments(): Promise<void> {
+  if (alignmentsLoading.value) {
+    return
+  }
+
+  alignmentsLoading.value = true
+  alignmentsError.value = false
+
+  try {
+    const code = draft.value.systemCode ?? 'dnd5e'
+    alignments.value = await request<AlignmentOption[]>({
+      url: `/api/generator/alignments?systemCode=${code}`,
+      auth: false,
+    })
+    alignmentsLoaded.value = true
+
+    // 恢复的选择如果已经不在内容里，就清掉，避免下一步卡住
+    if (
+      draft.value.alignmentCode &&
+      !alignments.value.some((item) => item.code === draft.value.alignmentCode)
+    ) {
+      draft.value.alignmentCode = null
+      draft.value.alignmentName = ''
+    }
+  } catch {
+    alignmentsError.value = true
+    alignments.value = []
+    alignmentsLoaded.value = false
+  } finally {
+    alignmentsLoading.value = false
+  }
+}
+
+function openAlignmentSheet(): void {
+  if (!alignments.value.length) {
+    void loadAlignments()
+    return
+  }
+
+  // 九宫格里每格都能点「i」看解释，先把词条拉一遍
+  void ensureKeywords()
+  alignmentSheetVisible.value = true
+}
+
+function closeAlignmentSheet(): void {
+  alignmentSheetVisible.value = false
+}
+
+function pickAlignment(option: AlignmentOption): void {
+  draft.value.alignmentCode = option.code
+  draft.value.alignmentName = option.name
+  alignmentSheetVisible.value = false
+  saveDraft(draft.value)
+}
+
+function hasAlignmentKeyword(name: string): boolean {
+  return Boolean(findKeyword(name))
+}
+
+function openAlignmentKeyword(option: AlignmentOption): void {
+  if (!findKeyword(option.name)) {
+    return
+  }
+
+  openKeyword(option.name)
+}
+
+function markAlignmentIconFailed(code: string): void {
+  failedAlignmentIcons.value[code] = true
+}
+
 /** 可选规则：所有种族改用「任意两项 +2 / +1」，替换各族的固定属性加值。 */
 const HOUSE_RULE_BONUS = '[属性值加成]：任意两项 +2 / +1'
 
@@ -1220,15 +1439,21 @@ function pickSystem(system: GameSystem): void {
     draft.value.raceName = ''
     draft.value.subraceCode = null
     draft.value.subraceName = ''
+    draft.value.alignmentCode = null
+    draft.value.alignmentName = ''
     draft.value.classStates = {}
     classes.value = []
     subclasses.value = []
     races.value = []
     subraces.value = []
+    alignments.value = []
+    alignmentsLoaded.value = false
+    alignmentSheetVisible.value = false
     subclassCatalogCode.value = null
     subraceCatalogCode.value = null
     failedCovers.value = {}
     failedSubclassCovers.value = {}
+    failedAlignmentIcons.value = {}
     void loadFlow()
     void loadClasses()
   }
@@ -1325,7 +1550,11 @@ function next(): void {
           ? '先选一个子职'
           : isRaceStep.value
             ? '先选一个种族'
-            : '这一步还不能继续',
+            : isSubraceStep.value
+              ? '先选一个亚种'
+              : isBackgroundStep.value
+                ? '先从九宫格里选一个阵营'
+                : '这一步还不能继续',
     )
     return
   }
@@ -1384,6 +1613,7 @@ async function finish(): Promise<void> {
         subclassName: draft.value.subclassName || null,
         raceName: draft.value.raceName || null,
         subraceName: draft.value.subraceName || null,
+        alignmentName: draft.value.alignmentName || null,
         sheet: {
           attributes: [],
           skills: [],
@@ -1973,6 +2203,239 @@ function scrollTop(): void {
   line-height: 1.6;
 }
 
+/* ---------------- 决定背景：阵营那一栏 + 九宫格 ---------------- */
+
+.background-empty {
+  line-height: 1.6;
+}
+
+.background-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.bg-field {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 22rpx 24rpx;
+  border: 2rpx solid $trpg-line;
+  border-radius: 16rpx;
+  background: #fff;
+}
+
+.bg-field-filled {
+  border-color: $trpg-accent;
+  background: #fffdf8;
+  box-shadow: 0 8rpx 24rpx rgba(91, 70, 54, 0.12);
+}
+
+.bg-field:active {
+  opacity: 0.85;
+}
+
+.bg-field-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.bg-field-label {
+  font-size: 22rpx;
+  letter-spacing: 2rpx;
+  color: $trpg-muted;
+}
+
+.bg-field-value {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 8rpx;
+}
+
+.bg-field-icon {
+  flex-shrink: 0;
+  width: 56rpx;
+  height: 56rpx;
+}
+
+.bg-field-icon-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+  color: #fffaf0;
+  font-size: 28rpx;
+}
+
+.bg-field-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+}
+
+.bg-field-arrow {
+  flex-shrink: 0;
+  font-size: 34rpx;
+  line-height: 1;
+  color: $trpg-muted;
+}
+
+.bg-field-tip {
+  font-size: 20rpx;
+  line-height: 1.6;
+}
+
+.align-mask {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(30, 23, 18, 0.5);
+  animation: align-fade 0.16s ease-out;
+}
+
+.align-sheet {
+  box-sizing: border-box;
+  width: 100%;
+  max-height: 86vh;
+  padding: 28rpx 24rpx;
+  padding-bottom: calc(32rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  border-radius: 26rpx 26rpx 0 0;
+  background: #fffdf8;
+  animation: align-rise 0.22s ease-out;
+}
+
+.align-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.align-sheet-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+}
+
+.align-sheet-close {
+  padding: 0 8rpx;
+  font-size: 40rpx;
+  line-height: 1;
+  color: $trpg-muted;
+}
+
+.align-sheet-hint {
+  margin: 8rpx 0 22rpx;
+  font-size: 20rpx;
+  line-height: 1.6;
+}
+
+.align-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14rpx;
+}
+
+.align-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 26rpx 8rpx 16rpx;
+  border: 2rpx solid $trpg-line;
+  border-top-width: 8rpx;
+  border-radius: 14rpx;
+  background: #fff;
+}
+
+.align-cell-selected {
+  border-color: $trpg-accent;
+  border-top-color: $trpg-accent !important;
+  background: #f7efe1;
+  box-shadow: 0 8rpx 24rpx rgba(91, 70, 54, 0.16);
+}
+
+.align-cell:active {
+  opacity: 0.85;
+}
+
+.align-icon {
+  width: 64rpx;
+  height: 64rpx;
+}
+
+.align-icon-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+  color: #fffaf0;
+  font-size: 30rpx;
+}
+
+.align-name {
+  font-size: 22rpx;
+  letter-spacing: 1rpx;
+  color: $trpg-ink;
+  text-align: center;
+}
+
+.align-info {
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30rpx;
+  height: 30rpx;
+  border: 2rpx solid #d8c6a5;
+  border-radius: 50%;
+  background: #fffdf8;
+  font-size: 18rpx;
+  font-style: italic;
+  color: $trpg-muted;
+}
+
+.align-check {
+  position: absolute;
+  top: 8rpx;
+  left: 10rpx;
+  font-size: 20rpx;
+  color: $trpg-accent;
+}
+
+@keyframes align-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes align-rise {
+  from {
+    opacity: 0.6;
+    transform: translateY(40rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .race-house-rule {
   display: flex;
   align-items: center;
@@ -2311,6 +2774,105 @@ function scrollTop(): void {
   .subrace-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 26px rgba(91, 70, 54, 0.1);
+  }
+
+  .bg-field {
+    padding: 14px 16px;
+    border-width: 1px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .bg-field:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 26px rgba(91, 70, 54, 0.1);
+  }
+
+  .bg-field-label {
+    font-size: 12px;
+  }
+
+  .bg-field-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .bg-field-name {
+    font-size: 18px;
+    letter-spacing: 1px;
+  }
+
+  .bg-field-arrow {
+    font-size: 22px;
+  }
+
+  .bg-field-tip {
+    font-size: 12px;
+  }
+
+  .align-mask {
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .align-sheet {
+    width: 480px;
+    max-height: 80vh;
+    padding: 22px 20px;
+    border-radius: 16px;
+  }
+
+  .align-sheet-title {
+    font-size: 18px;
+  }
+
+  .align-sheet-hint {
+    font-size: 12px;
+    margin: 6px 0 18px;
+  }
+
+  .align-grid {
+    gap: 10px;
+  }
+
+  .align-cell {
+    padding: 16px 8px 12px;
+    border-width: 1px;
+    border-top-width: 5px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .align-cell:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(91, 70, 54, 0.12);
+  }
+
+  .align-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .align-name {
+    font-size: 13px;
+  }
+
+  .align-info {
+    top: 5px;
+    right: 5px;
+    width: 18px;
+    height: 18px;
+    border-width: 1px;
+    font-size: 11px;
+  }
+
+  .align-check {
+    top: 5px;
+    left: 6px;
+    font-size: 11px;
   }
 
   .race-card {

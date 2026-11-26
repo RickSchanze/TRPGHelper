@@ -27,6 +27,9 @@ public static class ContentPaths
 
     public const string BackgroundsFile = "背景.xlsx";
 
+    /// <summary>阵营（九宫格：守序善良 … 混乱邪恶），带图标给车卡流程用。</summary>
+    public const string AlignmentsFile = "阵营.xlsx";
+
     public const string InspirationsFile = "职业灵感.xlsx";
 
     public const string FlowFile = "车卡流程.xlsx";

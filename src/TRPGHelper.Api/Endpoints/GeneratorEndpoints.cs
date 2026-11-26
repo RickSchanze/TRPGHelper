@@ -45,6 +45,10 @@ public static class GeneratorEndpoints
                 Results.Ok(await catalog.SubracesAsync(systemCode, raceId, cancellationToken)))
             .WithSummary("亚种列表（按种族过滤）");
 
+        group.MapGet("/alignments", async (string? systemCode, GeneratorCatalogService catalog, CancellationToken cancellationToken) =>
+                Results.Ok(await catalog.AlignmentsAsync(systemCode, cancellationToken)))
+            .WithSummary("阵营列表（九宫格，带图标）");
+
         group.MapGet("/inspirations", async (string? systemCode, int? count, GeneratorCatalogService catalog, CancellationToken cancellationToken) =>
                 Results.Ok(await catalog.InspirationsAsync(systemCode, count ?? 3, null, cancellationToken)))
             .WithSummary("车卡灵感（故事钩子）");

@@ -63,6 +63,8 @@ export interface CharacterSummary {
   subclassName?: string
   raceName?: string
   subraceName?: string
+  /** 阵营，例如「守序善良」 */
+  alignmentName?: string
   age?: number
   summary?: string
   portraitUrl?: string
@@ -192,6 +194,14 @@ export interface SubraceOption {
   raceId: string
   description: string
   traits: string[]
+}
+
+/** 阵营（九宫格）：解释文字在关键词里，这里只有渲染图标 + 名字要用的字段。 */
+export interface AlignmentOption {
+  code: string
+  name: string
+  iconUrl?: string
+  accent?: string
 }
 
 /** 子职选项（圣武士的三个神圣誓约等）。 */

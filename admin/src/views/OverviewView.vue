@@ -15,6 +15,8 @@ const kindLabels: Record<string, string> = {
   class: '职业卡',
   subclass: '子职',
   race: '种族',
+  subrace: '亚种',
+  alignment: '阵营',
   inspiration: '灵感',
 }
 

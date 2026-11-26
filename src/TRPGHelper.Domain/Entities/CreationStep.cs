@@ -26,6 +26,9 @@ public enum CreationStepKind
 
     /// <summary>确认卡面并提交。</summary>
     Summary = 4,
+
+    /// <summary>决定背景：先是九宫格阵营，后面再补背景本身。</summary>
+    Background = 7,
 }
 
 /// <summary>

@@ -55,3 +55,12 @@ public sealed record SubraceOptionDto(
     string RaceId,
     string Description,
     IReadOnlyList<string> Traits);
+
+/// <summary>
+/// 阵营（九宫格）。解释文字在关键词里，这里只给车卡流程渲染图标 + 名字要用的字段。
+/// </summary>
+public sealed record AlignmentOptionDto(
+    string Code,
+    string Name,
+    string? IconUrl,
+    string? Accent);
