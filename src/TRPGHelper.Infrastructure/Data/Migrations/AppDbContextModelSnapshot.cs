@@ -96,6 +96,9 @@ namespace TRPGHelper.Infrastructure.Data.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SubraceName")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Summary")
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");

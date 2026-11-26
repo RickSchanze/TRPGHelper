@@ -22,6 +22,9 @@ public static class ContentPaths
 
     public const string RacesFile = "种族.xlsx";
 
+    /// <summary>亚种（高等精灵 / 山地矮人 / 轻足半身人等），按种族分组。</summary>
+    public const string SubracesFile = "亚种.xlsx";
+
     public const string BackgroundsFile = "背景.xlsx";
 
     public const string InspirationsFile = "职业灵感.xlsx";

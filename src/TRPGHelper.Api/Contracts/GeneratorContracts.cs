@@ -48,3 +48,10 @@ public sealed record SubclassOptionDto(
     IReadOnlyList<string> Features,
     string? ImageUrl,
     string? Accent);
+
+public sealed record SubraceOptionDto(
+    string Code,
+    string Name,
+    string RaceId,
+    string Description,
+    IReadOnlyList<string> Traits);

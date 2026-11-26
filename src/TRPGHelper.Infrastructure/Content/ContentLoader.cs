@@ -26,6 +26,7 @@ public static class ContentLoader
         LoadClasses(dataPath, systems, entries);
         LoadSubclasses(dataPath, systems, entries);
         LoadRaces(dataPath, systems, entries);
+        LoadSubraces(dataPath, systems, entries);
         LoadInspirations(dataPath, systems, entries);
 
         var steps = LoadSteps(dataPath, systems);
@@ -321,6 +322,63 @@ public static class ContentLoader
                     description = row["description"].Trim(),
                     abilityBonus = row["abilityBonus"].Trim(),
                     speed = row.Int("speed", 30),
+                    traits,
+                }, JsonOptions),
+                (index + 1) * 10));
+            index += 1;
+        }
+    }
+
+    private static void LoadSubraces(
+        string dataPath,
+        IReadOnlyList<ContentSystem> systems,
+        List<GeneratorEntryContent> entries)
+    {
+        var path = Path.Combine(dataPath, ContentPaths.SubracesFile);
+        if (!File.Exists(path))
+        {
+            return;
+        }
+
+        using var workbook = OpenWorkbook(path);
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var raceCodes = entries
+            .Where(entry => entry.Kind == JsonKey(GeneratorKind.Race))
+            .Select(entry => entry.Category)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var index = 0;
+
+        foreach (var row in XlsxHelpers.ReadRows(
+                     XlsxHelpers.RequireSheet(workbook, path, "subraces"),
+                     path,
+                     ["systemId", "id", "raceId", "name", "description", "traits"]))
+        {
+            var id = row.Required("id", path).ToLowerInvariant();
+            if (!ids.Add(id))
+            {
+                row.Fail(path, $"亚种 id「{id}」重复。");
+            }
+
+            var systemId = RequireSystem(row, systems, path);
+            var raceId = row.Required("raceId", path).ToLowerInvariant();
+            if (!raceCodes.Contains(raceId))
+            {
+                row.Fail(path, $"亚种「{id}」的 raceId「{raceId}」在 {ContentPaths.RacesFile} 里不存在。");
+            }
+
+            var traits = row["traits"]
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList();
+
+            entries.Add(new GeneratorEntryContent(
+                systemId,
+                JsonKey(GeneratorKind.Subrace),
+                raceId,
+                row.Required("name", path),
+                JsonSerializer.Serialize(new
+                {
+                    code = id,
+                    description = row["description"].Trim(),
                     traits,
                 }, JsonOptions),
                 (index + 1) * 10));

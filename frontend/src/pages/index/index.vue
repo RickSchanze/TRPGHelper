@@ -62,6 +62,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { getToken, request } from '../../api/http'
 import type { CardStatusKey, CharacterStats, CharacterSummary, PagedResult } from '../../api/types'
 import { formatDate } from '../../utils/format'
+import { clearDraft } from '../../stores/createDraft'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
 import KeywordText from '../../components/KeywordText/KeywordText.vue'
 import KeywordModal from '../../components/KeywordModal/KeywordModal.vue'
@@ -121,6 +122,8 @@ function openDetail(id: string): void {
 }
 
 function goCreate(): void {
+  // 点「车新卡」= 开一次新的车卡会话：清掉上一次的草稿，避免带着上次的职业/子职进来
+  clearDraft()
   uni.navigateTo({ url: '/pages/create/create' })
 }
 

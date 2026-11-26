@@ -31,6 +31,9 @@ public class CharacterCard
     /// <summary>规则系统里的种族，例如 DND 的「半精灵」。</summary>
     public string? RaceName { get; set; }
 
+    /// <summary>亚种，例如「高等精灵」「山地矮人」。</summary>
+    public string? SubraceName { get; set; }
+
     public int? Age { get; set; }
 
     public string? Summary { get; set; }

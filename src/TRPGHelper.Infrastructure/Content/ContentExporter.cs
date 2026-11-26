@@ -158,6 +158,23 @@ public static class ContentExporter
             })
             .ToList();
 
+        var subraceRows = entries
+            .Where(entry => entry.Kind == GeneratorKind.Subrace)
+            .Select(entry =>
+            {
+                var extra = ParseExtra(entry.ExtraJson);
+                return new object?[]
+                {
+                    entry.SystemCode ?? "dnd5e",
+                    ReadString(extra, "code") ?? entry.Category,
+                    entry.Category,
+                    entry.Value,
+                    ReadString(extra, "description") ?? string.Empty,
+                    string.Join('\n', ReadStringList(extra, "traits")),
+                };
+            })
+            .ToList();
+
         var inspirationRows = entries
             .Where(entry => entry.Kind == GeneratorKind.Inspiration)
             .Select(entry => new object?[]
@@ -235,6 +252,24 @@ public static class ContentExporter
                 },
                 new HashSet<string> { "description", "traits" });
             written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.RacesFile)));
+        }
+
+        using (var workbook = new XLWorkbook())
+        {
+            XlsxHelpers.WriteSheet(workbook, "subraces",
+                ["systemId", "id", "raceId", "name", "description", "traits"],
+                subraceRows,
+                new Dictionary<string, double>
+                {
+                    ["systemId"] = 12,
+                    ["id"] = 14,
+                    ["raceId"] = 12,
+                    ["name"] = 16,
+                    ["description"] = 56,
+                    ["traits"] = 64,
+                },
+                new HashSet<string> { "description", "traits" });
+            written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.SubracesFile)));
         }
 
         using (var workbook = new XLWorkbook())

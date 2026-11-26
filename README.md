@@ -134,6 +134,7 @@ npm run build      # 产物在 admin/dist
 | POST | `/api/generator/attributes` | 按规则生成属性（掷骰 / 标准数组） |
 | GET | `/api/generator/classes` | 职业卡列表（数据来自素材库，含 `imageUrl`） |
 | GET | `/api/generator/subclasses` | 子职卡列表（按 `classId` 过滤，含 `imageUrl` 与特性） |
+| GET | `/api/generator/subraces` | 亚种卡列表（按 `raceId` 过滤，含特质） |
 | GET | `/api/generator/races` | 种族列表（数据来自素材库） |
 | GET | `/api/generator/names` | 随机姓名（按系统的姓名模板拼） |
 | GET | `/api/generator/occupations` | 随机职业（职业 + 背景池） |
@@ -175,22 +176,24 @@ npm run build      # 产物在 admin/dist
 
 ## 车新卡流程
 
-目前专注 DND 5E 车卡，页面顶部只写 **WHO ARE YOU / 你是谁**（标题用宋体，其余保持默认字体）。选规则书是流程前置条件，不占步骤；流程现在是 3 步：
+目前专注 DND 5E 车卡，页面顶部只写 **WHO ARE YOU / 你是谁**（标题用宋体，其余保持默认字体）。选规则书是流程前置条件，不占步骤；流程现在是 4 步，顶部步骤条一屏最多露出 3 个、步骤之间用连线连接，鼠标按住或手指左右拖动可以查看前后的步骤。点步骤可以直接跳转：子职需要先选职业（否则提示「请先选择职业」），亚种需要先选种族（否则提示「请先选择种族」），职业和种族之间没有依赖：
 
 1. **职业**：游侠、战士、武僧、德鲁伊、圣武士五张职业卡（大图单列 + 特点两栏），选中后「下一步」才可用
 2. **子职**：按所选职业过滤的子职卡（大图 + 描述 + 特性），目前先做了圣武士的三个神圣誓约：奉献 / 古贤 / 复仇；其它职业的子职还在整理，这一步会提示可以直接跳过
 3. **选择种族**：人类、精灵、矮人、半身人、龙裔、侏儒、半精灵、半兽人、提夫林九个核心种族（数据来自 `data/种族.xlsx`）。卡片上写属性加值、速度和种族特质，描述与特质按职业卡的写法用 `[关键词]` 标出可点词条（黑暗视觉、妖精血统、吐息武器、地狱遗赠…）；右侧有和职业一样的进度条，可以点着跳到对应种族。面板顶部有一个可选开关「任意两项 +2 / +1」，打开后不再使用各族的固定属性加值，所有种族都改为自选两项属性分别 +2 / +1。选中后「下一步」才可用
+4. **选择亚种**：按所选种族过滤的亚种卡（数据来自 `data/亚种.xlsx`）：精灵有高等 / 木 / 卓尔，矮人有丘陵 / 山地，半身人有轻足 / 敦实，侏儒有森林 / 岩石，龙裔按十种龙族血统分；人类、半精灵、半兽人、提夫林没有亚种，这一步会提示直接跳过。亚种特质同样支持 `[关键词]`，右侧进度条同种族
 
 职业卡配图：默认用 `frontend/src/static/classes/*.jpg`，路径和主色在 `data/职业.xlsx > classes` 的 `imageUrl` / `accent` 列配置（管理台也能上传替换）。
 
 子职卡配图：`frontend/src/static/subclasses/*.jpg`，路径在 `data/子职.xlsx > subclasses` 配置；生图提示词见 [docs/image-prompts.md](docs/image-prompts.md)。
 
-选择进度存在本机（uni storage，key `trpg_create_draft`），刷新 / 退出再进会恢复；点「完成」才会 `POST /api/characters` 提交，卡名暂由后端随机生成，等后续加上命名步骤再替换。
+选择进度存在本机（uni storage，key `trpg_create_draft`）：同一次车卡会话里切步骤、刷新都会保留；点「＋ 车新卡」会清掉上一次的草稿、从空白开始，点「完成」才 `POST /api/characters` 提交，卡名暂由后端随机生成，等后续加上命名步骤再替换。
 
 流程中可以点顶部已完成步骤（或「上一步」）退回去改；每个职业的选择单独存着，切到别的职业、再切回来，之前的子职选择会自动恢复。
 
 职业来自后端：`GET /api/generator/classes?systemCode=dnd5e`
 子职来自后端：`GET /api/generator/subclasses?systemCode=dnd5e&classId=paladin`（提交时随卡存 `subclassName`）
+亚种来自后端：`GET /api/generator/subraces?systemCode=dnd5e&raceId=elf`（提交时随卡存 `subraceName`）
 种族来自后端：`GET /api/generator/races?systemCode=dnd5e`（提交时随卡存 `raceName`）
 
 译名与内容取材以 [5E 不全书](https://5echm.kagangtuya.top) 为准（当前按《玩家手册》2014 译名），约定和易错词表见 [docs/translation.md](docs/translation.md)。

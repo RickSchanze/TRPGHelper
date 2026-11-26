@@ -71,20 +71,34 @@
       </view>
 
       <template v-else>
-        <view class="stepper">
+        <view
+          class="stepper-viewport"
+          @touchstart="onStepperTouchStart"
+          @touchmove="onStepperTouchMove"
+          @touchend="onStepperTouchEnd"
+          @touchcancel="onStepperTouchEnd"
+        >
           <view
-            v-for="(item, index) in steps"
-            :key="item.id"
-            class="step"
-            :class="{
-              'step-active': step === index + 1,
-              'step-done': step > index + 1,
-              'step-clickable': step > index + 1,
+            class="stepper"
+            :style="{
+              transform: `translateX(-${stepperOffset}px)`,
+              transition: stepperDragging ? 'none' : 'transform 0.25s ease',
             }"
-            @tap="jumpToStep(index)"
           >
-            <view class="step-dot">{{ step > index + 1 ? '✓' : index + 1 }}</view>
-            <KeywordText class="step-label" :text="item.title" />
+            <view
+              v-for="(item, index) in steps"
+              :key="item.id"
+              class="step"
+              :class="{
+                'step-active': step === index + 1,
+                'step-done': isStepDone(index),
+                'step-clickable': isStepDone(index) || step > index + 1,
+              }"
+              @tap="jumpToStep(index)"
+            >
+              <view class="step-dot">{{ isStepDone(index) && step !== index + 1 ? '✓' : index + 1 }}</view>
+              <KeywordText class="step-label" :text="item.title" />
+            </view>
           </view>
         </view>
 
@@ -103,7 +117,13 @@
           </view>
 
           <view v-else class="class-list">
-            <view v-for="item in classes" :key="item.code" class="class-card" @tap="pickClass(item)">
+            <view
+              v-for="item in classes"
+              :key="item.code"
+              class="class-card"
+              :class="{ 'class-selected': draft.classCode === item.code }"
+              @tap="pickClass(item)"
+            >
               <view class="class-cover-wrap">
                 <image
                   v-if="coverFor(item) && !failedCovers[item.code]"
@@ -173,6 +193,7 @@
               v-for="item in subclasses"
               :key="item.code"
               class="subclass-card"
+              :class="{ 'subclass-selected': draft.subclassCode === item.code }"
               @tap="pickSubclass(item)"
             >
               <view class="subclass-cover-wrap">
@@ -278,6 +299,51 @@
           </view>
         </view>
 
+        <!-- 亚种步骤：按种族过滤，没有亚种的种族可跳过 -->
+        <view v-else-if="isSubraceStep" class="panel">
+          <view class="panel-title">
+            <KeywordText :text="currentStep?.title || '选择亚种'" />
+          </view>
+          <view v-if="currentStep?.description" class="muted step-hint">
+            <KeywordText :text="currentStep.description" />
+          </view>
+
+          <view v-if="subracesLoading" class="muted">正在加载亚种…</view>
+          <view v-else-if="subracesError" class="load-error" @tap="loadSubraces">
+            <text class="muted">亚种加载失败，点这里重试</text>
+          </view>
+          <view v-else-if="!draft.raceCode" class="muted">先回上一步选好种族。</view>
+          <view v-else-if="!subraces.length" class="muted subrace-empty">
+            「{{ draft.raceName }}」没有可选的亚种，这一步可以直接点「下一步」。
+          </view>
+
+          <view v-else class="subrace-list">
+            <view
+              v-for="item in subraces"
+              :key="item.code"
+              class="subrace-card"
+              :class="{ 'subrace-selected': draft.subraceCode === item.code }"
+              @tap="pickSubrace(item)"
+            >
+              <view class="race-head">
+                <view class="race-name">
+                  <KeywordText :text="item.name" />
+                </view>
+                <view v-if="draft.subraceCode === item.code" class="race-check">✓</view>
+              </view>
+              <view class="race-desc">
+                <KeywordText :text="item.description" />
+              </view>
+              <view v-if="item.traits.length" class="feature-list race-features">
+                <view v-for="trait in item.traits" :key="trait" class="feature">
+                  <text class="feature-dot">◆</text>
+                  <KeywordText class="feature-text" :text="trait" />
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+
         <!-- 其它类型的步骤：面板还没做，先按配置占位 -->
         <view v-else class="panel placeholder-panel">
           <view class="panel-title">
@@ -331,6 +397,7 @@ import type {
   GameSystem,
   RaceOption,
   SubclassOption,
+  SubraceOption,
 } from '../../api/types'
 import { clearDraft, emptyDraft, loadDraft, saveDraft, type CreateDraft } from '../../stores/createDraft'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
@@ -347,6 +414,10 @@ const steps = ref<CreationStep[]>([])
 const classes = ref<ClassOption[]>([])
 const subclasses = ref<SubclassOption[]>([])
 const races = ref<RaceOption[]>([])
+const subraces = ref<SubraceOption[]>([])
+/** 子职 / 亚种列表是按哪个职业 / 种族加载的，用来判断「没有内容」是不是真的 */
+const subclassCatalogCode = ref<string | null>(null)
+const subraceCatalogCode = ref<string | null>(null)
 const flowLoading = ref(false)
 const flowError = ref(false)
 const classesLoading = ref(false)
@@ -355,6 +426,8 @@ const subclassesLoading = ref(false)
 const subclassesError = ref(false)
 const racesLoading = ref(false)
 const racesError = ref(false)
+const subracesLoading = ref(false)
+const subracesError = ref(false)
 const ready = ref(false)
 const started = ref(false)
 const finishing = ref(false)
@@ -367,6 +440,18 @@ const jumping = ref(false)
 const detailVisible = ref(false)
 const detailClass = ref<ClassOption | null>(null)
 
+/** 顶部步骤条：最多露出 3 个，横向拖动查看前后的步骤 */
+const stepperWidth = ref(0)
+const stepperOffset = ref(0)
+const stepperDragging = ref(false)
+const stepperStepWidth = computed(() => (stepperWidth.value > 0 ? stepperWidth.value / 3 : 0))
+const stepperMaxStart = computed(() => Math.max(0, steps.value.length - 3))
+let stepperStartX = 0
+let stepperBaseOffset = 0
+let stepperMoved = false
+let stepperTapLock = false
+let stepperMeasureRetries = 0
+
 let jumpTimer: ReturnType<typeof setTimeout> | null = null
 let scrollTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -375,7 +460,8 @@ const currentStep = computed<CreationStep | null>(() => steps.value[draft.value.
 const isClassStep = computed(() => currentStep.value?.kind === 'class')
 const isSubclassStep = computed(() => currentStep.value?.kind === 'subclass')
 const isRaceStep = computed(() => currentStep.value?.kind === 'race')
-/** 右侧卡片进度条：职业和种族都用同一套 */
+const isSubraceStep = computed(() => currentStep.value?.kind === 'subrace')
+/** 右侧卡片进度条：职业、种族、亚种都用同一套 */
 const railOptions = computed(() => {
   if (isClassStep.value) {
     return classes.value
@@ -385,12 +471,30 @@ const railOptions = computed(() => {
     return races.value
   }
 
+  if (isSubraceStep.value) {
+    return subraces.value
+  }
+
   return []
 })
-const railSelectedCode = computed(() =>
-  isClassStep.value ? draft.value.classCode : isRaceStep.value ? draft.value.raceCode : null,
+const railSelectedCode = computed(() => {
+  if (isClassStep.value) {
+    return draft.value.classCode
+  }
+
+  if (isRaceStep.value) {
+    return draft.value.raceCode
+  }
+
+  if (isSubraceStep.value) {
+    return draft.value.subraceCode
+  }
+
+  return null
+})
+const railSelector = computed(() =>
+  isClassStep.value ? '.class-card' : isRaceStep.value ? '.race-card' : '.subrace-card',
 )
-const railSelector = computed(() => (isClassStep.value ? '.class-card' : '.race-card'))
 const isLastStep = computed(() => steps.value.length > 0 && draft.value.step >= steps.value.length)
 const canNext = computed(() => {
   if (!currentStep.value) {
@@ -411,8 +515,48 @@ const canNext = computed(() => {
     return races.value.length === 0 || Boolean(draft.value.raceCode)
   }
 
+  if (isSubraceStep.value) {
+    // 该种族没有亚种（或还没配）时允许跳过
+    return subraces.value.length === 0 || Boolean(draft.value.subraceCode)
+  }
+
   return true
 })
+
+/** 步骤打勾只看是否真的选过，不看它排在第几个 */
+function isStepDone(index: number): boolean {
+  const item = steps.value[index]
+  if (!item) {
+    return false
+  }
+
+  switch (item.kind) {
+    case 'class':
+      return Boolean(draft.value.classCode)
+    case 'subclass':
+      // 该职业没有子职内容时，选好职业就算完成
+      return (
+        Boolean(draft.value.subclassCode) ||
+        (Boolean(draft.value.classCode) &&
+          !subclassesLoading.value &&
+          subclassCatalogCode.value === draft.value.classCode &&
+          subclasses.value.length === 0)
+      )
+    case 'race':
+      return Boolean(draft.value.raceCode)
+    case 'subrace':
+      // 该种族没有亚种内容时，选好种族就算完成
+      return (
+        Boolean(draft.value.subraceCode) ||
+        (Boolean(draft.value.raceCode) &&
+          !subracesLoading.value &&
+          subraceCatalogCode.value === draft.value.raceCode &&
+          subraces.value.length === 0)
+      )
+    default:
+      return false
+  }
+}
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -439,6 +583,8 @@ watch(
     // 换步骤后旧的卡片位置全部作废
     railTops.value = []
     activeRailIndex.value = 0
+    // 步骤条跟着当前步骤走，保证它落在一屏三个里
+    syncStepperToStep()
 
     if (item?.kind === 'subclass') {
       void loadSubclasses()
@@ -452,6 +598,18 @@ watch(
     if (item?.kind === 'race') {
       void loadRaces()
     }
+
+    if (item?.kind === 'subrace') {
+      void loadSubraces()
+    }
+  },
+)
+
+// 步骤条只有进入流程后才渲染，等它出现再量一次宽度
+watch(
+  [started, () => steps.value.length],
+  () => {
+    void nextTick(() => measureStepper())
   },
 )
 
@@ -460,15 +618,23 @@ onHide(() => {
     saveDraft(draft.value)
   }
 })
-
 onUnload(() => {
   if (ready.value) {
     saveDraft(draft.value)
   }
+
+  // #ifdef H5
+  window.removeEventListener('resize', measureStepper)
+  document.removeEventListener('mousedown', onStepperMouseDown)
+  // #endif
 })
 
 onLoad(() => {
   void init()
+  // #ifdef H5
+  window.addEventListener('resize', measureStepper)
+  document.addEventListener('mousedown', onStepperMouseDown)
+  // #endif
 })
 
 onPageScroll((event) => {
@@ -508,6 +674,137 @@ function measureRail(): void {
     const scrollTop = (result?.[1]?.scrollTop ?? 0) as number
     railTops.value = rects.map((rect) => rect.top + scrollTop)
   })
+}
+
+/* ---------------- 顶部步骤条：3 个一屏 + 左右拖动 ---------------- */
+
+function measureStepper(): void {
+  const query = uni.createSelectorQuery()
+  query.select('.stepper-viewport').boundingClientRect()
+  query.exec((result) => {
+    const rect = (result?.[0] ?? null) as { width?: number } | null
+    const width = rect?.width ?? 0
+
+    if (width > 0) {
+      stepperWidth.value = width
+      stepperMeasureRetries = 0
+      syncStepperToStep()
+      return
+    }
+
+    // 刚切到流程页时元素可能还没排版，重试几次
+    if (stepperMeasureRetries < 6) {
+      stepperMeasureRetries += 1
+      setTimeout(measureStepper, 120)
+    }
+  })
+}
+
+/** 当前步骤尽量落在可见的三个里（中间位置优先） */
+function syncStepperToStep(): void {
+  const width = stepperStepWidth.value
+  if (!width) {
+    return
+  }
+
+  const start = Math.min(Math.max(draft.value.step - 2, 0), stepperMaxStart.value)
+  stepperOffset.value = start * width
+}
+
+function pointerX(event: { touches?: Array<{ clientX?: number }>; changedTouches?: Array<{ clientX?: number }>; clientX?: number }): number {
+  const touch = event?.touches?.[0] ?? event?.changedTouches?.[0]
+  return touch?.clientX ?? event?.clientX ?? 0
+}
+
+function stepperDragStart(x: number): void {
+  if (!stepperStepWidth.value) {
+    measureStepper()
+  }
+
+  stepperDragging.value = true
+  stepperMoved = false
+  stepperStartX = x
+  stepperBaseOffset = stepperOffset.value
+}
+
+function stepperDragMove(x: number): void {
+  const width = stepperStepWidth.value
+  if (!stepperDragging.value || !width) {
+    return
+  }
+
+  const delta = x - stepperStartX
+  if (Math.abs(delta) > 6) {
+    stepperMoved = true
+  }
+
+  stepperOffset.value = Math.min(
+    Math.max(stepperBaseOffset - delta, 0),
+    stepperMaxStart.value * width,
+  )
+}
+
+function stepperDragEnd(): void {
+  if (!stepperDragging.value) {
+    return
+  }
+
+  stepperDragging.value = false
+  const width = stepperStepWidth.value
+  if (!width) {
+    return
+  }
+
+  const start = Math.min(
+    Math.max(Math.round(stepperOffset.value / width), 0),
+    stepperMaxStart.value,
+  )
+  stepperOffset.value = start * width
+
+  // 拖动结束后的那次 tap 不要误触步骤跳转
+  if (stepperMoved) {
+    stepperTapLock = true
+    setTimeout(() => {
+      stepperTapLock = false
+    }, 260)
+  }
+}
+
+function onStepperTouchStart(event: { touches?: Array<{ clientX?: number }> }): void {
+  stepperDragStart(pointerX(event))
+}
+
+function onStepperTouchMove(event: { touches?: Array<{ clientX?: number }> }): void {
+  stepperDragMove(pointerX(event))
+}
+
+function onStepperTouchEnd(event: { changedTouches?: Array<{ clientX?: number }> }): void {
+  stepperDragMove(pointerX(event))
+  stepperDragEnd()
+}
+
+/** H5 桌面端用鼠标拖动；监听挂在 document 上，避免 uni view 的事件绑定差异 */
+function onStepperMouseDown(event: MouseEvent): void {
+  if (event.button !== 0) {
+    return
+  }
+
+  const viewport = document.querySelector('.stepper-viewport')
+  const target = event.target
+  if (!viewport || !(target instanceof Node) || !viewport.contains(target)) {
+    return
+  }
+
+  stepperDragStart(event.clientX)
+  const move = (ev: MouseEvent) => stepperDragMove(ev.clientX)
+  const up = () => {
+    window.removeEventListener('mousemove', move)
+    window.removeEventListener('mouseup', up)
+    stepperDragEnd()
+  }
+
+  window.addEventListener('mousemove', move)
+  window.addEventListener('mouseup', up)
 }
 
 function scrollToRail(index: number): void {
@@ -572,6 +869,8 @@ async function init(): Promise<void> {
   }
 
   ready.value = true
+  void nextTick(() => measureStepper())
+  void nextTick(() => measureStepper())
 
   if (currentStep.value?.kind === 'subclass') {
     void loadSubclasses()
@@ -579,6 +878,10 @@ async function init(): Promise<void> {
 
   if (currentStep.value?.kind === 'race') {
     void loadRaces()
+  }
+
+  if (currentStep.value?.kind === 'subrace') {
+    void loadSubraces()
   }
 }
 
@@ -605,6 +908,8 @@ async function loadFlow(): Promise<void> {
       auth: false,
     })
     steps.value = flow.steps ?? []
+    await nextTick()
+    measureStepper()
   } catch {
     flowError.value = true
     steps.value = []
@@ -646,6 +951,7 @@ function subclassCover(option: SubclassOption): string {
 async function loadSubclasses(): Promise<void> {
   if (!draft.value.classCode) {
     subclasses.value = []
+    subclassCatalogCode.value = null
     return
   }
 
@@ -658,10 +964,13 @@ async function loadSubclasses(): Promise<void> {
 
   try {
     const code = draft.value.systemCode ?? 'dnd5e'
-    subclasses.value = await request<SubclassOption[]>({
-      url: `/api/generator/subclasses?systemCode=${code}&classId=${encodeURIComponent(draft.value.classCode)}`,
+    const loadedFor = draft.value.classCode
+    const list = await request<SubclassOption[]>({
+      url: `/api/generator/subclasses?systemCode=${code}&classId=${encodeURIComponent(loadedFor)}`,
       auth: false,
     })
+    subclasses.value = list
+    subclassCatalogCode.value = loadedFor
 
     // 恢复的选择如果已经不在内容里，就清掉，避免下一步卡住
     if (
@@ -676,6 +985,7 @@ async function loadSubclasses(): Promise<void> {
   } catch {
     subclassesError.value = true
     subclasses.value = []
+    subclassCatalogCode.value = null
   } finally {
     subclassesLoading.value = false
   }
@@ -726,8 +1036,65 @@ async function loadRaces(): Promise<void> {
 }
 
 function pickRace(option: RaceOption): void {
+  if (draft.value.raceCode !== option.code) {
+    // 换种族后，之前选的亚种不再适用
+    draft.value.subraceCode = null
+    draft.value.subraceName = ''
+    subraces.value = []
+    subraceCatalogCode.value = null
+  }
+
   draft.value.raceCode = option.code
   draft.value.raceName = option.name
+}
+
+async function loadSubraces(): Promise<void> {
+  if (!draft.value.raceCode) {
+    subraces.value = []
+    subraceCatalogCode.value = null
+    return
+  }
+
+  if (subracesLoading.value) {
+    return
+  }
+
+  subracesLoading.value = true
+  subracesError.value = false
+
+  try {
+    const code = draft.value.systemCode ?? 'dnd5e'
+    const loadedFor = draft.value.raceCode
+    const list = await request<SubraceOption[]>({
+      url: `/api/generator/subraces?systemCode=${code}&raceId=${encodeURIComponent(loadedFor)}`,
+      auth: false,
+    })
+    subraces.value = list
+    subraceCatalogCode.value = loadedFor
+
+    // 恢复的选择如果已经不在内容里，就清掉，避免下一步卡住
+    if (
+      draft.value.subraceCode &&
+      !subraces.value.some((item) => item.code === draft.value.subraceCode)
+    ) {
+      draft.value.subraceCode = null
+      draft.value.subraceName = ''
+    }
+
+    await nextTick()
+    setTimeout(measureRail, 250)
+  } catch {
+    subracesError.value = true
+    subraces.value = []
+    subraceCatalogCode.value = null
+  } finally {
+    subracesLoading.value = false
+  }
+}
+
+function pickSubrace(option: SubraceOption): void {
+  draft.value.subraceCode = option.code
+  draft.value.subraceName = option.name
 }
 
 /** 可选规则：所有种族改用「任意两项 +2 / +1」，替换各族的固定属性加值。 */
@@ -768,10 +1135,15 @@ function pickSystem(system: GameSystem): void {
     draft.value.subclassName = ''
     draft.value.raceCode = null
     draft.value.raceName = ''
+    draft.value.subraceCode = null
+    draft.value.subraceName = ''
     draft.value.classStates = {}
     classes.value = []
     subclasses.value = []
     races.value = []
+    subraces.value = []
+    subclassCatalogCode.value = null
+    subraceCatalogCode.value = null
     failedCovers.value = {}
     failedSubclassCovers.value = {}
     void loadFlow()
@@ -803,6 +1175,7 @@ async function startFlow(): Promise<void> {
   draft.value.step = 1
   saveDraft(draft.value)
   scrollTop()
+  void nextTick(() => measureStepper())
 }
 
 function pickClass(option: ClassOption): void {
@@ -819,6 +1192,7 @@ function pickClass(option: ClassOption): void {
   draft.value.subclassCode = saved?.subclassCode ?? null
   draft.value.subclassName = saved?.subclassName ?? ''
   subclasses.value = []
+  subclassCatalogCode.value = null
 }
 
 function pickSubclass(option: SubclassOption): void {
@@ -827,10 +1201,25 @@ function pickSubclass(option: SubclassOption): void {
   syncClassState()
 }
 
-/** 点 stepper 往回跳；只允许退到前面的步骤，前进仍然走「下一步」。 */
+/** 点 stepper 跳到任意步骤；只有子职依赖职业、亚种依赖种族。 */
 function jumpToStep(index: number): void {
+  if (stepperTapLock) {
+    return
+  }
+
   const target = index + 1
-  if (target >= draft.value.step) {
+  if (target === draft.value.step) {
+    return
+  }
+
+  const item = steps.value[index]
+  if (item?.kind === 'subclass' && !draft.value.classCode) {
+    toast('请先选择职业')
+    return
+  }
+
+  if (item?.kind === 'subrace' && !draft.value.raceCode) {
+    toast('请先选择种族')
     return
   }
 
@@ -911,6 +1300,7 @@ async function finish(): Promise<void> {
         className: draft.value.className,
         subclassName: draft.value.subclassName || null,
         raceName: draft.value.raceName || null,
+        subraceName: draft.value.subraceName || null,
         sheet: {
           attributes: [],
           skills: [],
@@ -959,14 +1349,20 @@ function scrollTop(): void {
   color: $trpg-muted;
 }
 
+.stepper-viewport {
+  overflow: hidden;
+  margin-bottom: 28rpx;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .stepper {
   display: flex;
-  margin-bottom: 28rpx;
 }
 
 .step {
   position: relative;
-  flex: 1;
+  flex: 0 0 calc(100% / 3);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1421,6 +1817,15 @@ function scrollTop(): void {
   box-shadow: 0 8rpx 24rpx rgba(91, 70, 54, 0.12);
 }
 
+/* 选中的卡片统一高亮边框 */
+.class-selected,
+.subclass-selected,
+.race-selected,
+.subrace-selected {
+  border-color: $trpg-accent;
+  box-shadow: 0 8rpx 26rpx rgba(91, 70, 54, 0.18);
+}
+
 .race-head {
   display: flex;
   align-items: center;
@@ -1431,6 +1836,28 @@ function scrollTop(): void {
 .race-features {
   grid-template-columns: 1fr;
   margin-top: 10rpx;
+}
+
+.subrace-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.subrace-card {
+  padding: 20rpx;
+  border: 2rpx solid $trpg-line;
+  border-radius: 16rpx;
+  background: #fff;
+}
+
+.subrace-selected {
+  border-color: $trpg-accent;
+  box-shadow: 0 8rpx 24rpx rgba(91, 70, 54, 0.12);
+}
+
+.subrace-empty {
+  line-height: 1.6;
 }
 
 .race-house-rule {
@@ -1570,8 +1997,13 @@ function scrollTop(): void {
     letter-spacing: 8px;
   }
 
-  .stepper {
+  .stepper-viewport {
     margin-bottom: 24px;
+    cursor: grab;
+  }
+
+  .stepper-viewport:active {
+    cursor: grabbing;
   }
 
   .step::after {
@@ -1698,6 +2130,25 @@ function scrollTop(): void {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 14px;
+  }
+
+  .subrace-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .subrace-card {
+    padding: 16px;
+    border-width: 1px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .subrace-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(91, 70, 54, 0.1);
   }
 
   .race-card {
@@ -1858,6 +2309,15 @@ function scrollTop(): void {
 
   .wizard-actions {
     gap: 12px;
+  }
+
+  /* 悬停的卡片如果正好是选中项，仍然保持高亮边框 */
+  .class-card.class-selected,
+  .subclass-card.subclass-selected,
+  .race-card.race-selected,
+  .subrace-card.subrace-selected {
+    border-color: $trpg-accent;
+    box-shadow: 0 12px 30px rgba(91, 70, 54, 0.22);
   }
 }
 </style>

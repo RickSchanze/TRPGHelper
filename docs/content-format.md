@@ -102,6 +102,19 @@
 | `speed` | 否 | 速度（尺），留空按 30 |
 | `traits` | 是 | 种族特质列表，**一行一条**（可为空，但列必须在）；按职业卡的写法写成「`[关键词]`：说明」，方括号里的特质名要在词条库里登记 |
 
+## 亚种.xlsx（工作表 subraces）
+
+车卡流程「选择亚种」这一步的卡片数据，按种族分组；没有亚种的种族（人类、半精灵、半兽人、提夫林）不写行，前端会自动允许跳过。
+
+| 列 | 必填 | 说明 |
+| --- | --- | --- |
+| `id` | 是 | 亚种 id（小写，例如 `high-elf`），全局唯一 |
+| `systemId` | 是 | 引用 `systems.id` |
+| `raceId` | 是 | 所属种族 id，例如 `elf`，会在 `种族.xlsx` 里校验 |
+| `name` | 是 | 亚种名，例如「高等精灵」 |
+| `description` | 否 | 一句话定位（支持 `[关键词]`） |
+| `traits` | 否 | 亚种特质，**一行一条**，按「`[关键词]`：说明」写 |
+
 ## 职业灵感.xlsx（工作表 inspirations）
 
 | 列 | 必填 | 说明 |
@@ -115,7 +128,7 @@
 | 列 | 必填 | 说明 |
 | --- | --- | --- |
 | `systemId` | 否 | 引用 `systems.id`；留空表示通用 |
-| `kind` | 是 | 步骤类型：`class` / `subclass` / `race` / `attributes` / `name` / `summary` |
+| `kind` | 是 | 步骤类型：`class` / `subclass` / `race` / `subrace` / `attributes` / `name` / `summary` |
 | `title` | 是 | 步骤标题（stepper 上显示） |
 | `description` | 否 | 步骤说明 |
 | `isEnabled` | 否 | 是否启用 |

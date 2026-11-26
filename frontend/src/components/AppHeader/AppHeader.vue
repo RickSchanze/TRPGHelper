@@ -18,6 +18,8 @@
 <script setup lang="ts">
 defineProps<{ current?: 'index' | 'mine' | 'create' | 'detail' }>()
 
+import { clearDraft } from '../../stores/createDraft'
+
 function goIndex(): void {
   uni.switchTab({ url: '/pages/index/index' })
 }
@@ -27,6 +29,8 @@ function goMine(): void {
 }
 
 function goCreate(): void {
+  // 每次点「车新卡」都从空白开始；同一次会话里靠本机草稿继续保留
+  clearDraft()
   uni.navigateTo({ url: '/pages/create/create' })
 }
 </script>

@@ -319,6 +319,87 @@ RACES = [
 ]
 
 
+SUBRACE_FILE = DATA_DIR / "亚种.xlsx"
+
+# ---- 亚种：按种族分组，车卡流程「选择亚种」这一步用 ----
+SUBRACES = [
+    {"id": "high-elf", "raceId": "elf", "name": "高等精灵",
+     "description": "聪慧而优雅，天生会一手奥术。",
+     "traits": ["[属性值加成]：[智力] +1", "一项自选法师戏法（[智力] 施法）",
+                "长剑、短弓、长弓、短剑熟练", "额外一门自选语言"]},
+    {"id": "wood-elf", "raceId": "elf", "name": "木精灵",
+     "description": "森林的守望者，隐匿与速度见长。",
+     "traits": ["[属性值加成]：[感知] +1", "[速度]：35 尺", "自然隐匿：可在轻度遮蔽中躲藏"]},
+    {"id": "drow", "raceId": "elf", "name": "卓尔",
+     "description": "幽暗地域的黑暗精灵，天生带魔法。",
+     "traits": ["[属性值加成]：[魅力] +1", "[黑暗视觉]：120 尺", "阳光下易感：直接阳光中视物不利",
+                "戏法：舞光术", "3 级妖火、5 级[黑暗术]各一次（长休恢复）"]},
+    {"id": "hill-dwarf", "raceId": "dwarf", "name": "丘陵矮人",
+     "description": "感官敏锐、格外坚韧的矮人。",
+     "traits": ["[属性值加成]：[感知] +1", "矮人坚韧：每级[生命值]上限 +1"]},
+    {"id": "mountain-dwarf", "raceId": "dwarf", "name": "山地矮人",
+     "description": "更强壮、披甲作战的矮人。",
+     "traits": ["[属性值加成]：[力量] +2", "轻甲与中甲熟练"]},
+    {"id": "lightfoot-halfling", "raceId": "halfling", "name": "轻足半身人",
+     "description": "容易相处、天生会躲的游历者。",
+     "traits": ["[属性值加成]：[魅力] +1", "天生隐匿：只需[体型]更大的生物遮蔽即可躲藏"]},
+    {"id": "stout-halfling", "raceId": "halfling", "name": "敦实半身人",
+     "description": "比同族更壮实，对毒素有抗性。",
+     "traits": ["[属性值加成]：[体质] +1", "毒素韧性：对抗毒素的[豁免]有优势，并有毒素[抗性]"]},
+    {"id": "forest-gnome", "raceId": "gnome", "name": "森林侏儒",
+     "description": "隐居林间的幻术小师。",
+     "traits": ["[属性值加成]：[敏捷] +1", "自然幻术：习得戏法[次级幻象]",
+                "与小兽沟通：能和[体型]小型或更小的野兽简单交流"]},
+    {"id": "rock-gnome", "raceId": "gnome", "name": "岩石侏儒",
+     "description": "爱鼓捣机械与发明的工匠。",
+     "traits": ["[属性值加成]：[体质] +1", "工匠巧手：可制作小型装置",
+                "关于魔法或机械物品的历史[属性检定]加双倍熟练"]},
+    {"id": "black", "raceId": "dragonborn", "name": "黑龙",
+     "description": "强酸血脉的龙裔。",
+     "traits": ["[吐息武器]：5×30 尺线状，2d6 强酸", "伤害[抗性]：强酸"]},
+    {"id": "blue", "raceId": "dragonborn", "name": "蓝龙",
+     "description": "闪电血脉的龙裔。",
+     "traits": ["[吐息武器]：5×30 尺线状，2d6 闪电", "伤害[抗性]：闪电"]},
+    {"id": "brass", "raceId": "dragonborn", "name": "黄铜龙",
+     "description": "火焰血脉的龙裔。",
+     "traits": ["[吐息武器]：5×30 尺线状，2d6 火焰", "伤害[抗性]：火焰"]},
+    {"id": "bronze", "raceId": "dragonborn", "name": "青铜龙",
+     "description": "闪电血脉的龙裔。",
+     "traits": ["[吐息武器]：5×30 尺线状，2d6 闪电", "伤害[抗性]：闪电"]},
+    {"id": "copper", "raceId": "dragonborn", "name": "赤铜龙",
+     "description": "强酸血脉的龙裔。",
+     "traits": ["[吐息武器]：5×30 尺线状，2d6 强酸", "伤害[抗性]：强酸"]},
+    {"id": "gold", "raceId": "dragonborn", "name": "金龙",
+     "description": "火焰血脉的龙裔。",
+     "traits": ["[吐息武器]：15 尺锥形，2d6 火焰", "伤害[抗性]：火焰"]},
+    {"id": "green", "raceId": "dragonborn", "name": "绿龙",
+     "description": "毒素血脉的龙裔。",
+     "traits": ["[吐息武器]：15 尺锥形，2d6 毒素", "伤害[抗性]：毒素"]},
+    {"id": "red", "raceId": "dragonborn", "name": "红龙",
+     "description": "火焰血脉的龙裔。",
+     "traits": ["[吐息武器]：15 尺锥形，2d6 火焰", "伤害[抗性]：火焰"]},
+    {"id": "silver", "raceId": "dragonborn", "name": "银龙",
+     "description": "寒霜血脉的龙裔。",
+     "traits": ["[吐息武器]：15 尺锥形，2d6 寒冷", "伤害[抗性]：寒冷"]},
+    {"id": "white", "raceId": "dragonborn", "name": "白龙",
+     "description": "寒霜血脉的龙裔。",
+     "traits": ["[吐息武器]：15 尺锥形，2d6 寒冷", "伤害[抗性]：寒冷"]},
+]
+
+def subrace_rows() -> list[list[object]]:
+    return [
+        [
+            "dnd5e",
+            item["id"],
+            item["raceId"],
+            item["name"],
+            item["description"],
+            "\n".join(item["traits"]),
+        ]
+        for item in SUBRACES
+    ]
+
+
 def lookup_category_code(path: Path, name: str) -> str | None:
     """只读查询分类编号，不修改文件。"""
     sheet = openpyxl.load_workbook(path)["categories"]
@@ -467,6 +548,19 @@ def check() -> int:
     else:
         problems.append(f"缺少 {RULE_KEYWORD_FILE.name}")
 
+    if not SUBRACE_FILE.exists():
+        problems.append(f"缺少 {SUBRACE_FILE.name}")
+    else:
+        workbook = openpyxl.load_workbook(SUBRACE_FILE, data_only=True)
+        actual = [
+            [str(cell) if cell is not None else "" for cell in row]
+            for row in workbook["subraces"].iter_rows(min_row=2, values_only=True)
+            if row and row[0] is not None
+        ]
+        expected = [[str(cell) if cell is not None else "" for cell in row] for row in subrace_rows()]
+        if actual != expected:
+            problems.append(f"{SUBRACE_FILE.name} 与脚本不一致")
+
     if not RACE_FILE.exists():
         problems.append(f"缺少 {RACE_FILE.name}")
     else:
@@ -547,6 +641,17 @@ def build() -> int:
         written += 1
     workbook.save(RACE_FILE)
     print(f"写入 {RACE_FILE.relative_to(REPO_ROOT)}（{written} 个种族的 description / abilityBonus / traits）")
+
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = "subraces"
+    sheet.append(["systemId", "id", "raceId", "name", "description", "traits"])
+    for row in subrace_rows():
+        sheet.append(row)
+    for column, width in {"A": 11, "B": 18, "C": 12, "D": 16, "E": 40, "F": 72}.items():
+        sheet.column_dimensions[column].width = width
+    workbook.save(SUBRACE_FILE)
+    print(f"写入 {SUBRACE_FILE.relative_to(REPO_ROOT)}（{len(SUBRACES)} 个亚种）")
     return 0
 
 

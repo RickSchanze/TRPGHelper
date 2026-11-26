@@ -85,7 +85,7 @@ export interface AdminKindCount {
   count: number
 }
 
-export type CreationStepKindKey = 'class' | 'subclass' | 'race' | 'attributes' | 'name' | 'summary'
+export type CreationStepKindKey = 'class' | 'subclass' | 'race' | 'subrace' | 'attributes' | 'name' | 'summary'
 
 export interface AdminCreationStep {
   id: string

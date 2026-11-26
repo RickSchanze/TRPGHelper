@@ -210,6 +210,38 @@ public sealed class GeneratorCatalogService(AppDbContext db)
             ReadString(extra, "accent"));
     }
 
+    public async Task<IReadOnlyList<SubraceOptionDto>> SubracesAsync(
+        string? systemCode,
+        string? raceId,
+        CancellationToken cancellationToken)
+    {
+        var system = await ResolveSystemAsync(systemCode, cancellationToken);
+        if (system is null)
+        {
+            return [];
+        }
+
+        var entries = await EntriesAsync(system.Code, [GeneratorKind.Subrace], cancellationToken);
+        var code = raceId?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(code))
+        {
+            entries = entries.Where(entry => entry.Category == code).ToList();
+        }
+
+        return entries.Select(ToSubraceOption).ToList();
+    }
+
+    internal static SubraceOptionDto ToSubraceOption(GeneratorEntry entry)
+    {
+        var extra = ParseExtra(entry.ExtraJson);
+        return new SubraceOptionDto(
+            ReadString(extra, "code") ?? entry.Value,
+            entry.Value,
+            entry.Category,
+            ReadString(extra, "description") ?? string.Empty,
+            ReadStringList(extra, "traits"));
+    }
+
     internal static ClassOptionDto ToClassOption(GeneratorEntry entry)
     {
         var extra = ParseExtra(entry.ExtraJson);

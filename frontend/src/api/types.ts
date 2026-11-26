@@ -62,6 +62,7 @@ export interface CharacterSummary {
   className?: string
   subclassName?: string
   raceName?: string
+  subraceName?: string
   age?: number
   summary?: string
   portraitUrl?: string
@@ -182,6 +183,14 @@ export interface RaceOption {
   description: string
   abilityBonus: string
   speed: number
+  traits: string[]
+}
+
+export interface SubraceOption {
+  code: string
+  name: string
+  raceId: string
+  description: string
   traits: string[]
 }
 

@@ -15,6 +15,9 @@ public enum CreationStepKind
     /// <summary>选种族。</summary>
     Race = 1,
 
+    /// <summary>选亚种（高等精灵、山地矮人等）。</summary>
+    Subrace = 6,
+
     /// <summary>掷属性 / 分配属性。</summary>
     Attributes = 2,
 

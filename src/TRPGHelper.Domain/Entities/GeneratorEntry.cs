@@ -28,6 +28,12 @@ public enum GeneratorKind
     /// ExtraJson 存 description / imageUrl / accent / features。
     /// </summary>
     Subclass = 6,
+
+    /// <summary>
+    /// 亚种（DND 5E），Category 存所属种族 code，Value 是亚种名，
+    /// ExtraJson 存 description / traits。
+    /// </summary>
+    Subrace = 7,
 }
 
 /// <summary>

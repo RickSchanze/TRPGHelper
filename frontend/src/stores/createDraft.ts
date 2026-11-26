@@ -5,7 +5,7 @@ export interface ClassSelectionState {
 }
 
 export interface CreateDraft {
-  version: 9
+  version: 10
   /** 当前步骤序号，从 1 开始；步骤数量由后端的车卡流程配置决定。 */
   step: number
   systemCode: string | null
@@ -16,6 +16,9 @@ export interface CreateDraft {
   /** 种族不跟随职业，单独存一份 */
   raceCode: string | null
   raceName: string
+  /** 亚种跟随种族，切换种族时清空 */
+  subraceCode: string | null
+  subraceName: string
   /** 可选规则：种族属性加值改为任意两项 +2 / +1 */
   houseRuleAbilityScores: boolean
   /** 每个职业各自保留的子职选择，来回切职业时不丢 */
@@ -24,7 +27,7 @@ export interface CreateDraft {
 }
 
 const STORAGE_KEY = 'trpg_create_draft'
-const DRAFT_VERSION = 9
+const DRAFT_VERSION = 10
 
 export function emptyDraft(): CreateDraft {
   return {
@@ -37,6 +40,8 @@ export function emptyDraft(): CreateDraft {
     subclassName: '',
     raceCode: null,
     raceName: '',
+    subraceCode: null,
+    subraceName: '',
     houseRuleAbilityScores: false,
     classStates: {},
     updatedAt: new Date().toISOString(),
@@ -79,8 +84,8 @@ function normalize(raw: unknown): CreateDraft | null {
 
   const draft = raw as Partial<CreateDraft> & { version?: number }
   const version = Number(draft.version)
-  // 5 - 9：旧草稿都能升上来，缺的字段补默认值（v7 的属性选择在 v8 里丢弃）
-  if (![5, 6, 7, 8, DRAFT_VERSION].includes(version)) {
+  // 5 - 10：旧草稿都能升上来，缺的字段补默认值（v7 的属性选择在 v8 里丢弃）
+  if (![5, 6, 7, 8, 9, DRAFT_VERSION].includes(version)) {
     return null
   }
 
@@ -105,6 +110,8 @@ function normalize(raw: unknown): CreateDraft | null {
     subclassName: asString(draft.subclassName),
     raceCode: asCode(draft.raceCode),
     raceName: asString(draft.raceName),
+    subraceCode: asCode(draft.subraceCode),
+    subraceName: asString(draft.subraceName),
     houseRuleAbilityScores: draft.houseRuleAbilityScores === true,
     classStates,
     updatedAt: typeof draft.updatedAt === 'string' ? draft.updatedAt : new Date().toISOString(),
