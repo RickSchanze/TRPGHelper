@@ -50,4 +50,54 @@ public class AttributeGeneratorTests
     {
         Assert.Empty(AttributeGenerator.Generate([]));
     }
+
+    private static readonly AttributeTemplate[] Dnd5eTemplates =
+    [
+        new("STR", "力量", "4d6kh3"),
+        new("DEX", "敏捷", "4d6kh3"),
+        new("CON", "体质", "4d6kh3"),
+        new("INT", "智力", "4d6kh3"),
+        new("WIS", "感知", "4d6kh3"),
+        new("CHA", "魅力", "4d6kh3"),
+    ];
+
+    [Fact]
+    public void GenerateDetailed_RollMethod_KeepsDiceDetail()
+    {
+        var rolls = AttributeGenerator.GenerateDetailed(Dnd5eTemplates, "roll", new Random(11));
+
+        Assert.Equal(6, rolls.Count);
+        Assert.All(rolls, roll =>
+        {
+            Assert.Equal(4, roll.Dice.Count);
+            Assert.Equal(3, roll.Kept.Count);
+            Assert.Equal(roll.Kept.Sum(), roll.Base);
+            Assert.Equal("4d6kh3", roll.Formula);
+        });
+    }
+
+    [Fact]
+    public void GenerateDetailed_StandardMethod_ReturnsStandardArrayInOrder()
+    {
+        var rolls = AttributeGenerator.GenerateDetailed(Dnd5eTemplates, "standard");
+
+        Assert.Equal([15, 14, 13, 12, 10, 8], rolls.Select(roll => roll.Base));
+        Assert.All(rolls, roll =>
+        {
+            Assert.Empty(roll.Dice);
+            Assert.Equal("标准数组", roll.Formula);
+        });
+    }
+
+    [Fact]
+    public void GenerateDetailed_ManualMethod_StartsFromTen()
+    {
+        var rolls = AttributeGenerator.GenerateDetailed(Dnd5eTemplates, "manual");
+
+        Assert.All(rolls, roll =>
+        {
+            Assert.Equal(10, roll.Base);
+            Assert.Equal("手动填写", roll.Formula);
+        });
+    }
 }

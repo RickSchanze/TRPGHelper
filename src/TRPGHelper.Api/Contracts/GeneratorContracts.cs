@@ -38,7 +38,9 @@ public sealed record RaceOptionDto(
     string Description,
     string AbilityBonus,
     int Speed,
-    IReadOnlyList<string> Traits);
+    IReadOnlyList<string> Traits,
+    IReadOnlyList<AbilityBonusDto> AbilityBonuses,
+    IReadOnlyList<AbilityChoiceDto> AbilityChoices);
 
 public sealed record SubclassOptionDto(
     string Code,
@@ -54,7 +56,31 @@ public sealed record SubraceOptionDto(
     string Name,
     string RaceId,
     string Description,
-    IReadOnlyList<string> Traits);
+    IReadOnlyList<string> Traits,
+    IReadOnlyList<AbilityBonusDto> AbilityBonuses,
+    IReadOnlyList<AbilityChoiceDto> AbilityChoices);
+
+/// <summary>种族 / 亚种给的固定属性加值，例如「精灵：敏捷 +2」。</summary>
+public sealed record AbilityBonusDto(string Key, string Label, int Value);
+
+/// <summary>需要玩家自己选的属性加值，例如半精灵「任选两项 +1」。</summary>
+public sealed record AbilityChoiceDto(string Id, string Label, int Count, int Value);
+
+/// <summary>一次「决定属性」生成：基础值 + 掷骰明细（标准数组 / 手动时骰子为空）。</summary>
+public sealed record AbilityScoreRollDto(
+    string Key,
+    string Label,
+    int Base,
+    string Formula,
+    IReadOnlyList<int> Dice,
+    IReadOnlyList<int> Kept);
+
+public sealed record AbilityScoresRequest(string? SystemCode, string? Method);
+
+public sealed record AbilityScoresResponse(
+    string SystemCode,
+    string Method,
+    IReadOnlyList<AbilityScoreRollDto> Attributes);
 
 /// <summary>
 /// 阵营（九宫格）。解释文字在关键词里，这里只给车卡流程渲染图标 + 名字要用的字段。

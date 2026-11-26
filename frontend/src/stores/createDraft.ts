@@ -4,8 +4,10 @@ export interface ClassSelectionState {
   subclassName: string
 }
 
+export type AttributeMethod = 'roll' | 'standard' | 'manual'
+
 export interface CreateDraft {
-  version: 11
+  version: 12
   /** 当前步骤序号，从 1 开始；步骤数量由后端的车卡流程配置决定。 */
   step: number
   systemCode: string | null
@@ -22,6 +24,13 @@ export interface CreateDraft {
   /** 阵营在「决定背景」这一步里选，和职业 / 种族无关 */
   alignmentCode: string | null
   alignmentName: string
+  /** 决定属性：生成方式、各项基础值、掷骰明细、需要玩家自选的加值 */
+  attributeMethod: AttributeMethod
+  attributeBase: Record<string, number>
+  attributeDice: Record<string, number[]>
+  attributeKept: Record<string, number[]>
+  /** 自选加值：race = 半精灵那类「任选两项 +1」；housePlus2 / housePlus1 = 可选规则 */
+  attributeChoices: Record<string, string[]>
   /** 可选规则：种族属性加值改为任意两项 +2 / +1 */
   houseRuleAbilityScores: boolean
   /** 每个职业各自保留的子职选择，来回切职业时不丢 */
@@ -30,7 +39,7 @@ export interface CreateDraft {
 }
 
 const STORAGE_KEY = 'trpg_create_draft'
-const DRAFT_VERSION = 11
+const DRAFT_VERSION = 12
 
 export function emptyDraft(): CreateDraft {
   return {
@@ -47,6 +56,11 @@ export function emptyDraft(): CreateDraft {
     subraceName: '',
     alignmentCode: null,
     alignmentName: '',
+    attributeMethod: 'roll',
+    attributeBase: {},
+    attributeDice: {},
+    attributeKept: {},
+    attributeChoices: {},
     houseRuleAbilityScores: false,
     classStates: {},
     updatedAt: new Date().toISOString(),
@@ -82,6 +96,61 @@ function readClassStates(raw: unknown): Record<string, ClassSelectionState> {
   return states
 }
 
+function readNumberMap(raw: unknown): Record<string, number> {
+  const map: Record<string, number> = {}
+  if (!raw || typeof raw !== 'object') {
+    return map
+  }
+
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    const number = Number(value)
+    if (Number.isFinite(number)) {
+      map[key] = Math.floor(number)
+    }
+  }
+
+  return map
+}
+
+function readNumberListMap(raw: unknown): Record<string, number[]> {
+  const map: Record<string, number[]> = {}
+  if (!raw || typeof raw !== 'object') {
+    return map
+  }
+
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!Array.isArray(value)) {
+      continue
+    }
+
+    const numbers = value.map((item) => Number(item)).filter((item) => Number.isFinite(item))
+    map[key] = numbers.map((item) => Math.floor(item))
+  }
+
+  return map
+}
+
+function readStringListMap(raw: unknown): Record<string, string[]> {
+  const map: Record<string, string[]> = {}
+  if (!raw || typeof raw !== 'object') {
+    return map
+  }
+
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!Array.isArray(value)) {
+      continue
+    }
+
+    map[key] = value.filter((item): item is string => typeof item === 'string' && item.length > 0)
+  }
+
+  return map
+}
+
+function readAttributeMethod(raw: unknown): AttributeMethod {
+  return raw === 'standard' || raw === 'manual' || raw === 'roll' ? raw : 'roll'
+}
+
 function normalize(raw: unknown): CreateDraft | null {
   if (!raw || typeof raw !== 'object') {
     return null
@@ -89,8 +158,8 @@ function normalize(raw: unknown): CreateDraft | null {
 
   const draft = raw as Partial<CreateDraft> & { version?: number }
   const version = Number(draft.version)
-  // 5 - 11：旧草稿都能升上来，缺的字段补默认值（v7 的属性选择在 v8 里丢弃）
-  if (![5, 6, 7, 8, 9, 10, DRAFT_VERSION].includes(version)) {
+  // 5 - 12：旧草稿都能升上来，缺的字段补默认值（v7 的属性选择在 v8 里丢弃，v12 重新加回来）
+  if (![5, 6, 7, 8, 9, 10, 11, DRAFT_VERSION].includes(version)) {
     return null
   }
 
@@ -119,6 +188,11 @@ function normalize(raw: unknown): CreateDraft | null {
     subraceName: asString(draft.subraceName),
     alignmentCode: asCode(draft.alignmentCode),
     alignmentName: asString(draft.alignmentName),
+    attributeMethod: readAttributeMethod(draft.attributeMethod),
+    attributeBase: readNumberMap(draft.attributeBase),
+    attributeDice: readNumberListMap(draft.attributeDice),
+    attributeKept: readNumberListMap(draft.attributeKept),
+    attributeChoices: readStringListMap(draft.attributeChoices),
     houseRuleAbilityScores: draft.houseRuleAbilityScores === true,
     classStates,
     updatedAt: typeof draft.updatedAt === 'string' ? draft.updatedAt : new Date().toISOString(),

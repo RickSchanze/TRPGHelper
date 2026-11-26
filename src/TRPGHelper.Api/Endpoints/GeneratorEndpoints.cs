@@ -21,6 +21,9 @@ public static class GeneratorEndpoints
         group.MapPost("/attributes", GenerateAttributes)
             .WithSummary("按规则系统生成一组初始属性（辅助车卡）");
 
+        group.MapPost("/ability-scores", GenerateAbilityScores)
+            .WithSummary("生成一组属性值（掷骰 / 标准数组 / 手动），带骰子明细");
+
         group.MapGet("/names", async (string? systemCode, int? count, GeneratorCatalogService catalog, CancellationToken cancellationToken) =>
                 Results.Ok(await catalog.NamesAsync(systemCode, count ?? 5, null, cancellationToken)))
             .WithSummary("随机姓名（素材来自管理台配置）");
@@ -129,6 +132,57 @@ public static class GeneratorEndpoints
                 method,
                 attributes,
                 attributes.Sum(attribute => attribute.Value)));
+        }
+        catch (ArgumentException ex)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["method"] = [ex.Message],
+            });
+        }
+    }
+
+    /// <summary>「决定属性」面板：一次掷骰 / 标准数组 / 手动，返回六项基础值与骰子明细。</summary>
+    private static async Task<IResult> GenerateAbilityScores(
+        AbilityScoresRequest request,
+        AppDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var system = await ResolveSystemAsync(db, null, request.SystemCode, cancellationToken);
+        if (system is null)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["system"] = ["找不到对应的规则系统。"],
+            });
+        }
+
+        var templates = AttributeTemplateParser.Parse(system.AttributeTemplateJson);
+        if (templates.Count == 0)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["system"] = ["这个规则系统没有配置属性模板。"],
+            });
+        }
+
+        var method = string.IsNullOrWhiteSpace(request.Method)
+            ? AttributeGenerator.RollMethod
+            : request.Method.Trim().ToLowerInvariant();
+
+        try
+        {
+            var rolls = AttributeGenerator.GenerateDetailed(templates, method);
+            return Results.Ok(new AbilityScoresResponse(
+                system.Code,
+                method,
+                rolls.Select(roll => new AbilityScoreRollDto(
+                    roll.Key,
+                    roll.Label,
+                    roll.Base,
+                    roll.Formula,
+                    roll.Dice,
+                    roll.Kept)).ToList()));
         }
         catch (ArgumentException ex)
         {

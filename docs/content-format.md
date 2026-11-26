@@ -101,6 +101,7 @@
 | `abilityBonus` | 是 | 属性加值，例如「[敏捷] +2」；方括号里的属性名要在词条库里登记 |
 | `speed` | 否 | 速度（尺），留空按 30 |
 | `traits` | 是 | 种族特质列表，**一行一条**（可为空，但列必须在）；按职业卡的写法写成「`[关键词]`：说明」，方括号里的特质名要在词条库里登记 |
+| `abilityBonuses` | 是 | 决定属性用的结构化加值：`敏捷+2`、`力量+2，魅力+1`、`全部+1`（全六项）、`任选两项+1`（玩家自己挑）；列可以为空，但列必须在 |
 
 ## 亚种.xlsx（工作表 subraces）
 
@@ -114,6 +115,9 @@
 | `name` | 是 | 亚种名，例如「高等精灵」 |
 | `description` | 否 | 一句话定位（支持 `[关键词]`） |
 | `traits` | 否 | 亚种特质，**一行一条**，按「`[关键词]`：说明」写 |
+| `abilityBonuses` | 是 | 亚种给的属性加值，写法同 `种族.xlsx`：`智力+1`、`力量+2`；没有加值时留空（列必须在） |
+
+`abilityBonuses` 是给「决定属性」算来源用的：加载时会按规则系统的属性模板把中文属性名换成属性 key，认不出来会直接报「第几行、哪个名字不认识」。它和卡片上展示的 `abilityBonus` / `traits` 文案是两份数据：改文案不会改数值，改数值也不会改文案，两边要一起改。
 
 ## 阵营.xlsx（工作表 alignments）
 
@@ -142,7 +146,7 @@
 | 列 | 必填 | 说明 |
 | --- | --- | --- |
 | `systemId` | 否 | 引用 `systems.id`；留空表示通用 |
-| `kind` | 是 | 步骤类型：`class` / `subclass` / `race` / `subrace` / `background` / `attributes` / `name` / `summary`；`background` = 决定背景（当前实现为九宫格阵营） |
+| `kind` | 是 | 步骤类型：`class` / `subclass` / `race` / `subrace` / `background` / `attributes` / `name` / `summary`；`background` = 决定背景（当前实现为九宫格阵营），`attributes` = 决定属性（掷骰 / 标准数组 / 手动，带来源明细） |
 | `title` | 是 | 步骤标题（stepper 上显示） |
 | `description` | 否 | 步骤说明 |
 | `isEnabled` | 否 | 是否启用 |

@@ -239,7 +239,9 @@ public sealed class GeneratorCatalogService(AppDbContext db)
             entry.Value,
             entry.Category,
             ReadString(extra, "description") ?? string.Empty,
-            ReadStringList(extra, "traits"));
+            ReadStringList(extra, "traits"),
+            ReadAbilityBonuses(extra),
+            ReadAbilityChoices(extra));
     }
 
     public async Task<IReadOnlyList<AlignmentOptionDto>> AlignmentsAsync(
@@ -291,8 +293,36 @@ public sealed class GeneratorCatalogService(AppDbContext db)
             ReadString(extra, "description") ?? string.Empty,
             ReadString(extra, "abilityBonus") ?? string.Empty,
             ReadInt(extra, "speed") ?? 30,
-            ReadStringList(extra, "traits"));
+            ReadStringList(extra, "traits"),
+            ReadAbilityBonuses(extra),
+            ReadAbilityChoices(extra));
     }
+
+    internal static IReadOnlyList<AbilityBonusDto> ReadAbilityBonuses(JsonElement? extra)
+        => ObjectItems(extra, "abilityBonuses")
+            .Select(item => new AbilityBonusDto(
+                ReadString(item, "key") ?? string.Empty,
+                ReadString(item, "label") ?? string.Empty,
+                ReadInt(item, "value") ?? 0))
+            .Where(bonus => bonus.Key.Length > 0 && bonus.Value != 0)
+            .ToList();
+
+    internal static IReadOnlyList<AbilityChoiceDto> ReadAbilityChoices(JsonElement? extra)
+        => ObjectItems(extra, "abilityChoices")
+            .Select(item => new AbilityChoiceDto(
+                ReadString(item, "id") ?? "choice",
+                ReadString(item, "label") ?? "任选",
+                ReadInt(item, "count") ?? 0,
+                ReadInt(item, "value") ?? 0))
+            .Where(choice => choice.Count > 0 && choice.Value != 0)
+            .ToList();
+
+    private static IEnumerable<JsonElement> ObjectItems(JsonElement? element, string property)
+        => element is { ValueKind: JsonValueKind.Object } value
+            && value.TryGetProperty(property, out var propertyValue)
+            && propertyValue.ValueKind == JsonValueKind.Array
+                ? propertyValue.EnumerateArray().Where(item => item.ValueKind == JsonValueKind.Object)
+                : Enumerable.Empty<JsonElement>();
 
     internal static JsonElement? ParseExtra(string? json)
     {

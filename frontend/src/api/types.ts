@@ -186,6 +186,10 @@ export interface RaceOption {
   abilityBonus: string
   speed: number
   traits: string[]
+  /** 结构化加值（「敏捷 +2」），决定属性时用来算来源 */
+  abilityBonuses: AbilityBonus[]
+  /** 需要玩家自己选的部分（半精灵「任选两项 +1」） */
+  abilityChoices: AbilityChoice[]
 }
 
 export interface SubraceOption {
@@ -194,6 +198,39 @@ export interface SubraceOption {
   raceId: string
   description: string
   traits: string[]
+  abilityBonuses: AbilityBonus[]
+  abilityChoices: AbilityChoice[]
+}
+
+/** 种族 / 亚种给的固定属性加值 */
+export interface AbilityBonus {
+  key: string
+  label: string
+  value: number
+}
+
+/** 需要玩家自己选的属性加值（例如半精灵「任选两项 +1」） */
+export interface AbilityChoice {
+  id: string
+  label: string
+  count: number
+  value: number
+}
+
+/** 「决定属性」一次生成：基础值 + 掷骰明细 */
+export interface AbilityScoreRoll {
+  key: string
+  label: string
+  base: number
+  formula: string
+  dice: number[]
+  kept: number[]
+}
+
+export interface AbilityScoresResponse {
+  systemCode: string
+  method: string
+  attributes: AbilityScoreRoll[]
 }
 
 /** 阵营（九宫格）：解释文字在关键词里，这里只有渲染图标 + 名字要用的字段。 */

@@ -154,6 +154,7 @@ public static class ContentExporter
                     ReadString(extra, "abilityBonus") ?? string.Empty,
                     ReadInt(extra, "speed") ?? 30,
                     string.Join('\n', ReadStringList(extra, "traits")),
+                    BuildAbilityBonusesText(extra),
                 };
             })
             .ToList();
@@ -171,6 +172,7 @@ public static class ContentExporter
                     entry.Value,
                     ReadString(extra, "description") ?? string.Empty,
                     string.Join('\n', ReadStringList(extra, "traits")),
+                    BuildAbilityBonusesText(extra),
                 };
             })
             .ToList();
@@ -254,7 +256,7 @@ public static class ContentExporter
         using (var workbook = new XLWorkbook())
         {
             XlsxHelpers.WriteSheet(workbook, "races",
-                ["id", "systemId", "name", "description", "abilityBonus", "speed", "traits"],
+                ["id", "systemId", "name", "description", "abilityBonus", "speed", "traits", "abilityBonuses"],
                 raceRows,
                 new Dictionary<string, double>
                 {
@@ -265,6 +267,7 @@ public static class ContentExporter
                     ["abilityBonus"] = 20,
                     ["speed"] = 8,
                     ["traits"] = 64,
+                    ["abilityBonuses"] = 20,
                 },
                 new HashSet<string> { "description", "traits" });
             written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.RacesFile)));
@@ -273,7 +276,7 @@ public static class ContentExporter
         using (var workbook = new XLWorkbook())
         {
             XlsxHelpers.WriteSheet(workbook, "subraces",
-                ["systemId", "id", "raceId", "name", "description", "traits"],
+                ["systemId", "id", "raceId", "name", "description", "traits", "abilityBonuses"],
                 subraceRows,
                 new Dictionary<string, double>
                 {
@@ -283,6 +286,7 @@ public static class ContentExporter
                     ["name"] = 16,
                     ["description"] = 56,
                     ["traits"] = 64,
+                    ["abilityBonuses"] = 20,
                 },
                 new HashSet<string> { "description", "traits" });
             written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.SubracesFile)));
@@ -515,4 +519,38 @@ public static class ContentExporter
                     .Select(text => text!)
                     .ToList()
                 : [];
+
+    /// <summary>把种族 / 亚种的属性加值写回「敏捷+2，任选两项+1」这种人类可读文本。</summary>
+    private static string BuildAbilityBonusesText(JsonElement? extra)
+    {
+        var parts = new List<string>();
+
+        foreach (var item in ObjectItems(extra, "abilityBonuses"))
+        {
+            var label = ReadString(item, "label");
+            var value = ReadInt(item, "value");
+            if (!string.IsNullOrWhiteSpace(label) && value is not null)
+            {
+                parts.Add($"{label}{(value > 0 ? "+" : string.Empty)}{value}");
+            }
+        }
+
+        foreach (var item in ObjectItems(extra, "abilityChoices"))
+        {
+            var label = ReadString(item, "label");
+            if (!string.IsNullOrWhiteSpace(label))
+            {
+                parts.Add(label);
+            }
+        }
+
+        return string.Join("，", parts);
+    }
+
+    private static IEnumerable<JsonElement> ObjectItems(JsonElement? element, string property)
+        => element is { ValueKind: JsonValueKind.Object } value
+            && value.TryGetProperty(property, out var propertyValue)
+            && propertyValue.ValueKind == JsonValueKind.Array
+                ? propertyValue.EnumerateArray().Where(item => item.ValueKind == JsonValueKind.Object)
+                : Enumerable.Empty<JsonElement>();
 }

@@ -59,7 +59,7 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
 
         var steps = await _db.CreationSteps.OrderBy(step => step.SortOrder).ToListAsync();
 
-        Assert.Equal(5, steps.Count);
+        Assert.Equal(6, steps.Count);
 
         var first = steps[0];
         Assert.Equal("dnd5e", first.SystemCode);
@@ -86,6 +86,11 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
         Assert.Equal(CreationStepKind.Background, fifth.Kind);
         Assert.Equal("决定背景", fifth.Title);
         Assert.True(fifth.IsEnabled);
+
+        var sixth = steps[5];
+        Assert.Equal(CreationStepKind.Attributes, sixth.Kind);
+        Assert.Equal("决定属性", sixth.Title);
+        Assert.True(sixth.IsEnabled);
     }
 
     [Fact]
@@ -204,6 +209,36 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
             new[] { "lawful-good", "neutral-good", "chaotic-good" },
             list.Skip(0).Take(3).Select(item => item.Code));
         Assert.Equal("chaotic-evil", list[^1].Code);
+    }
+
+    [Fact]
+    public async Task Race_and_subrace_ability_bonuses_are_structured()
+    {
+        await SyncContentAsync();
+
+        var catalog = new GeneratorCatalogService(_db);
+
+        var races = await catalog.RacesAsync("dnd5e", CancellationToken.None);
+        var elf = Assert.Single(races, race => race.Code == "elf");
+        Assert.Contains(elf.AbilityBonuses, bonus => bonus.Key == "DEX" && bonus.Label == "敏捷" && bonus.Value == 2);
+        Assert.Empty(elf.AbilityChoices);
+
+        var human = Assert.Single(races, race => race.Code == "human");
+        Assert.Equal(6, human.AbilityBonuses.Count);
+        Assert.All(human.AbilityBonuses, bonus => Assert.Equal(1, bonus.Value));
+
+        var halfElf = Assert.Single(races, race => race.Code == "half-elf");
+        Assert.Contains(halfElf.AbilityBonuses, bonus => bonus.Key == "CHA" && bonus.Value == 2);
+        var choice = Assert.Single(halfElf.AbilityChoices);
+        Assert.Equal(2, choice.Count);
+        Assert.Equal(1, choice.Value);
+
+        var subraces = await catalog.SubracesAsync("dnd5e", "elf", CancellationToken.None);
+        var highElf = Assert.Single(subraces, subrace => subrace.Code == "high-elf");
+        Assert.Contains(highElf.AbilityBonuses, bonus => bonus.Key == "INT" && bonus.Value == 1);
+
+        var dragonSubraces = await catalog.SubracesAsync("dnd5e", "dragonborn", CancellationToken.None);
+        Assert.All(dragonSubraces, subrace => Assert.Empty(subrace.AbilityBonuses));
     }
 
     [Fact]

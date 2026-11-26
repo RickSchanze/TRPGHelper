@@ -27,7 +27,7 @@ const kindOptions: StepKindOption[] = [
   { key: 'race', label: '选择种族', hint: '种族卡列表，数据来自 种族.xlsx（已实现）' },
   { key: 'subrace', label: '选择亚种', hint: '亚种卡列表，按种族过滤，数据来自 亚种.xlsx（已实现）' },
   { key: 'background', label: '决定背景', hint: '第一步是九宫格阵营，数据来自 阵营.xlsx（已实现）' },
-  { key: 'attributes', label: '分配属性', hint: '面板暂未实现（本轮已从默认流程移除）' },
+  { key: 'attributes', label: '决定属性', hint: '掷骰 / 标准数组 / 手动填，点每项看来源，依赖决定背景（已实现）' },
   { key: 'name', label: '起名', hint: '卡名与背景（占位，待实现）' },
   { key: 'summary', label: '确认卡面', hint: '提交前总览（占位，待实现）' },
 ]

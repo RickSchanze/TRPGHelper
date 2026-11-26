@@ -25,8 +25,8 @@ public static class ContentLoader
         LoadSimpleValues(dataPath, ContentPaths.BackgroundsFile, "backgrounds", GeneratorKind.Background, systems, entries);
         LoadClasses(dataPath, systems, entries);
         LoadSubclasses(dataPath, systems, entries);
-        LoadRaces(dataPath, systems, entries);
-        LoadSubraces(dataPath, systems, entries);
+        LoadRaces(dataPath, systems, attributes, entries);
+        LoadSubraces(dataPath, systems, attributes, entries);
         LoadAlignments(dataPath, systems, entries);
         LoadInspirations(dataPath, systems, entries);
 
@@ -296,6 +296,7 @@ public static class ContentLoader
     private static void LoadRaces(
         string dataPath,
         IReadOnlyList<ContentSystem> systems,
+        IReadOnlyList<ContentAttribute> attributes,
         List<GeneratorEntryContent> entries)
     {
         var path = Path.Combine(dataPath, ContentPaths.RacesFile);
@@ -305,13 +306,14 @@ public static class ContentLoader
         foreach (var row in XlsxHelpers.ReadRows(
                      XlsxHelpers.RequireSheet(workbook, path, "races"),
                      path,
-                     ["id", "systemId", "name", "description", "abilityBonus", "speed", "traits"]))
+                     ["id", "systemId", "name", "description", "abilityBonus", "speed", "traits", "abilityBonuses"]))
         {
             var id = row.Required("id", path).ToLowerInvariant();
             var systemId = RequireSystem(row, systems, path);
             var traits = row["traits"]
                 .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .ToList();
+            var bonus = ParseAbilityBonuses(row, path, attributes, systemId);
 
             entries.Add(new GeneratorEntryContent(
                 systemId,
@@ -324,6 +326,8 @@ public static class ContentLoader
                     abilityBonus = row["abilityBonus"].Trim(),
                     speed = row.Int("speed", 30),
                     traits,
+                    abilityBonuses = bonus.Bonuses,
+                    abilityChoices = bonus.Choices,
                 }, JsonOptions),
                 (index + 1) * 10));
             index += 1;
@@ -333,6 +337,7 @@ public static class ContentLoader
     private static void LoadSubraces(
         string dataPath,
         IReadOnlyList<ContentSystem> systems,
+        IReadOnlyList<ContentAttribute> attributes,
         List<GeneratorEntryContent> entries)
     {
         var path = Path.Combine(dataPath, ContentPaths.SubracesFile);
@@ -352,7 +357,7 @@ public static class ContentLoader
         foreach (var row in XlsxHelpers.ReadRows(
                      XlsxHelpers.RequireSheet(workbook, path, "subraces"),
                      path,
-                     ["systemId", "id", "raceId", "name", "description", "traits"]))
+                     ["systemId", "id", "raceId", "name", "description", "traits", "abilityBonuses"]))
         {
             var id = row.Required("id", path).ToLowerInvariant();
             if (!ids.Add(id))
@@ -370,6 +375,7 @@ public static class ContentLoader
             var traits = row["traits"]
                 .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .ToList();
+            var bonus = ParseAbilityBonuses(row, path, attributes, systemId);
 
             entries.Add(new GeneratorEntryContent(
                 systemId,
@@ -381,6 +387,8 @@ public static class ContentLoader
                     code = id,
                     description = row["description"].Trim(),
                     traits,
+                    abilityBonuses = bonus.Bonuses,
+                    abilityChoices = bonus.Choices,
                 }, JsonOptions),
                 (index + 1) * 10));
             index += 1;
@@ -751,6 +759,117 @@ public static class ContentLoader
     }
 
     /* ---------------- 小工具 ---------------- */
+
+    /// <summary>
+    /// 解析「属性加值」列：`敏捷+2`、`力量+2，魅力+1`、`全部+1`、`任选两项+1`。
+    /// 固定加值落到具体的属性 key 上，任选先记成一条待选项（前端让玩家挑），
+    /// 数值来源在前端「属性来源」里展示。
+    /// </summary>
+    private static (List<object> Bonuses, List<object> Choices) ParseAbilityBonuses(
+        SheetRow row,
+        string path,
+        IReadOnlyList<ContentAttribute> attributes,
+        string systemId)
+    {
+        var bonuses = new List<object>();
+        var choices = new List<object>();
+        var raw = row["abilityBonuses"].Trim();
+        if (raw.Length == 0)
+        {
+            return (bonuses, choices);
+        }
+
+        var systemAttributes = attributes
+            .Where(attribute => attribute.SystemId == systemId)
+            .ToList();
+
+        if (systemAttributes.Count == 0)
+        {
+            row.Fail(path, $"系统「{systemId}」没有属性模板，无法解析属性加值。");
+        }
+
+        foreach (var token in raw.Split(
+                     [',', '，', '、', ';', '；'],
+                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var plusIndex = token.LastIndexOfAny(['+', '＋']);
+            if (plusIndex <= 0 || plusIndex == token.Length - 1)
+            {
+                row.Fail(path, $"属性加值「{token}」格式不对，应写成「敏捷+2」「全部+1」或「任选两项+1」。");
+            }
+
+            var label = token[..plusIndex].Trim();
+            var valueText = token[(plusIndex + 1)..].Trim();
+            if (!int.TryParse(valueText, out var value) || value == 0)
+            {
+                row.Fail(path, $"属性加值「{token}」的数值「{valueText}」不是非零整数。");
+            }
+
+            if (label is "全部" or "全属性" or "所有属性")
+            {
+                foreach (var attribute in systemAttributes)
+                {
+                    bonuses.Add(new { key = attribute.Key, label = attribute.Label, value });
+                }
+
+                continue;
+            }
+
+            if (TryParseChoiceCount(label, out var count))
+            {
+                choices.Add(new
+                {
+                    id = $"choice{choices.Count + 1}",
+                    label = $"{label}+{value}",
+                    count,
+                    value,
+                });
+                continue;
+            }
+
+            var match = systemAttributes.FirstOrDefault(attribute =>
+                string.Equals(attribute.Label, label, StringComparison.OrdinalIgnoreCase));
+
+            if (match is null)
+            {
+                row.Fail(
+                    path,
+                    $"属性加值里的「{label}」不是系统「{systemId}」的属性名，可用：{string.Join("、", systemAttributes.Select(attribute => attribute.Label))}。");
+            }
+
+            bonuses.Add(new { key = match!.Key, label = match.Label, value });
+        }
+
+        return (bonuses, choices);
+    }
+
+    /// <summary>「任选两项」这类待选项：返回可选的属性个数。</summary>
+    private static bool TryParseChoiceCount(string label, out int count)
+    {
+        count = 0;
+        if (!label.StartsWith("任选", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var rest = label["任选".Length..].Trim();
+        if (!rest.EndsWith('项'))
+        {
+            return false;
+        }
+
+        var numberText = rest[..^1].Trim();
+        count = numberText switch
+        {
+            "一" => 1,
+            "两" or "二" => 2,
+            "三" => 3,
+            "四" => 4,
+            _ => int.TryParse(numberText, out var parsed) ? parsed : 0,
+        };
+
+        return count > 0;
+    }
 
     private static XLWorkbook OpenWorkbook(string path)
     {

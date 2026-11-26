@@ -405,6 +405,124 @@
           </view>
         </view>
 
+        <!-- 决定属性：六项数值，点每张卡看「来源」 -->
+        <view v-else-if="isAttributesStep" class="panel">
+          <view class="panel-title">
+            <KeywordText :text="currentStep?.title || '决定属性'" />
+          </view>
+          <view v-if="currentStep?.description" class="muted step-hint">
+            <KeywordText :text="currentStep.description" />
+          </view>
+
+          <view v-if="!attributeRows.length" class="muted">这个规则书还没配置属性模板。</view>
+
+          <template v-else>
+            <view class="attr-methods">
+              <view
+                v-for="method in ATTRIBUTE_METHODS"
+                :key="method.key"
+                class="attr-method"
+                :class="{ 'attr-method-active': draft.attributeMethod === method.key }"
+                @tap="useAttributeMethod(method.key)"
+              >
+                <view class="attr-method-label">{{ method.label }}</view>
+              </view>
+            </view>
+            <view class="muted attr-method-hint">{{ attributeMethodOption.hint }}</view>
+
+            <view v-if="attributeRolling" class="muted attr-rolling">正在生成属性…</view>
+            <view v-else-if="attributeError" class="load-error" @tap="generateAttributeScores()">
+              <text class="muted">属性生成失败，点这里重试</text>
+            </view>
+
+            <view class="attr-grid">
+              <view
+                v-for="row in attributeRows"
+                :key="row.key"
+                class="attr-card"
+                :class="{ 'attr-card-ready': row.base > 0 }"
+                @tap="openAttributeSheet(row.key)"
+              >
+                <view class="attr-card-head">
+                  <KeywordText class="attr-name" :text="'[' + row.label + ']'" />
+                  <text class="attr-mod" :class="row.modifier >= 0 ? 'attr-mod-up' : 'attr-mod-down'">
+                    {{ signed(row.modifier) }}
+                  </text>
+                </view>
+                <view class="attr-value" :class="{ 'attr-value-empty': row.base === 0 }">
+                  {{ row.base > 0 ? row.final : '—' }}
+                </view>
+                <view class="attr-short muted">{{ row.shortSource }}</view>
+                <view class="attr-source-link">来源 ›</view>
+              </view>
+            </view>
+
+            <!-- 半精灵这类「任选两项 +1」 -->
+            <view v-if="raceChoice" class="attr-choice">
+              <view class="attr-choice-title">
+                <KeywordText :text="raceOption?.name" />：{{ raceChoiceLabel }}
+              </view>
+              <view class="attr-choice-hint muted">
+                已选 {{ chosenRaceChoices.length }} / {{ raceChoice.count }} 项
+              </view>
+              <view class="attr-chips">
+                <view
+                  v-for="row in attributeRows"
+                  :key="row.key"
+                  class="attr-chip"
+                  :class="{ 'attr-chip-on': chosenRaceChoices.includes(row.key) }"
+                  @tap="toggleRaceChoice(row.key)"
+                >
+                  {{ row.label }}
+                </view>
+              </view>
+            </view>
+
+            <!-- 可选规则：种族加值改成任意两项 +2 / +1 -->
+            <view v-if="draft.houseRuleAbilityScores" class="attr-choice">
+              <view class="attr-choice-title">可选规则：任意两项 +2 / +1</view>
+              <view class="attr-choice-hint muted">
+                开了这条规则就不再使用种族 / 亚种的固定加值；先挑 +2 的那项，再挑 +1 的那项。
+              </view>
+              <view class="attr-choice-row">
+                <text class="attr-chip-label">+2</text>
+                <view class="attr-chips">
+                  <view
+                    v-for="row in attributeRows"
+                    :key="row.key"
+                    class="attr-chip"
+                    :class="{ 'attr-chip-on': housePlus2 === row.key }"
+                    @tap="pickHouseBonus('housePlus2', row.key)"
+                  >
+                    {{ row.label }}
+                  </view>
+                </view>
+              </view>
+              <view class="attr-choice-row">
+                <text class="attr-chip-label">+1</text>
+                <view class="attr-chips">
+                  <view
+                    v-for="row in attributeRows"
+                    :key="row.key"
+                    class="attr-chip"
+                    :class="{ 'attr-chip-on': housePlus1 === row.key }"
+                    @tap="pickHouseBonus('housePlus1', row.key)"
+                  >
+                    {{ row.label }}
+                  </view>
+                </view>
+              </view>
+            </view>
+
+            <view v-if="attributeSnapshot.length" class="attr-snapshot">
+              <view v-for="item in attributeSnapshot" :key="item.label" class="attr-snap">
+                <view class="attr-snap-value">{{ item.value }}</view>
+                <view class="attr-snap-label muted">{{ item.label }}</view>
+              </view>
+            </view>
+          </template>
+        </view>
+
         <!-- 其它类型的步骤：面板还没做，先按配置占位 -->
         <view v-else class="panel placeholder-panel">
           <view class="panel-title">
@@ -503,6 +621,52 @@
       </view>
     </view>
 
+    <!-- 属性来源：点属性的卡弹出来，一项项说清楚这个数怎么来的 -->
+    <view v-if="attributeSheetVisible && attributeSheetRow" class="attr-mask" @tap="closeAttributeSheet">
+      <view class="attr-sheet" @tap.stop>
+        <view class="attr-sheet-head">
+          <view class="attr-sheet-title">
+            <KeywordText :text="'[' + attributeSheetRow.label + ']'" />
+          </view>
+          <text class="attr-sheet-close" @tap="closeAttributeSheet">×</text>
+        </view>
+
+        <view class="attr-sheet-total">
+          <text class="attr-sheet-number">{{ attributeSheetRow.base > 0 ? attributeSheetRow.final : '—' }}</text>
+          <text class="muted attr-sheet-mod">
+            调整值 {{ signed(attributeSheetRow.modifier) }}
+          </text>
+        </view>
+
+        <view class="attr-sources">
+          <view v-for="(source, index) in attributeSheetRow.sources" :key="index" class="attr-source">
+            <view class="attr-source-main">
+              <text class="attr-source-label">{{ source.label }}</text>
+              <text class="attr-source-value" :class="{ 'attr-source-plus': source.label !== '基础值' }">
+                {{ source.label === '基础值' ? source.value : signed(source.value) }}
+              </text>
+            </view>
+            <view class="attr-source-note muted">{{ source.note }}</view>
+          </view>
+          <view v-if="!attributeSheetRow.sources.length" class="muted">还没有数值。</view>
+        </view>
+
+        <view class="attr-adjust">
+          <text class="muted">基础值</text>
+          <view class="attr-adjust-buttons">
+            <view class="attr-adjust-btn" @tap="adjustAttribute(attributeSheetRow.key, -1)">−</view>
+            <text class="attr-adjust-value">{{ attributeSheetRow.base }}</text>
+            <view class="attr-adjust-btn" @tap="adjustAttribute(attributeSheetRow.key, 1)">+</view>
+          </view>
+          <text class="muted attr-adjust-hint">3–18</text>
+        </view>
+
+        <button class="btn attr-sheet-done" hover-class="btn-pressed" hover-stay-time="80" @tap="closeAttributeSheet">
+          完成
+        </button>
+      </view>
+    </view>
+
     <KeywordModal />
 
     <ClassDetailModal
@@ -519,6 +683,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { onHide, onLoad, onPageScroll, onUnload } from '@dcloudio/uni-app'
 import { request } from '../../api/http'
 import type {
+  AbilityScoresResponse,
   AlignmentOption,
   ClassOption,
   CreationFlow,
@@ -528,7 +693,7 @@ import type {
   SubclassOption,
   SubraceOption,
 } from '../../api/types'
-import { clearDraft, emptyDraft, loadDraft, saveDraft, type CreateDraft } from '../../stores/createDraft'
+import { clearDraft, emptyDraft, loadDraft, saveDraft, type AttributeMethod, type CreateDraft } from '../../stores/createDraft'
 import { ensureKeywords, findKeyword, openKeyword } from '../../stores/keywords'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
 import KeywordText from '../../components/KeywordText/KeywordText.vue'
@@ -537,6 +702,49 @@ import ClassDetailModal from '../../components/ClassDetailModal/ClassDetailModal
 
 /** 内容里没配主色时的兜底（纯展示默认值，不是内容） */
 const DEFAULT_ACCENT = '#5b4636'
+
+/** 标准数组（5E 不全书：15、14、13、12、10、8） */
+const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8]
+
+/** 规则系统没配属性模板时的兜底（DND 5E 六维） */
+const DEFAULT_ATTRIBUTE_TEMPLATES = [
+  { key: 'STR', label: '力量', formula: '4d6kh3' },
+  { key: 'DEX', label: '敏捷', formula: '4d6kh3' },
+  { key: 'CON', label: '体质', formula: '4d6kh3' },
+  { key: 'INT', label: '智力', formula: '4d6kh3' },
+  { key: 'WIS', label: '感知', formula: '4d6kh3' },
+  { key: 'CHA', label: '魅力', formula: '4d6kh3' },
+]
+
+interface AttributeMethodOption {
+  key: AttributeMethod
+  label: string
+  hint: string
+}
+
+const ATTRIBUTE_METHODS: AttributeMethodOption[] = [
+  { key: 'roll', label: '掷骰', hint: '每项 4d6 取高 3，点一下重掷' },
+  { key: 'standard', label: '标准数组', hint: '15、14、13、12、10、8 依次摆好' },
+  { key: 'manual', label: '手动填写', hint: '从 10 开始，自己一项项调' },
+]
+
+interface AttributeSource {
+  label: string
+  note: string
+  value: number
+  short?: string
+}
+
+interface AttributeRow {
+  key: string
+  label: string
+  base: number
+  final: number
+  modifier: number
+  shortSource: string
+  formula: string
+  sources: AttributeSource[]
+}
 
 const draft = ref<CreateDraft>(emptyDraft())
 const systems = ref<GameSystem[]>([])
@@ -549,6 +757,11 @@ const subraces = ref<SubraceOption[]>([])
 const alignments = ref<AlignmentOption[]>([])
 const alignmentsLoaded = ref(false)
 const alignmentSheetVisible = ref(false)
+/** 决定属性：生成中标记、属性来源弹窗 */
+const attributeRolling = ref(false)
+const attributeError = ref(false)
+const attributeSheetVisible = ref(false)
+const attributeSheetKey = ref<string | null>(null)
 /** 子职 / 亚种列表是按哪个职业 / 种族加载的，用来判断「没有内容」是不是真的 */
 const subclassCatalogCode = ref<string | null>(null)
 const subraceCatalogCode = ref<string | null>(null)
@@ -604,6 +817,136 @@ const isSubclassStep = computed(() => currentStep.value?.kind === 'subclass')
 const isRaceStep = computed(() => currentStep.value?.kind === 'race')
 const isSubraceStep = computed(() => currentStep.value?.kind === 'subrace')
 const isBackgroundStep = computed(() => currentStep.value?.kind === 'background')
+const isAttributesStep = computed(() => currentStep.value?.kind === 'attributes')
+const attributeTemplates = computed(() => {
+  const system = systems.value.find((item) => item.code === draft.value.systemCode)
+  return system?.attributes?.length ? system.attributes : DEFAULT_ATTRIBUTE_TEMPLATES
+})
+const attributeMethodOption = computed<AttributeMethodOption>(
+  () => ATTRIBUTE_METHODS.find((item) => item.key === draft.value.attributeMethod) ?? ATTRIBUTE_METHODS[0],
+)
+const raceOption = computed<RaceOption | null>(
+  () => races.value.find((item) => item.code === draft.value.raceCode) ?? null,
+)
+const subraceOption = computed<SubraceOption | null>(
+  () => subraces.value.find((item) => item.code === draft.value.subraceCode) ?? null,
+)
+/** 半精灵这类「任选两项 +1」；开了可选规则时改用自选 +2/+1 */
+const raceChoice = computed(() =>
+  draft.value.houseRuleAbilityScores ? null : raceOption.value?.abilityChoices?.[0] ?? null,
+)
+const chosenRaceChoices = computed(() => draft.value.attributeChoices['race'] ?? [])
+/** 「任选两项+1」显示成「任选两项 +1」 */
+const raceChoiceLabel = computed(() => (raceChoice.value?.label ?? '').replace(/\+/g, ' + ').trim())
+const housePlus2 = computed(() => draft.value.attributeChoices['housePlus2']?.[0] ?? '')
+const housePlus1 = computed(() => draft.value.attributeChoices['housePlus1']?.[0] ?? '')
+/** 六项属性：基础值 + 种族 / 亚种 / 自选加值，每一项都带着来源 */
+const attributeRows = computed<AttributeRow[]>(() =>
+  attributeTemplates.value.map((template, index) => {
+    const base = draft.value.attributeBase[template.key] ?? 0
+    const sources: AttributeSource[] = []
+
+    if (base > 0) {
+      sources.push({ label: '基础值', note: baseNote(template.key, base, index), value: base })
+    }
+
+    if (draft.value.houseRuleAbilityScores) {
+      if (housePlus2.value === template.key) {
+        sources.push({ label: '可选规则 +2', note: '任意两项 +2 / +1：这一项 +2', value: 2, short: '自选 +2' })
+      }
+
+      if (housePlus1.value === template.key) {
+        sources.push({ label: '可选规则 +1', note: '任意两项 +2 / +1：这一项 +1', value: 1, short: '自选 +1' })
+      }
+    } else {
+      const race = raceOption.value
+      if (race) {
+        for (const bonus of race.abilityBonuses ?? []) {
+          if (bonus.key === template.key) {
+            sources.push({
+              label: `种族「${race.name}」`,
+              note: `属性值加成：${bonus.label} +${bonus.value}`,
+              value: bonus.value,
+              short: `${race.name} +${bonus.value}`,
+            })
+          }
+        }
+
+        if (raceChoice.value && chosenRaceChoices.value.includes(template.key)) {
+          sources.push({
+            label: `种族「${race.name}」`,
+            note: `${raceChoice.value.label}：这一项 +${raceChoice.value.value}`,
+            value: raceChoice.value.value,
+            short: `自选 +${raceChoice.value.value}`,
+          })
+        }
+      }
+
+      const subrace = subraceOption.value
+      if (subrace) {
+        for (const bonus of subrace.abilityBonuses ?? []) {
+          if (bonus.key === template.key) {
+            sources.push({
+              label: `亚种「${subrace.name}」`,
+              note: `属性值加成：${bonus.label} +${bonus.value}`,
+              value: bonus.value,
+              short: `${subrace.name} +${bonus.value}`,
+            })
+          }
+        }
+      }
+    }
+
+    const final = sources.reduce((sum, source) => sum + source.value, 0)
+    const bonusSources = sources.filter((source) => source.label !== '基础值')
+
+    return {
+      key: template.key,
+      label: template.label,
+      base,
+      final,
+      modifier: Math.floor((final - 10) / 2),
+      shortSource: bonusSources.length
+        ? bonusSources.map((source) => source.short ?? '').filter(Boolean).join(' · ')
+        : base > 0
+          ? '无种族加值'
+          : '还没定',
+      formula: sources
+        .map((source) =>
+          source.label === '基础值'
+            ? `${source.value}`
+            : `${source.value > 0 ? '+' : ''}${source.value}(${source.short ?? source.label})`,
+        )
+        .join(' '),
+      sources,
+    }
+  }),
+)
+/** 面板底部的小结：生命值上限 / 无甲 AC / 先攻 / 被动察觉 */
+const attributeSnapshot = computed(() => {
+  const rows = attributeRows.value
+  if (!rows.length || rows.some((row) => !row.base)) {
+    return []
+  }
+
+  const modifierOf = (key: string) => rows.find((row) => row.key === key)?.modifier ?? 0
+  const items: Array<{ label: string; value: string }> = [
+    { label: '无甲 AC', value: String(10 + modifierOf('DEX')) },
+    { label: '先攻', value: signed(modifierOf('DEX')) },
+    { label: '被动察觉', value: String(10 + modifierOf('WIS')) },
+  ]
+
+  const hitDie = classes.value.find((item) => item.code === draft.value.classCode)?.hitDie ?? ''
+  const sides = Number(hitDie.replace(/\D/g, ''))
+  if (sides > 0) {
+    items.unshift({ label: '生命值上限', value: String(sides + modifierOf('CON')) })
+  }
+
+  return items
+})
+const attributeSheetRow = computed<AttributeRow | null>(
+  () => attributeRows.value.find((row) => row.key === attributeSheetKey.value) ?? null,
+)
 /** 选中的阵营：内容还没加载完（旧草稿）时先用草稿里的名字兜底 */
 const pickedAlignment = computed<AlignmentOption | null>(() => {
   const code = draft.value.alignmentCode
@@ -708,6 +1051,10 @@ const canNext = computed(() => {
     return alignments.value.length === 0 || Boolean(draft.value.alignmentCode)
   }
 
+  if (isAttributesStep.value) {
+    return attributesReady()
+  }
+
   return true
 })
 
@@ -743,6 +1090,8 @@ function isStepDone(index: number): boolean {
       )
     case 'background':
       return Boolean(draft.value.alignmentCode) || (alignmentsLoaded.value && alignments.value.length === 0)
+    case 'attributes':
+      return attributesReady()
     default:
       return false
   }
@@ -775,6 +1124,7 @@ watch(
     activeRailIndex.value = 0
     // 九宫格只在当前步骤里开，切步骤就收起来
     alignmentSheetVisible.value = false
+    attributeSheetVisible.value = false
     // 步骤条跟着当前步骤走，保证它落在一屏三个里
     syncStepperToStep()
 
@@ -797,6 +1147,10 @@ watch(
 
     if (item?.kind === 'background') {
       void loadAlignments()
+    }
+
+    if (item?.kind === 'attributes') {
+      void ensureAttributeContext()
     }
   },
 )
@@ -1112,6 +1466,10 @@ async function init(): Promise<void> {
   if (currentStep.value?.kind === 'background') {
     void loadAlignments()
   }
+
+  if (currentStep.value?.kind === 'attributes') {
+    void ensureAttributeContext()
+  }
 }
 
 async function loadSystems(): Promise<void> {
@@ -1266,9 +1624,10 @@ async function loadRaces(): Promise<void> {
 
 function pickRace(option: RaceOption): void {
   if (draft.value.raceCode !== option.code) {
-    // 换种族后，之前选的亚种不再适用
+    // 换种族后，之前选的亚种和自选属性加值都不再适用
     draft.value.subraceCode = null
     draft.value.subraceName = ''
+    draft.value.attributeChoices = { ...draft.value.attributeChoices, race: [] }
     subraces.value = []
     subraceCatalogCode.value = null
   }
@@ -1399,6 +1758,173 @@ function markAlignmentIconFailed(code: string): void {
   failedAlignmentIcons.value[code] = true
 }
 
+/* ---------------- 决定属性 ---------------- */
+
+function signed(value: number): string {
+  return value >= 0 ? `+${value}` : String(value)
+}
+
+/** 基础值是怎么来的：掷骰 / 标准数组 / 手动，以及被手动改过的说明 */
+function baseNote(key: string, base: number, index: number): string {
+  if (draft.value.attributeMethod === 'roll') {
+    const dice = draft.value.attributeDice[key]
+    if (dice?.length) {
+      const kept = draft.value.attributeKept[key] ?? []
+      const total = kept.reduce((sum, item) => sum + item, 0)
+      return base === total
+        ? `掷骰 4d6 取高 3（${dice.join('、')}）→ ${base}`
+        : `手动调整 → ${base}`
+    }
+
+    return `手动填写 → ${base}`
+  }
+
+  if (draft.value.attributeMethod === 'standard') {
+    return base === STANDARD_ARRAY[index] ? `标准数组 → ${base}` : `手动调整 → ${base}`
+  }
+
+  return `手动填写 → ${base}`
+}
+
+/** 六项都定了、需要自选的加值也选完了，才能进入下一步 */
+function attributesReady(): boolean {
+  const rows = attributeRows.value
+  if (!rows.length || rows.some((row) => row.base < 3)) {
+    return false
+  }
+
+  if (draft.value.houseRuleAbilityScores) {
+    return Boolean(housePlus2.value && housePlus1.value && housePlus2.value !== housePlus1.value)
+  }
+
+  if (raceChoice.value) {
+    return chosenRaceChoices.value.length === raceChoice.value.count
+  }
+
+  return true
+}
+
+async function generateAttributeScores(method?: AttributeMethod): Promise<void> {
+  if (attributeRolling.value) {
+    return
+  }
+
+  const target = method ?? draft.value.attributeMethod
+  attributeRolling.value = true
+  attributeError.value = false
+
+  try {
+    const code = draft.value.systemCode ?? 'dnd5e'
+    const result = await request<AbilityScoresResponse>({
+      url: '/api/generator/ability-scores',
+      method: 'POST',
+      data: { systemCode: code, method: target },
+    })
+
+    draft.value.attributeMethod = (result.method as AttributeMethod) ?? target
+
+    const base: Record<string, number> = {}
+    const dice: Record<string, number[]> = {}
+    const kept: Record<string, number[]> = {}
+
+    for (const item of result.attributes ?? []) {
+      base[item.key] = item.base
+      if (item.dice?.length) {
+        dice[item.key] = item.dice
+        kept[item.key] = item.kept ?? []
+      }
+    }
+
+    draft.value.attributeBase = base
+    draft.value.attributeDice = dice
+    draft.value.attributeKept = kept
+    saveDraft(draft.value)
+  } catch {
+    attributeError.value = true
+    toast('属性生成失败，检查后端是否在跑')
+  } finally {
+    attributeRolling.value = false
+  }
+}
+
+/** 点生成方式：点当前这项（掷骰）= 重掷一组 */
+function useAttributeMethod(method: AttributeMethod): void {
+  if (method !== draft.value.attributeMethod) {
+    draft.value.attributeMethod = method
+    draft.value.attributeDice = {}
+    draft.value.attributeKept = {}
+  }
+
+  void generateAttributeScores(method)
+}
+
+/** 进入这一步时还没有属性就先生成一组；种族 / 亚种内容也顺手加载 */
+async function ensureAttributeContext(): Promise<void> {
+  if (!races.value.length) {
+    await loadRaces()
+  }
+
+  if (draft.value.raceCode && !subraces.value.length) {
+    await loadSubraces()
+  }
+
+  if (Object.keys(draft.value.attributeBase).length === 0) {
+    await generateAttributeScores(draft.value.attributeMethod)
+  }
+}
+
+function openAttributeSheet(key: string): void {
+  attributeSheetKey.value = key
+  attributeSheetVisible.value = true
+}
+
+function closeAttributeSheet(): void {
+  attributeSheetVisible.value = false
+}
+
+/** 来源弹窗里直接改基础值；改过之后来源会写成「手动调整」 */
+function adjustAttribute(key: string, delta: number): void {
+  const current = draft.value.attributeBase[key] ?? 10
+  const next = Math.min(18, Math.max(3, current + delta))
+  draft.value.attributeBase = { ...draft.value.attributeBase, [key]: next }
+  saveDraft(draft.value)
+}
+
+/** 半精灵「任选两项 +1」：点一下选中，再点取消 */
+function toggleRaceChoice(key: string): void {
+  if (!raceChoice.value) {
+    return
+  }
+
+  const chosen = [...chosenRaceChoices.value]
+  const index = chosen.indexOf(key)
+  if (index >= 0) {
+    chosen.splice(index, 1)
+  } else if (chosen.length < raceChoice.value.count) {
+    chosen.push(key)
+  } else {
+    toast(`最多选 ${raceChoice.value.count} 项，先取消一个`)
+    return
+  }
+
+  draft.value.attributeChoices = { ...draft.value.attributeChoices, race: chosen }
+  saveDraft(draft.value)
+}
+
+/** 可选规则：+2 / +1 各挑一项，不能是同一项 */
+function pickHouseBonus(slot: 'housePlus2' | 'housePlus1', key: string): void {
+  const choices = { ...draft.value.attributeChoices }
+  const other = slot === 'housePlus2' ? choices['housePlus1']?.[0] : choices['housePlus2']?.[0]
+  if (other === key) {
+    toast('+2 和 +1 不能是同一项')
+    return
+  }
+
+  choices[slot] = choices[slot]?.[0] === key ? [] : [key]
+  draft.value.attributeChoices = choices
+  saveDraft(draft.value)
+}
+
 /** 可选规则：所有种族改用「任意两项 +2 / +1」，替换各族的固定属性加值。 */
 const HOUSE_RULE_BONUS = '[属性值加成]：任意两项 +2 / +1'
 
@@ -1441,6 +1967,11 @@ function pickSystem(system: GameSystem): void {
     draft.value.subraceName = ''
     draft.value.alignmentCode = null
     draft.value.alignmentName = ''
+    draft.value.attributeMethod = 'roll'
+    draft.value.attributeBase = {}
+    draft.value.attributeDice = {}
+    draft.value.attributeKept = {}
+    draft.value.attributeChoices = {}
     draft.value.classStates = {}
     classes.value = []
     subclasses.value = []
@@ -1531,6 +2062,17 @@ function jumpToStep(index: number): void {
     return
   }
 
+  // 决定背景依赖职业和种族；决定属性依赖决定背景（阵营）
+  if (item?.kind === 'background' && (!draft.value.classCode || !draft.value.raceCode)) {
+    toast('请先选择职业和种族')
+    return
+  }
+
+  if (item?.kind === 'attributes' && !draft.value.alignmentCode) {
+    toast('请先决定阵营')
+    return
+  }
+
   draft.value.step = target
   saveDraft(draft.value)
   scrollTop()
@@ -1554,7 +2096,9 @@ function next(): void {
               ? '先选一个亚种'
               : isBackgroundStep.value
                 ? '先从九宫格里选一个阵营'
-                : '这一步还不能继续',
+                : isAttributesStep.value
+                  ? '先把六项属性定下来'
+                  : '这一步还不能继续',
     )
     return
   }
@@ -1615,7 +2159,14 @@ async function finish(): Promise<void> {
         subraceName: draft.value.subraceName || null,
         alignmentName: draft.value.alignmentName || null,
         sheet: {
-          attributes: [],
+          attributes: attributeRows.value
+            .filter((row) => row.base > 0)
+            .map((row) => ({
+              key: row.key,
+              label: row.label,
+              value: row.final,
+              formula: row.formula,
+            })),
           skills: [],
           items: [],
         },
@@ -2436,6 +2987,337 @@ function scrollTop(): void {
   }
 }
 
+/* ---------------- 决定属性：六项属性卡 + 来源弹窗 ---------------- */
+
+.attr-methods {
+  display: flex;
+  gap: 8rpx;
+  padding: 6rpx;
+  margin-bottom: 10rpx;
+  border: 2rpx solid $trpg-line;
+  border-radius: 14rpx;
+  background: #fff;
+}
+
+.attr-method {
+  flex: 1;
+  padding: 14rpx 0;
+  border-radius: 10rpx;
+  font-size: 24rpx;
+  color: $trpg-muted;
+  text-align: center;
+}
+
+.attr-method-active {
+  background: $trpg-accent;
+  color: #fffaf0;
+  font-weight: 600;
+}
+
+.attr-method-hint {
+  margin-bottom: 18rpx;
+  font-size: 20rpx;
+}
+
+.attr-rolling {
+  padding: 10rpx 0;
+}
+
+.attr-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16rpx;
+}
+
+.attr-card {
+  position: relative;
+  padding: 18rpx;
+  border: 2rpx solid $trpg-line;
+  border-radius: 16rpx;
+  background: #fff;
+}
+
+.attr-card-ready {
+  border-color: #d8c6a5;
+}
+
+.attr-card:active {
+  opacity: 0.85;
+}
+
+.attr-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8rpx;
+}
+
+.attr-name {
+  font-size: 24rpx;
+  letter-spacing: 2rpx;
+}
+
+.attr-mod {
+  font-size: 20rpx;
+}
+
+.attr-mod-up {
+  color: $trpg-accent;
+}
+
+.attr-mod-down {
+  color: #8a3b34;
+}
+
+.attr-value {
+  margin-top: 6rpx;
+  font-size: 58rpx;
+  font-weight: 600;
+  line-height: 1.1;
+  color: $trpg-accent-deep;
+}
+
+.attr-value-empty {
+  color: #c9bca8;
+}
+
+.attr-short {
+  min-height: 30rpx;
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  line-height: 1.4;
+}
+
+.attr-source-link {
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  color: $trpg-accent;
+}
+
+.attr-choice {
+  padding: 18rpx;
+  margin-top: 20rpx;
+  border: 2rpx dashed #d8c6a5;
+  border-radius: 14rpx;
+  background: #fff;
+}
+
+.attr-choice-title {
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.attr-choice-hint {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  line-height: 1.5;
+}
+
+.attr-choice-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10rpx;
+  margin-top: 12rpx;
+}
+
+.attr-chip-label {
+  flex: none;
+  width: 44rpx;
+  font-size: 22rpx;
+  color: $trpg-muted;
+}
+
+.attr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 12rpx;
+}
+
+.attr-choice-row .attr-chips {
+  margin-top: 0;
+}
+
+.attr-chip {
+  padding: 8rpx 16rpx;
+  border: 2rpx solid $trpg-line;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  background: #fffdf8;
+}
+
+.attr-chip-on {
+  border-color: $trpg-accent;
+  background: $trpg-accent;
+  color: #fffaf0;
+}
+
+.attr-snapshot {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 16rpx 0 4rpx;
+  margin-top: 20rpx;
+  border-top: 2rpx dashed $trpg-line;
+}
+
+.attr-snap {
+  width: 25%;
+  text-align: center;
+}
+
+.attr-snap-value {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: $trpg-accent-deep;
+}
+
+.attr-snap-label {
+  font-size: 20rpx;
+}
+
+.attr-mask {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 210;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(30, 23, 18, 0.5);
+  animation: align-fade 0.16s ease-out;
+}
+
+.attr-sheet {
+  box-sizing: border-box;
+  width: 100%;
+  max-height: 86vh;
+  padding: 28rpx 24rpx;
+  padding-bottom: calc(32rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  border-radius: 26rpx 26rpx 0 0;
+  background: #fffdf8;
+  animation: align-rise 0.22s ease-out;
+}
+
+.attr-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.attr-sheet-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+}
+
+.attr-sheet-close {
+  padding: 0 8rpx;
+  font-size: 40rpx;
+  line-height: 1;
+  color: $trpg-muted;
+}
+
+.attr-sheet-total {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+  margin: 10rpx 0 18rpx;
+}
+
+.attr-sheet-number {
+  font-size: 76rpx;
+  font-weight: 600;
+  line-height: 1;
+  color: $trpg-accent-deep;
+}
+
+.attr-sheet-mod {
+  font-size: 22rpx;
+}
+
+.attr-sources {
+  border-top: 2rpx solid $trpg-line;
+}
+
+.attr-source {
+  padding: 14rpx 0;
+  border-bottom: 2rpx solid $trpg-line;
+}
+
+.attr-source-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 16rpx;
+  font-size: 24rpx;
+}
+
+.attr-source-label {
+  color: $trpg-ink;
+}
+
+.attr-source-value {
+  font-weight: 600;
+  color: $trpg-accent-deep;
+}
+
+.attr-source-plus {
+  color: $trpg-accent;
+}
+
+.attr-source-note {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  line-height: 1.5;
+}
+
+.attr-adjust {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  margin-top: 20rpx;
+  font-size: 22rpx;
+}
+
+.attr-adjust-buttons {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border: 2rpx solid $trpg-line;
+  border-radius: 999rpx;
+  background: #fff;
+}
+
+.attr-adjust-btn {
+  width: 56rpx;
+  padding: 8rpx 0;
+  font-size: 30rpx;
+  line-height: 1;
+  text-align: center;
+  color: $trpg-accent-deep;
+}
+
+.attr-adjust-btn:active {
+  background: #f3e7d4;
+}
+
+.attr-adjust-value {
+  min-width: 60rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  text-align: center;
+}
+
+.attr-adjust-hint {
+  font-size: 20rpx;
+}
+
+.attr-sheet-done {
+  margin-top: 24rpx;
+}
+
 .race-house-rule {
   display: flex;
   align-items: center;
@@ -2873,6 +3755,151 @@ function scrollTop(): void {
     top: 5px;
     left: 6px;
     font-size: 11px;
+  }
+
+  .attr-methods {
+    gap: 6px;
+    padding: 4px;
+    margin-bottom: 8px;
+    border-width: 1px;
+    border-radius: 10px;
+  }
+
+  .attr-method {
+    padding: 8px 0;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .attr-method-hint {
+    margin-bottom: 14px;
+    font-size: 12px;
+  }
+
+  .attr-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .attr-card {
+    padding: 14px;
+    border-width: 1px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .attr-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(91, 70, 54, 0.12);
+  }
+
+  .attr-name {
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+
+  .attr-value {
+    font-size: 34px;
+  }
+
+  .attr-short {
+    font-size: 12px;
+  }
+
+  .attr-source-link {
+    font-size: 12px;
+  }
+
+  .attr-choice {
+    padding: 14px;
+    margin-top: 16px;
+    border-width: 1px;
+    border-radius: 10px;
+  }
+
+  .attr-choice-title {
+    font-size: 14px;
+  }
+
+  .attr-choice-hint {
+    font-size: 12px;
+  }
+
+  .attr-chip {
+    padding: 5px 12px;
+    border-width: 1px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .attr-snapshot {
+    margin-top: 16px;
+    padding: 12px 0 2px;
+    border-top-width: 1px;
+  }
+
+  .attr-snap-value {
+    font-size: 20px;
+  }
+
+  .attr-snap-label {
+    font-size: 12px;
+  }
+
+  .attr-mask {
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .attr-sheet {
+    width: 420px;
+    max-height: 80vh;
+    padding: 22px 20px;
+    border-radius: 16px;
+  }
+
+  .attr-sheet-title {
+    font-size: 18px;
+  }
+
+  .attr-sheet-number {
+    font-size: 44px;
+  }
+
+  .attr-source {
+    padding: 10px 0;
+    border-bottom-width: 1px;
+  }
+
+  .attr-source-main {
+    font-size: 13px;
+  }
+
+  .attr-source-note {
+    font-size: 12px;
+  }
+
+  .attr-adjust {
+    font-size: 12px;
+  }
+
+  .attr-adjust-buttons {
+    border-width: 1px;
+  }
+
+  .attr-adjust-btn {
+    width: 32px;
+    padding: 5px 0;
+    font-size: 17px;
+    cursor: pointer;
+  }
+
+  .attr-adjust-value {
+    min-width: 36px;
+    font-size: 14px;
   }
 
   .race-card {
