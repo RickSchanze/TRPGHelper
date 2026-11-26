@@ -237,6 +237,8 @@ python tools/build_race_content.py    # 重新生成种族词条与 traits（需
 
 ## 下一步（待一点一点加）
 
+完整的车卡缺口对照（背景 / 技能 / 语言 / 装备 / 法术 / 卡面，按优先级）见 [docs/character-creation-gaps.md](docs/character-creation-gaps.md)，近期顺序：背景与描述 → 装备与战斗数值 → 法术与子职。
+
 - [ ] 卡面编辑：技能、物品、背景、头像上传
 - [ ] 微信小程序订阅消息 / 分享卡片
 - [ ] 多规则系统自定义属性模板
