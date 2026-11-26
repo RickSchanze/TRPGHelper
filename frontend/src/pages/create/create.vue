@@ -361,7 +361,13 @@
       </template>
     </template>
 
-    <view v-if="railOptions.length > 1" class="class-rail">
+    <!-- 右侧索引：滑动时展开，停下后缩成一条细线，不挡着读卡片 -->
+    <view
+      v-if="railOptions.length > 1"
+      class="class-rail"
+      :class="{ 'rail-idle': !railOpen }"
+      @tap="wakeRail"
+    >
       <view
         v-for="(item, index) in railOptions"
         :key="item.code"
@@ -458,6 +464,11 @@ const failedSubclassCovers = ref<Record<string, boolean>>({})
 const activeRailIndex = ref(0)
 const railTops = ref<number[]>([])
 const jumping = ref(false)
+/** 右侧索引是否展开：滑动时展开，停下滑动后缩成一条细线，不挡着读卡片 */
+const railOpen = ref(false)
+const RAIL_IDLE_MS = 1000
+let railIdleTimer: ReturnType<typeof setTimeout> | null = null
+let railWakeMutedUntil = 0
 const detailVisible = ref(false)
 const detailClass = ref<ClassOption | null>(null)
 
@@ -666,6 +677,11 @@ onUnload(() => {
     saveDraft(draft.value)
   }
 
+  if (railIdleTimer) {
+    clearTimeout(railIdleTimer)
+    railIdleTimer = null
+  }
+
   // #ifdef H5
   window.removeEventListener('resize', measureStepper)
   document.removeEventListener('mousedown', onStepperMouseDown)
@@ -681,6 +697,12 @@ onLoad(() => {
 })
 
 onPageScroll((event) => {
+  // 一滚就展开右侧索引，停下再慢慢收回去。
+  // 切换步骤时页面自己会滚到顶部，那种程序化滚动不算「玩家在滑动」，别把它闪出来
+  if (Date.now() >= railWakeMutedUntil) {
+    wakeRail()
+  }
+
   // 跳转动画期间不跟着滚动事件改高亮，避免来回闪
   if (jumping.value || railTops.value.length === 0) {
     return
@@ -701,6 +723,23 @@ onPageScroll((event) => {
     activeRailIndex.value = index
   }, 60)
 })
+
+/** 一滑动就把右侧索引张开，闲置一会儿再让它收回去 */
+function wakeRail(): void {
+  railOpen.value = true
+  if (railIdleTimer) {
+    clearTimeout(railIdleTimer)
+  }
+  railIdleTimer = setTimeout(() => {
+    railIdleTimer = null
+    railOpen.value = false
+  }, RAIL_IDLE_MS)
+}
+
+/** 程序化滚动（切步骤 / 点索引跳转）期间不唤醒索引，避免闪一下 */
+function muteRailWake(ms: number): void {
+  railWakeMutedUntil = Date.now() + ms
+}
 
 function measureRail(): void {
   const selector = railSelector.value
@@ -876,6 +915,7 @@ function scrollToRail(index: number): void {
     }
 
     const isDesktop = uni.getSystemInfoSync().windowWidth >= 900
+    muteRailWake(500)
     uni.pageScrollTo({
       scrollTop: Math.max(0, rect.top + scrollTop - (isDesktop ? 96 : 24)),
       duration: 300,
@@ -1366,6 +1406,7 @@ function toast(title: string): void {
 }
 
 function scrollTop(): void {
+  muteRailWake(500)
   uni.pageScrollTo({ scrollTop: 0, duration: 200 })
 }
 </script>
@@ -1613,31 +1654,57 @@ function scrollTop(): void {
 .class-rail {
   position: fixed;
   top: 50%;
-  right: 12rpx;
+  right: 12px;
   z-index: 60;
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
+  gap: 4rpx;
   padding: 10rpx;
   border: 2rpx solid $trpg-line;
-  border-radius: 999rpx;
+  /* 不再是满圆角胶囊：两端弧线会把贴近边缘的文字切掉 */
+  border-radius: 18px;
   background: rgba(255, 253, 248, 0.94);
-  box-shadow: 0 10rpx 30rpx rgba(91, 70, 54, 0.14);
+  box-shadow: 0 5px 15px rgba(91, 70, 54, 0.14);
   transform: translateY(-50%);
-  /* 给右下角的按钮留位：进度条再长也探不到「下一步」上面 */
-  max-height: calc(100vh - 320rpx);
+  /* 展开快一点、收回去慢一点，两头都有动画 */
+  transition: transform 0.22s ease-out, background-color 0.22s ease, box-shadow 0.22s ease;
+  /* 条目多 / 窗口矮时最多长到这里，给右下角按钮留位 */
+  max-height: calc(100vh - 160px);
   overflow-y: auto;
 }
+
+/* 玩家停下滑动：索引滑到右边只剩一条细线，不挡着读卡片 */
+.class-rail.rail-idle {
+  transform: translate(calc(100% + 6px), -50%);
+  background: rgba(122, 92, 62, 0.6);
+  box-shadow: none;
+  transition-duration: 0.5s;
+  transition-timing-function: ease-in-out;
+}
+
+/* 进度条自己就是操作区，不能再长出一条滚动条 */
+/* #ifdef H5 */
+.class-rail {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.class-rail::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+/* #endif */
 
 .rail-item {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 2rpx;
-  min-width: 52rpx;
-  min-height: 52rpx;
-  padding: 0 8rpx;
-  border-radius: 10rpx;
+  min-width: 44rpx;
+  min-height: 44rpx;
+  padding: 0 10rpx;
+  border-radius: 8rpx;
   color: $trpg-muted;
 }
 
@@ -2019,22 +2086,22 @@ function scrollTop(): void {
    这里是贴着页面底边的实心按钮；进度条另有最大高度，永远压不到这组按钮上 */
 .wizard-dock {
   position: fixed;
-  right: 32rpx;
-  bottom: 32rpx;
-  bottom: calc(32rpx + constant(safe-area-inset-bottom));
-  bottom: calc(32rpx + env(safe-area-inset-bottom));
+  right: 16px;
+  bottom: 16px;
+  bottom: calc(16px + constant(safe-area-inset-bottom));
+  bottom: calc(16px + env(safe-area-inset-bottom));
   z-index: 70;
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: 10px;
 }
 
 .wizard-dock .btn {
   flex: none;
-  height: 84rpx;
-  padding: 0 30rpx;
-  font-size: 28rpx;
-  box-shadow: 0 10rpx 30rpx rgba(43, 33, 26, 0.2);
+  height: 44px;
+  padding: 0 18px;
+  font-size: 15px;
+  box-shadow: 0 6px 16px rgba(43, 33, 26, 0.2);
   transition: opacity 0.12s ease;
 }
 
@@ -2063,13 +2130,13 @@ function scrollTop(): void {
 }
 
 .wizard-dock-next {
-  min-width: 180rpx;
+  min-width: 96px;
 }
 
 /* 底部给按钮留出高度，最后一张卡不会被挡住 */
 .wizard-page-docked {
-  padding-bottom: calc(200rpx + constant(safe-area-inset-bottom));
-  padding-bottom: calc(200rpx + env(safe-area-inset-bottom));
+  padding-bottom: calc(88px + constant(safe-area-inset-bottom));
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 
 @media (min-width: 900px) {
@@ -2324,15 +2391,16 @@ function scrollTop(): void {
   .class-rail {
     right: max(16px, calc((100vw - 860px) / 2 - 68px));
     gap: 6px;
-    padding: 8px;
+    padding: 10px 8px;
     border-width: 1px;
+    border-radius: 20px;
     max-height: calc(100vh - 240px);
   }
 
   .rail-item {
     min-width: 36px;
     min-height: 36px;
-    padding: 0 6px;
+    padding: 0 8px;
     cursor: pointer;
   }
 
