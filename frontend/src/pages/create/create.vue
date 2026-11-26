@@ -1,5 +1,5 @@
 <template>
-  <view class="page wizard-page">
+  <view class="page wizard-page" :class="{ 'wizard-page-docked': flowActive }">
     <AppHeader current="create" />
 
     <view class="hero">
@@ -49,7 +49,13 @@
       </view>
 
       <view class="rulebook-actions">
-        <button class="btn" :disabled="!draft.systemCode || flowLoading" @tap="startFlow">
+        <button
+          class="btn"
+          hover-class="btn-pressed"
+          hover-stay-time="80"
+          :disabled="!draft.systemCode || flowLoading"
+          @tap="startFlow"
+        >
           {{ flowLoading ? '正在加载流程…' : '开始车卡' }}
         </button>
       </view>
@@ -368,10 +374,25 @@
       </view>
     </view>
 
-    <view v-if="started && steps.length" class="wizard-actions">
-      <button class="btn btn-plain" :disabled="finishing" @tap="prev">上一步</button>
-      <button class="btn" :disabled="!canNext || finishing" @tap="next">
-        {{ isLastStep ? (finishing ? '提交中…' : '完成') : '下一步' }}
+    <!-- 流程操作固定在右下角：种族 / 亚种这类长列表不用滚到底，每一步都有 -->
+    <view v-if="flowActive" class="wizard-dock">
+      <button
+        class="btn btn-plain"
+        hover-class="btn-pressed"
+        hover-stay-time="80"
+        :disabled="finishing"
+        @tap="prev"
+      >
+        上一步
+      </button>
+      <button
+        class="btn wizard-dock-next"
+        hover-class="btn-pressed"
+        hover-stay-time="80"
+        :disabled="!canNext || finishing"
+        @tap="next"
+      >
+        {{ nextLabel }}
       </button>
     </view>
 
@@ -496,6 +517,15 @@ const railSelector = computed(() =>
   isClassStep.value ? '.class-card' : isRaceStep.value ? '.race-card' : '.subrace-card',
 )
 const isLastStep = computed(() => steps.value.length > 0 && draft.value.step >= steps.value.length)
+/** 车卡流程里才显示右下角那组「上一步 / 下一步」 */
+const flowActive = computed(() => started.value && steps.value.length > 0)
+const nextLabel = computed(() => {
+  if (!isLastStep.value) {
+    return '下一步'
+  }
+
+  return finishing.value ? '提交中…' : '完成'
+})
 const canNext = computed(() => {
   if (!currentStep.value) {
     return false
@@ -506,16 +536,29 @@ const canNext = computed(() => {
   }
 
   if (isSubclassStep.value) {
+    // 列表还在路上时先别放行，免得把「还没加载」当成「没有内容、可以跳过」
+    if (subclassesLoading.value && !draft.value.subclassCode) {
+      return false
+    }
+
     // 该职业还没配置子职时允许跳过
     return subclasses.value.length === 0 || Boolean(draft.value.subclassCode)
   }
 
   if (isRaceStep.value) {
+    if (racesLoading.value && !draft.value.raceCode) {
+      return false
+    }
+
     // 没配种族时允许跳过
     return races.value.length === 0 || Boolean(draft.value.raceCode)
   }
 
   if (isSubraceStep.value) {
+    if (subracesLoading.value && !draft.value.subraceCode) {
+      return false
+    }
+
     // 该种族没有亚种（或还没配）时允许跳过
     return subraces.value.length === 0 || Boolean(draft.value.subraceCode)
   }
@@ -1581,6 +1624,9 @@ function scrollTop(): void {
   background: rgba(255, 253, 248, 0.94);
   box-shadow: 0 10rpx 30rpx rgba(91, 70, 54, 0.14);
   transform: translateY(-50%);
+  /* 给右下角的按钮留位：进度条再长也探不到「下一步」上面 */
+  max-height: calc(100vh - 320rpx);
+  overflow-y: auto;
 }
 
 .rail-item {
@@ -1968,13 +2014,62 @@ function scrollTop(): void {
   opacity: 0.4;
 }
 
-.wizard-actions {
+/* 车卡操作固定在右下角：种族 / 亚种再长也不用滚到底。
+   和右侧进度条刻意分开——进度条是垂直居中的半透明细胶囊（纯展示 + 快速跳转），
+   这里是贴着页面底边的实心按钮；进度条另有最大高度，永远压不到这组按钮上 */
+.wizard-dock {
+  position: fixed;
+  right: 32rpx;
+  bottom: 32rpx;
+  bottom: calc(32rpx + constant(safe-area-inset-bottom));
+  bottom: calc(32rpx + env(safe-area-inset-bottom));
+  z-index: 70;
   display: flex;
-  gap: 20rpx;
+  align-items: center;
+  gap: 16rpx;
 }
 
-.wizard-actions .btn {
-  flex: 1;
+.wizard-dock .btn {
+  flex: none;
+  height: 84rpx;
+  padding: 0 30rpx;
+  font-size: 28rpx;
+  box-shadow: 0 10rpx 30rpx rgba(43, 33, 26, 0.2);
+  transition: opacity 0.12s ease;
+}
+
+/* 「上一步」是次要操作，给个实底才好压住背后的卡片 */
+.wizard-dock .btn-plain {
+  background: #fffdf8;
+}
+
+/* 禁用态沿用同一套配色，只压暗。
+   uni 默认会把没有 type 的禁用按钮刷成浅灰底 + 黑字，和启用态的棕底来回切很扎眼 */
+.wizard-dock .btn[disabled] {
+  background: $trpg-accent;
+  color: #fffaf0;
+  opacity: 0.42;
+}
+
+.wizard-dock .btn-plain[disabled] {
+  background: #fffdf8;
+  color: $trpg-accent;
+  border-color: $trpg-accent;
+}
+
+/* 自己接管按下反馈：uni 默认的 button-hover 是浅灰底，会把实心棕按钮闪成灰色 */
+.btn-pressed {
+  opacity: 0.82;
+}
+
+.wizard-dock-next {
+  min-width: 180rpx;
+}
+
+/* 底部给按钮留出高度，最后一张卡不会被挡住 */
+.wizard-page-docked {
+  padding-bottom: calc(200rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(200rpx + env(safe-area-inset-bottom));
 }
 
 @media (min-width: 900px) {
@@ -2231,6 +2326,7 @@ function scrollTop(): void {
     gap: 6px;
     padding: 8px;
     border-width: 1px;
+    max-height: calc(100vh - 240px);
   }
 
   .rail-item {
@@ -2307,8 +2403,28 @@ function scrollTop(): void {
     font-size: 12px;
   }
 
-  .wizard-actions {
+  .wizard-dock {
+    right: max(16px, calc((100vw - 860px) / 2 + 40px));
+    bottom: 32px;
+    bottom: calc(32px + constant(safe-area-inset-bottom));
+    bottom: calc(32px + env(safe-area-inset-bottom));
     gap: 12px;
+  }
+
+  .wizard-dock .btn {
+    height: 48px;
+    padding: 0 22px;
+    font-size: 15px;
+    box-shadow: 0 12px 28px rgba(43, 33, 26, 0.24);
+  }
+
+  .wizard-dock-next {
+    min-width: 104px;
+  }
+
+  .wizard-page-docked {
+    padding-bottom: calc(128px + constant(safe-area-inset-bottom));
+    padding-bottom: calc(128px + env(safe-area-inset-bottom));
   }
 
   /* 悬停的卡片如果正好是选中项，仍然保持高亮边框 */
