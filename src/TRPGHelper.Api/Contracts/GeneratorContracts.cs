@@ -30,7 +30,11 @@ public sealed record ClassOptionDto(
     string SpellcastingAbility,
     IReadOnlyList<string> Features,
     string? ImageUrl,
-    string? Accent);
+    string? Accent,
+    int SkillChoiceCount,
+    IReadOnlyList<string> SkillOptions,
+    IReadOnlyList<string> ArmorProficiencies,
+    IReadOnlyList<string> WeaponProficiencies);
 
 public sealed record RaceOptionDto(
     string Code,
@@ -40,7 +44,11 @@ public sealed record RaceOptionDto(
     int Speed,
     IReadOnlyList<string> Traits,
     IReadOnlyList<AbilityBonusDto> AbilityBonuses,
-    IReadOnlyList<AbilityChoiceDto> AbilityChoices);
+    IReadOnlyList<AbilityChoiceDto> AbilityChoices,
+    IReadOnlyList<string> Skills,
+    int SkillChoiceCount,
+    IReadOnlyList<string> Languages,
+    int LanguageChoiceCount);
 
 public sealed record SubclassOptionDto(
     string Code,
@@ -81,6 +89,62 @@ public sealed record AbilityScoresResponse(
     string SystemCode,
     string Method,
     IReadOnlyList<AbilityScoreRollDto> Attributes);
+
+/// <summary>18 项技能之一。</summary>
+public sealed record SkillOptionDto(string Id, string Name, string Ability, string Description);
+
+/// <summary>语言（标准语 / 异界语）。</summary>
+public sealed record LanguageOptionDto(string Id, string Name, string Kind, string Description);
+
+/// <summary>背景详情：技能、工具、语言、装备、背景特性。</summary>
+public sealed record BackgroundDetailDto(
+    string Id,
+    string Name,
+    string Description,
+    IReadOnlyList<string> Skills,
+    string Tools,
+    int LanguageCount,
+    string Equipment,
+    string FeatureName,
+    string FeatureText);
+
+/// <summary>1 级职业特性选项（战斗风格 / 宿敌 / 自然探索者）。</summary>
+public sealed record FeatureOptionDto(string ClassId, string OptionType, string Name, string Description);
+
+/// <summary>护甲 / 盾。</summary>
+public sealed record ArmorOptionDto(
+    string Id,
+    string Name,
+    string Type,
+    int BaseAc,
+    int? DexCap,
+    int? StrengthReq,
+    bool StealthDisadvantage,
+    string Description);
+
+/// <summary>武器。</summary>
+public sealed record WeaponOptionDto(
+    string Id,
+    string Name,
+    string Damage,
+    string DamageType,
+    string Ability,
+    bool Ranged,
+    string Properties);
+
+/// <summary>职业起始装备包。</summary>
+public sealed record EquipmentKitDto(
+    string ClassId,
+    string ArmorId,
+    bool Shield,
+    IReadOnlyList<string> WeaponIds,
+    string DefaultWeaponId,
+    string Pack);
+
+public sealed record EquipmentResponse(
+    IReadOnlyList<ArmorOptionDto> Armor,
+    IReadOnlyList<WeaponOptionDto> Weapons,
+    EquipmentKitDto? Kit);
 
 /// <summary>
 /// 阵营（九宫格）。解释文字在关键词里，这里只给车卡流程渲染图标 + 名字要用的字段。

@@ -40,6 +40,27 @@ public enum GeneratorKind
     /// Value 是阵营名，ExtraJson 存 iconUrl / accent。
     /// </summary>
     Alignment = 8,
+
+    /// <summary>技能（18 项），Category 存技能 code，Value 是技能名，ExtraJson 存关联属性与说明。</summary>
+    Skill = 9,
+
+    /// <summary>语言，Category 存语言 code，Value 是语言名，ExtraJson 存标准 / 异界分类。</summary>
+    Language = 10,
+
+    /// <summary>背景详情（技能、工具、语言、装备、特性），Category 存背景 code。</summary>
+    BackgroundDetail = 11,
+
+    /// <summary>1 级职业特性选项（战斗风格 / 宿敌 / 自然探索者），Category 存职业 code。</summary>
+    ClassOption = 12,
+
+    /// <summary>护甲 / 盾，ExtraJson 存类型、基础 AC、敏捷上限等。</summary>
+    Armor = 13,
+
+    /// <summary>武器，ExtraJson 存伤害、伤害类型、属性、是否远程、词条。</summary>
+    Weapon = 14,
+
+    /// <summary>职业起始装备包，Category 存职业 code。</summary>
+    EquipmentKit = 15,
 }
 
 /// <summary>

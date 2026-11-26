@@ -47,12 +47,52 @@ export interface SheetSkill {
   note?: string
 }
 
+export interface SheetProficiencies {
+  armor: string[]
+  weapons: string[]
+  tools: string[]
+}
+
+export interface SheetEquipmentItem {
+  name: string
+  quantity: number
+  note?: string
+}
+
+export interface SheetCombat {
+  hitPoints: number
+  armorClass: number
+  initiative: number
+  speed: number
+  proficiencyBonus: number
+  passivePerception: number
+  savingThrows: Record<string, number>
+}
+
+export interface SheetPersonality {
+  trait?: string
+  ideal?: string
+  bond?: string
+  flaw?: string
+}
+
 export interface CharacterSheet {
   attributes: SheetAttribute[]
   skills: SheetSkill[]
   items: string[]
   background?: string
   notes?: string
+  backgroundName?: string
+  gender?: string
+  height?: string
+  weight?: string
+  appearance?: string
+  languages: string[]
+  proficiencies: SheetProficiencies
+  equipment: SheetEquipmentItem[]
+  combat: SheetCombat
+  personality: SheetPersonality
+  featureChoices: Record<string, string>
 }
 
 export interface CharacterSummary {
@@ -140,6 +180,83 @@ export interface ClassOption {
   imageUrl?: string
   /** 管理台配置的主色，例如 #3f5a3a */
   accent?: string
+  /** 从职业技能列表里选几项 */
+  skillChoiceCount: number
+  /** 可选的职业技能名单 */
+  skillOptions: string[]
+  armorProficiencies: string[]
+  weaponProficiencies: string[]
+}
+
+/** 18 项技能之一。 */
+export interface SkillOption {
+  id: string
+  name: string
+  ability: string
+  description: string
+}
+
+export interface LanguageOption {
+  id: string
+  name: string
+  kind: string
+  description: string
+}
+
+export interface BackgroundDetail {
+  id: string
+  name: string
+  description: string
+  skills: string[]
+  tools: string
+  languageCount: number
+  equipment: string
+  featureName: string
+  featureText: string
+}
+
+/** 1 级职业特性选项。 */
+export interface FeatureOption {
+  classId: string
+  optionType: string
+  name: string
+  description: string
+}
+
+export interface ArmorOption {
+  id: string
+  name: string
+  type: string
+  baseAc: number
+  dexCap?: number
+  strengthReq?: number
+  stealthDisadvantage: boolean
+  description: string
+}
+
+export interface WeaponOption {
+  id: string
+  name: string
+  damage: string
+  damageType: string
+  ability: string
+  ranged: boolean
+  properties: string
+}
+
+export interface EquipmentKit {
+  classId: string
+  armorId: string
+  shield: boolean
+  weaponIds: string[]
+  defaultWeaponId: string
+  pack: string
+}
+
+export interface EquipmentResponse {
+  armor: ArmorOption[]
+  weapons: WeaponOption[]
+  kit: EquipmentKit | null
 }
 
 /** 关键词词条：点击 [关键词] 时弹出的解释。 */
@@ -190,6 +307,14 @@ export interface RaceOption {
   abilityBonuses: AbilityBonus[]
   /** 需要玩家自己选的部分（半精灵「任选两项 +1」） */
   abilityChoices: AbilityChoice[]
+  /** 种族直接给的技能熟练 */
+  skills: string[]
+  /** 种族允许自选的技能数量（半精灵 2） */
+  skillChoiceCount: number
+  /** 种族母语 */
+  languages: string[]
+  /** 额外语言数量 */
+  languageChoiceCount: number
 }
 
 export interface SubraceOption {

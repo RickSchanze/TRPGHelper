@@ -29,6 +29,21 @@ public enum CreationStepKind
 
     /// <summary>决定背景：先是九宫格阵营，后面再补背景本身。</summary>
     Background = 7,
+
+    /// <summary>选技能熟练项（职业选 N 项 + 背景固定项）。</summary>
+    Skills = 8,
+
+    /// <summary>选额外语言。</summary>
+    Languages = 9,
+
+    /// <summary>1 级职业特性选择（战斗风格 / 宿敌 / 自然探索者）。</summary>
+    Features = 10,
+
+    /// <summary>起始装备与武器选择。</summary>
+    Equipment = 11,
+
+    /// <summary>姓名 / 性别 / 年龄 / 外貌 / 个性。</summary>
+    Description = 12,
 }
 
 /// <summary>

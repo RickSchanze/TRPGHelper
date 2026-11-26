@@ -15,6 +15,30 @@ public sealed class CharacterSheet
     public string? Background { get; set; }
 
     public string? Notes { get; set; }
+
+    /// <summary>背景名（与 <see cref="Background"/> 并存，车卡流程写入这里）。</summary>
+    public string? BackgroundName { get; set; }
+
+    public string? Gender { get; set; }
+
+    public string? Height { get; set; }
+
+    public string? Weight { get; set; }
+
+    public string? Appearance { get; set; }
+
+    public List<string> Languages { get; set; } = new();
+
+    public SheetProficiencies Proficiencies { get; set; } = new();
+
+    public List<SheetEquipmentItem> Equipment { get; set; } = new();
+
+    public SheetCombat Combat { get; set; } = new();
+
+    public SheetPersonality Personality { get; set; } = new();
+
+    /// <summary>1 级职业特性选择，例如 fightingStyle = 防御。</summary>
+    public Dictionary<string, string> FeatureChoices { get; set; } = new();
 }
 
 public sealed class SheetAttribute
@@ -36,4 +60,50 @@ public sealed class SheetSkill
     public int Value { get; set; }
 
     public string? Note { get; set; }
+}
+
+public sealed class SheetProficiencies
+{
+    public List<string> Armor { get; set; } = new();
+
+    public List<string> Weapons { get; set; } = new();
+
+    public List<string> Tools { get; set; } = new();
+}
+
+public sealed class SheetEquipmentItem
+{
+    public string Name { get; set; } = string.Empty;
+
+    public int Quantity { get; set; } = 1;
+
+    public string? Note { get; set; }
+}
+
+public sealed class SheetCombat
+{
+    public int HitPoints { get; set; }
+
+    public int ArmorClass { get; set; }
+
+    public int Initiative { get; set; }
+
+    public int Speed { get; set; }
+
+    public int ProficiencyBonus { get; set; } = 2;
+
+    public int PassivePerception { get; set; }
+
+    public Dictionary<string, int> SavingThrows { get; set; } = new();
+}
+
+public sealed class SheetPersonality
+{
+    public string? Trait { get; set; }
+
+    public string? Ideal { get; set; }
+
+    public string? Bond { get; set; }
+
+    public string? Flaw { get; set; }
 }

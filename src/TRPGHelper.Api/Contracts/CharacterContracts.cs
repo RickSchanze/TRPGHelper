@@ -4,12 +4,41 @@ public sealed record SheetAttributeDto(string Key, string Label, int Value, stri
 
 public sealed record SheetSkillDto(string Name, int Value, string? Note);
 
+public sealed record SheetProficienciesDto(
+    List<string>? Armor,
+    List<string>? Weapons,
+    List<string>? Tools);
+
+public sealed record SheetEquipmentItemDto(string Name, int Quantity, string? Note);
+
+public sealed record SheetCombatDto(
+    int HitPoints,
+    int ArmorClass,
+    int Initiative,
+    int Speed,
+    int ProficiencyBonus,
+    int PassivePerception,
+    Dictionary<string, int>? SavingThrows);
+
+public sealed record SheetPersonalityDto(string? Trait, string? Ideal, string? Bond, string? Flaw);
+
 public sealed record CharacterSheetDto(
     List<SheetAttributeDto>? Attributes,
     List<SheetSkillDto>? Skills,
     List<string>? Items,
     string? Background,
-    string? Notes);
+    string? Notes,
+    string? BackgroundName,
+    string? Gender,
+    string? Height,
+    string? Weight,
+    string? Appearance,
+    List<string>? Languages,
+    SheetProficienciesDto? Proficiencies,
+    List<SheetEquipmentItemDto>? Equipment,
+    SheetCombatDto? Combat,
+    SheetPersonalityDto? Personality,
+    Dictionary<string, string>? FeatureChoices);
 
 public sealed record CharacterSummaryDto(
     Guid Id,

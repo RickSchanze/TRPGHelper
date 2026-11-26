@@ -34,7 +34,32 @@ internal static class Mappings
         sheet.Skills.Select(s => new SheetSkillDto(s.Name, s.Value, s.Note)).ToList(),
         sheet.Items.ToList(),
         sheet.Background,
-        sheet.Notes);
+        sheet.Notes,
+        sheet.BackgroundName,
+        sheet.Gender,
+        sheet.Height,
+        sheet.Weight,
+        sheet.Appearance,
+        sheet.Languages.ToList(),
+        new SheetProficienciesDto(
+            sheet.Proficiencies.Armor.ToList(),
+            sheet.Proficiencies.Weapons.ToList(),
+            sheet.Proficiencies.Tools.ToList()),
+        sheet.Equipment.Select(item => new SheetEquipmentItemDto(item.Name, item.Quantity, item.Note)).ToList(),
+        new SheetCombatDto(
+            sheet.Combat.HitPoints,
+            sheet.Combat.ArmorClass,
+            sheet.Combat.Initiative,
+            sheet.Combat.Speed,
+            sheet.Combat.ProficiencyBonus,
+            sheet.Combat.PassivePerception,
+            new Dictionary<string, int>(sheet.Combat.SavingThrows)),
+        new SheetPersonalityDto(
+            sheet.Personality.Trait,
+            sheet.Personality.Ideal,
+            sheet.Personality.Bond,
+            sheet.Personality.Flaw),
+        new Dictionary<string, string>(sheet.FeatureChoices));
 
     public static CharacterSheet FromDto(CharacterSheetDto dto) => new()
     {
@@ -57,7 +82,54 @@ internal static class Mappings
             .ToList() ?? [],
         Items = dto.Items?.Where(i => !string.IsNullOrWhiteSpace(i)).Select(i => i.Trim()).ToList() ?? [],
         Background = dto.Background,
+        BackgroundName = dto.BackgroundName,
         Notes = dto.Notes,
+        Gender = dto.Gender,
+        Height = dto.Height,
+        Weight = dto.Weight,
+        Appearance = dto.Appearance,
+        Languages = dto.Languages?.Where(l => !string.IsNullOrWhiteSpace(l)).Select(l => l.Trim()).ToList() ?? [],
+        Proficiencies = new SheetProficiencies
+        {
+            Armor = dto.Proficiencies?.Armor?.Where(i => !string.IsNullOrWhiteSpace(i)).Select(i => i.Trim()).ToList() ?? [],
+            Weapons = dto.Proficiencies?.Weapons?.Where(i => !string.IsNullOrWhiteSpace(i)).Select(i => i.Trim()).ToList() ?? [],
+            Tools = dto.Proficiencies?.Tools?.Where(i => !string.IsNullOrWhiteSpace(i)).Select(i => i.Trim()).ToList() ?? [],
+        },
+        Equipment = dto.Equipment?
+            .Where(item => !string.IsNullOrWhiteSpace(item.Name))
+            .Select(item => new SheetEquipmentItem
+            {
+                Name = item.Name.Trim(),
+                Quantity = item.Quantity <= 0 ? 1 : item.Quantity,
+                Note = item.Note,
+            })
+            .ToList() ?? [],
+        Combat = dto.Combat is null
+            ? new SheetCombat()
+            : new SheetCombat
+            {
+                HitPoints = dto.Combat.HitPoints,
+                ArmorClass = dto.Combat.ArmorClass,
+                Initiative = dto.Combat.Initiative,
+                Speed = dto.Combat.Speed,
+                ProficiencyBonus = dto.Combat.ProficiencyBonus,
+                PassivePerception = dto.Combat.PassivePerception,
+                SavingThrows = dto.Combat.SavingThrows is null
+                    ? new Dictionary<string, int>()
+                    : new Dictionary<string, int>(dto.Combat.SavingThrows),
+            },
+        Personality = dto.Personality is null
+            ? new SheetPersonality()
+            : new SheetPersonality
+            {
+                Trait = dto.Personality.Trait,
+                Ideal = dto.Personality.Ideal,
+                Bond = dto.Personality.Bond,
+                Flaw = dto.Personality.Flaw,
+            },
+        FeatureChoices = dto.FeatureChoices is null
+            ? new Dictionary<string, string>()
+            : new Dictionary<string, string>(dto.FeatureChoices),
     };
 
     public static CharacterSummaryDto ToSummary(CharacterCard card) => new(

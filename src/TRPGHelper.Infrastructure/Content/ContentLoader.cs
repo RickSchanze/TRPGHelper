@@ -28,6 +28,11 @@ public static class ContentLoader
         LoadRaces(dataPath, systems, attributes, entries);
         LoadSubraces(dataPath, systems, attributes, entries);
         LoadAlignments(dataPath, systems, entries);
+        LoadSkills(dataPath, systems, entries);
+        LoadLanguages(dataPath, systems, entries);
+        LoadBackgroundDetails(dataPath, systems, entries);
+        LoadClassOptions(dataPath, systems, entries);
+        LoadEquipment(dataPath, systems, entries);
         LoadInspirations(dataPath, systems, entries);
 
         var steps = LoadSteps(dataPath, systems);
@@ -196,7 +201,7 @@ public static class ContentLoader
         foreach (var row in XlsxHelpers.ReadRows(
                      XlsxHelpers.RequireSheet(workbook, path, "classes"),
                      path,
-                     ["id", "systemId", "name", "description", "hitDie", "primaryAbility", "imageUrl", "features", "accent", "savingThrows", "spellcastingAbility"]))
+                     ["id", "systemId", "name", "description", "hitDie", "primaryAbility", "imageUrl", "features", "accent", "savingThrows", "spellcastingAbility", "skillChoiceCount", "skillOptions", "armorProficiencies", "weaponProficiencies"]))
         {
             var id = row.Required("id", path).ToLowerInvariant();
             if (!ids.Add(id))
@@ -226,6 +231,10 @@ public static class ContentLoader
                     accent = accent.Length == 0 ? null : accent,
                     savingThrows = row["savingThrows"].Trim(),
                     spellcastingAbility = row["spellcastingAbility"].Trim(),
+                    skillChoiceCount = row.Int("skillChoiceCount", 0),
+                    skillOptions = SplitList(row["skillOptions"]),
+                    armorProficiencies = SplitList(row["armorProficiencies"]),
+                    weaponProficiencies = SplitList(row["weaponProficiencies"]),
                 }, JsonOptions),
                 (index + 1) * 10));
             index += 1;
@@ -306,7 +315,8 @@ public static class ContentLoader
         foreach (var row in XlsxHelpers.ReadRows(
                      XlsxHelpers.RequireSheet(workbook, path, "races"),
                      path,
-                     ["id", "systemId", "name", "description", "abilityBonus", "speed", "traits", "abilityBonuses"]))
+                     ["id", "systemId", "name", "description", "abilityBonus", "speed", "traits", "abilityBonuses",
+                         "skills", "skillChoiceCount", "languages", "languageChoiceCount"]))
         {
             var id = row.Required("id", path).ToLowerInvariant();
             var systemId = RequireSystem(row, systems, path);
@@ -328,6 +338,10 @@ public static class ContentLoader
                     traits,
                     abilityBonuses = bonus.Bonuses,
                     abilityChoices = bonus.Choices,
+                    skills = SplitList(row["skills"]),
+                    skillChoiceCount = row.Int("skillChoiceCount", 0),
+                    languages = SplitList(row["languages"]),
+                    languageChoiceCount = row.Int("languageChoiceCount", 0),
                 }, JsonOptions),
                 (index + 1) * 10));
             index += 1;
@@ -445,6 +459,230 @@ public static class ContentLoader
         }
     }
 
+    /* ---------------- 技能 / 语言 / 背景详情 / 职业选项 / 装备 ---------------- */
+
+    private static void LoadSkills(
+        string dataPath,
+        IReadOnlyList<ContentSystem> systems,
+        List<GeneratorEntryContent> entries)
+    {
+        var path = Path.Combine(dataPath, ContentPaths.SkillsFile);
+        using var workbook = OpenWorkbook(path);
+        var index = 0;
+
+        foreach (var row in XlsxHelpers.ReadRows(
+                     XlsxHelpers.RequireSheet(workbook, path, "skills"),
+                     path,
+                     ["id", "systemId", "name", "ability", "description"]))
+        {
+            var id = row.Required("id", path).ToLowerInvariant();
+            var systemId = RequireSystem(row, systems, path);
+
+            entries.Add(new GeneratorEntryContent(
+                systemId,
+                JsonKey(GeneratorKind.Skill),
+                id,
+                row.Required("name", path),
+                JsonSerializer.Serialize(new
+                {
+                    ability = row.Required("ability", path),
+                    description = row["description"].Trim(),
+                }, JsonOptions),
+                (index + 1) * 10));
+            index += 1;
+        }
+    }
+
+    private static void LoadLanguages(
+        string dataPath,
+        IReadOnlyList<ContentSystem> systems,
+        List<GeneratorEntryContent> entries)
+    {
+        var path = Path.Combine(dataPath, ContentPaths.LanguagesFile);
+        using var workbook = OpenWorkbook(path);
+        var index = 0;
+
+        foreach (var row in XlsxHelpers.ReadRows(
+                     XlsxHelpers.RequireSheet(workbook, path, "languages"),
+                     path,
+                     ["id", "systemId", "name", "kind", "description"]))
+        {
+            var id = row.Required("id", path).ToLowerInvariant();
+            var systemId = RequireSystem(row, systems, path);
+
+            entries.Add(new GeneratorEntryContent(
+                systemId,
+                JsonKey(GeneratorKind.Language),
+                id,
+                row.Required("name", path),
+                JsonSerializer.Serialize(new
+                {
+                    kind = row.Required("kind", path),
+                    description = row["description"].Trim(),
+                }, JsonOptions),
+                (index + 1) * 10));
+            index += 1;
+        }
+    }
+
+    private static void LoadBackgroundDetails(
+        string dataPath,
+        IReadOnlyList<ContentSystem> systems,
+        List<GeneratorEntryContent> entries)
+    {
+        var path = Path.Combine(dataPath, ContentPaths.BackgroundDetailsFile);
+        using var workbook = OpenWorkbook(path);
+        var index = 0;
+
+        foreach (var row in XlsxHelpers.ReadRows(
+                     XlsxHelpers.RequireSheet(workbook, path, "backgrounds"),
+                     path,
+                     ["id", "systemId", "name", "description", "skills", "tools", "languageCount", "equipment", "featureName", "featureText"]))
+        {
+            var id = row.Required("id", path).ToLowerInvariant();
+            var systemId = RequireSystem(row, systems, path);
+
+            entries.Add(new GeneratorEntryContent(
+                systemId,
+                JsonKey(GeneratorKind.BackgroundDetail),
+                id,
+                row.Required("name", path),
+                JsonSerializer.Serialize(new
+                {
+                    description = row["description"].Trim(),
+                    skills = SplitList(row["skills"]),
+                    tools = row["tools"].Trim(),
+                    languageCount = row.Int("languageCount", 0),
+                    equipment = row["equipment"].Trim(),
+                    featureName = row["featureName"].Trim(),
+                    featureText = row["featureText"].Trim(),
+                }, JsonOptions),
+                (index + 1) * 10));
+            index += 1;
+        }
+    }
+
+    private static void LoadClassOptions(
+        string dataPath,
+        IReadOnlyList<ContentSystem> systems,
+        List<GeneratorEntryContent> entries)
+    {
+        var path = Path.Combine(dataPath, ContentPaths.ClassOptionsFile);
+        using var workbook = OpenWorkbook(path);
+        var index = 0;
+
+        foreach (var row in XlsxHelpers.ReadRows(
+                     XlsxHelpers.RequireSheet(workbook, path, "options"),
+                     path,
+                     ["systemId", "classId", "optionType", "name", "description"]))
+        {
+            var systemId = RequireSystem(row, systems, path);
+            var classId = row.Required("classId", path).ToLowerInvariant();
+            var optionType = row.Required("optionType", path);
+
+            entries.Add(new GeneratorEntryContent(
+                systemId,
+                JsonKey(GeneratorKind.ClassOption),
+                classId,
+                row.Required("name", path),
+                JsonSerializer.Serialize(new
+                {
+                    optionType,
+                    description = row["description"].Trim(),
+                }, JsonOptions),
+                (index + 1) * 10));
+            index += 1;
+        }
+    }
+
+    private static void LoadEquipment(
+        string dataPath,
+        IReadOnlyList<ContentSystem> systems,
+        List<GeneratorEntryContent> entries)
+    {
+        var path = Path.Combine(dataPath, ContentPaths.EquipmentFile);
+        using var workbook = OpenWorkbook(path);
+
+        var armorIndex = 0;
+        foreach (var row in XlsxHelpers.ReadRows(
+                     XlsxHelpers.RequireSheet(workbook, path, "armor"),
+                     path,
+                     ["id", "systemId", "name", "type", "baseAc", "dexCap", "strengthReq", "stealthDisadvantage", "description"]))
+        {
+            var id = row.Required("id", path).ToLowerInvariant();
+            var systemId = RequireSystem(row, systems, path);
+
+            entries.Add(new GeneratorEntryContent(
+                systemId,
+                JsonKey(GeneratorKind.Armor),
+                id,
+                row.Required("name", path),
+                JsonSerializer.Serialize(new
+                {
+                    type = row.Required("type", path),
+                    baseAc = row.Int("baseAc"),
+                    dexCap = IntOrNull(row, "dexCap"),
+                    strengthReq = IntOrNull(row, "strengthReq"),
+                    stealthDisadvantage = row.Bool("stealthDisadvantage", false),
+                    description = row["description"].Trim(),
+                }, JsonOptions),
+                (armorIndex + 1) * 10));
+            armorIndex += 1;
+        }
+
+        var weaponIndex = 0;
+        foreach (var row in XlsxHelpers.ReadRows(
+                     XlsxHelpers.RequireSheet(workbook, path, "weapons"),
+                     path,
+                     ["id", "systemId", "name", "damage", "damageType", "ability", "ranged", "properties"]))
+        {
+            var id = row.Required("id", path).ToLowerInvariant();
+            var systemId = RequireSystem(row, systems, path);
+
+            entries.Add(new GeneratorEntryContent(
+                systemId,
+                JsonKey(GeneratorKind.Weapon),
+                id,
+                row.Required("name", path),
+                JsonSerializer.Serialize(new
+                {
+                    damage = row.Required("damage", path),
+                    damageType = row.Required("damageType", path),
+                    ability = row.Required("ability", path),
+                    ranged = row.Bool("ranged", false),
+                    properties = row["properties"].Trim(),
+                }, JsonOptions),
+                (weaponIndex + 1) * 10));
+            weaponIndex += 1;
+        }
+
+        var kitIndex = 0;
+        foreach (var row in XlsxHelpers.ReadRows(
+                     XlsxHelpers.RequireSheet(workbook, path, "kits"),
+                     path,
+                     ["classId", "systemId", "armorId", "shield", "weaponIds", "defaultWeaponId", "pack"]))
+        {
+            var systemId = RequireSystem(row, systems, path);
+            var classId = row.Required("classId", path).ToLowerInvariant();
+
+            entries.Add(new GeneratorEntryContent(
+                systemId,
+                JsonKey(GeneratorKind.EquipmentKit),
+                classId,
+                classId,
+                JsonSerializer.Serialize(new
+                {
+                    armorId = row["armorId"].Trim(),
+                    shield = row.Bool("shield", false),
+                    weaponIds = SplitList(row["weaponIds"]),
+                    defaultWeaponId = row["defaultWeaponId"].Trim(),
+                    pack = row["pack"].Trim(),
+                }, JsonOptions),
+                (kitIndex + 1) * 10));
+            kitIndex += 1;
+        }
+    }
+
     private static void LoadInspirations(
         string dataPath,
         IReadOnlyList<ContentSystem> systems,
@@ -501,7 +739,7 @@ public static class ContentLoader
             var kind = ParseStepKind(row.Required("kind", path));
             if (kind is null)
             {
-                row.Fail(path, $"步骤类型「{row["kind"]}」不认识，可用：class / subclass / race / subrace / background / attributes / name / summary。");
+                row.Fail(path, $"步骤类型「{row["kind"]}」不认识，可用：class / subclass / race / subrace / background / attributes / skills / languages / features / equipment / description / name / summary。");
             }
 
             steps.Add(new ContentCreationStep(
@@ -844,8 +1082,7 @@ public static class ContentLoader
     }
 
     /// <summary>「任选两项」这类待选项：返回可选的属性个数。</summary>
-    private static bool TryParseChoiceCount(string label, out int count)
-    {
+    private static bool TryParseChoiceCount(string label, out int count)    {
         count = 0;
         if (!label.StartsWith("任选", StringComparison.Ordinal))
         {
@@ -870,6 +1107,13 @@ public static class ContentLoader
 
         return count > 0;
     }
+
+    private static List<string> SplitList(string value)
+        => value.Split([',', '，', '、', ';', '；'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+
+    private static int? IntOrNull(SheetRow row, string column)
+        => int.TryParse(row[column], out var value) ? value : null;
 
     private static XLWorkbook OpenWorkbook(string path)
     {

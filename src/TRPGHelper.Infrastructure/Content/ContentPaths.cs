@@ -30,6 +30,21 @@ public static class ContentPaths
     /// <summary>阵营（九宫格：守序善良 … 混乱邪恶），带图标给车卡流程用。</summary>
     public const string AlignmentsFile = "阵营.xlsx";
 
+    /// <summary>18 项技能（关联属性、说明）。</summary>
+    public const string SkillsFile = "技能.xlsx";
+
+    /// <summary>语言（标准语 / 异界语）。</summary>
+    public const string LanguagesFile = "语言.xlsx";
+
+    /// <summary>背景详情：技能、工具、语言、装备、背景特性。</summary>
+    public const string BackgroundDetailsFile = "背景详情.xlsx";
+
+    /// <summary>1 级职业特性选项（战斗风格 / 宿敌 / 自然探索者）。</summary>
+    public const string ClassOptionsFile = "职业选项.xlsx";
+
+    /// <summary>护甲 / 武器 / 职业起始装备包。</summary>
+    public const string EquipmentFile = "装备.xlsx";
+
     public const string InspirationsFile = "职业灵感.xlsx";
 
     public const string FlowFile = "车卡流程.xlsx";

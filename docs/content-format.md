@@ -56,6 +56,10 @@
 | `accent` | 否 | 职业卡主色（没配图时用色块），例如 `#3f5a3a` |
 | `savingThrows` | 否 | 豁免熟练，逗号分隔，例如 `力量,体质`；决定属性步骤的豁免加值 |
 | `spellcastingAbility` | 否 | 1 级即可施法时的施法属性，例如 `魅力`；留空表示 1 级不施法（游侠 2 级才拿施法） |
+| `skillChoiceCount` | 否 | 从职业技能名单里选几项（游侠 3，其它 2） |
+| `skillOptions` | 否 | 可选的技能名单，逗号分隔 |
+| `armorProficiencies` | 否 | 护甲熟练文案，例如「全部护甲,盾」 |
+| `weaponProficiencies` | 否 | 武器熟练文案，例如「简易武器,军用武器」 |
 
 ## 子职.xlsx（工作表 subclasses）
 
@@ -102,6 +106,10 @@
 | `speed` | 否 | 速度（尺），留空按 30 |
 | `traits` | 是 | 种族特质列表，**一行一条**（可为空，但列必须在）；按职业卡的写法写成「`[关键词]`：说明」，方括号里的特质名要在词条库里登记 |
 | `abilityBonuses` | 是 | 决定属性用的结构化加值：`敏捷+2`、`力量+2，魅力+1`、`全部+1`（全六项）、`任选两项+1`（玩家自己挑）；列可以为空，但列必须在 |
+| `skills` | 否 | 种族直接给的技能熟练，逗号分隔（精灵察觉、半兽人威吓） |
+| `skillChoiceCount` | 否 | 种族允许自选的技能数量（半精灵 2） |
+| `languages` | 否 | 种族母语，逗号分隔（人类「通用语」、精灵「通用语,精灵语」） |
+| `languageChoiceCount` | 否 | 种族给的额外语言数量（人类 1、半精灵 1） |
 
 ## 亚种.xlsx（工作表 subraces）
 
@@ -133,6 +141,64 @@
 
 行顺序按九宫格三行排列：守序善良 / 中立善良 / 混乱善良 → 守序中立 / 绝对中立 / 混乱中立 → 守序邪恶 / 中立邪恶 / 混乱邪恶。前端固定按 3×3 网格渲染。
 
+## 技能.xlsx（工作表 skills）
+
+18 项技能，供「选择技能」与卡面技能使用。
+
+| 列 | 必填 | 说明 |
+| --- | --- | --- |
+| `id` | 是 | 技能 code（小写，例如 `athletics`） |
+| `systemId` | 是 | 引用 `systems.id` |
+| `name` | 是 | 技能名，例如「运动」 |
+| `ability` | 是 | 关联属性，「力量 / 敏捷 / 智力 / 感知 / 魅力」之一 |
+| `description` | 否 | 一句话说明 |
+
+## 语言.xlsx（工作表 languages）
+
+| 列 | 必填 | 说明 |
+| --- | --- | --- |
+| `id` | 是 | 语言 code（例如 `lang-std-1`） |
+| `systemId` | 是 | 引用 `systems.id` |
+| `name` | 是 | 语言名，例如「精灵语」 |
+| `kind` | 是 | `标准语` / `异界语` |
+| `description` | 否 | 说明 |
+
+## 背景详情.xlsx（工作表 backgrounds）
+
+「决定背景」里选的背景，和 `背景.xlsx` 的随机背景池是两份数据。
+
+| 列 | 必填 | 说明 |
+| --- | --- | --- |
+| `id` | 是 | 背景 code（例如 `soldier`） |
+| `systemId` | 是 | 引用 `systems.id` |
+| `name` | 是 | 背景名，例如「士兵」 |
+| `description` | 否 | 一句话介绍 |
+| `skills` | 是 | 固定技能熟练，逗号分隔，例如「运动,威吓」 |
+| `tools` | 否 | 工具熟练文案 |
+| `languageCount` | 否 | 背景给的额外语言数量 |
+| `equipment` | 否 | 背景起始装备（文案） |
+| `featureName` / `featureText` | 否 | 背景特性名与说明 |
+
+## 职业选项.xlsx（工作表 options）
+
+1 级职业特性选项，按 `classId` 分组，`optionType` 决定前端归到哪一类。
+
+| 列 | 必填 | 说明 |
+| --- | --- | --- |
+| `systemId` | 是 | 引用 `systems.id` |
+| `classId` | 是 | 职业 code，例如 `fighter` |
+| `optionType` | 是 | `fightingStyle` / `favoredEnemy` / `naturalExplorer` |
+| `name` | 是 | 选项名，例如「防御」「异怪」「森林」 |
+| `description` | 否 | 选项说明 |
+
+## 装备.xlsx
+
+三个工作表：
+
+- `armor`：`id`、`systemId`、`name`、`type`（轻甲 / 中甲 / 重甲 / 盾）、`baseAc`、`dexCap`（重甲填 0、中甲填 2、轻甲留空）、`strengthReq`、`stealthDisadvantage`、`description`
+- `weapons`：`id`、`systemId`、`name`、`damage`（例如 `1d8`）、`damageType`、`ability`（力量 / 敏捷）、`ranged`、`properties`
+- `kits`：`classId`、`systemId`、`armorId`、`shield`、`weaponIds`（逗号分隔）、`defaultWeaponId`、`pack`
+
 ## 职业灵感.xlsx（工作表 inspirations）
 
 | 列 | 必填 | 说明 |
@@ -146,7 +212,7 @@
 | 列 | 必填 | 说明 |
 | --- | --- | --- |
 | `systemId` | 否 | 引用 `systems.id`；留空表示通用 |
-| `kind` | 是 | 步骤类型：`class` / `subclass` / `race` / `subrace` / `background` / `attributes` / `name` / `summary`；`background` = 决定背景（当前实现为九宫格阵营），`attributes` = 决定属性（初始数值自己填，「投掷」给一组参考值；点属性看来源） |
+| `kind` | 是 | 步骤类型：`class` / `subclass` / `race` / `subrace` / `background` / `attributes` / `skills` / `languages` / `features` / `equipment` / `description` / `name` / `summary`；`background` = 决定背景（背景 + 阵营），`attributes` = 决定属性，`skills` / `languages` = 技能 / 语言，`features` = 1 级职业特性，`equipment` = 起始装备，`description` = 姓名 / 外貌 / 个性 |
 | `title` | 是 | 步骤标题（stepper 上显示） |
 | `description` | 否 | 步骤说明 |
 | `isEnabled` | 否 | 是否启用 |

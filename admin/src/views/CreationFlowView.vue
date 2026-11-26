@@ -27,7 +27,12 @@ const kindOptions: StepKindOption[] = [
   { key: 'race', label: '选择种族', hint: '种族卡列表，数据来自 种族.xlsx（已实现）' },
   { key: 'subrace', label: '选择亚种', hint: '亚种卡列表，按种族过滤，数据来自 亚种.xlsx（已实现）' },
   { key: 'background', label: '决定背景', hint: '第一步是九宫格阵营，数据来自 阵营.xlsx（已实现）' },
-  { key: 'attributes', label: '决定属性', hint: '掷骰 / 标准数组 / 手动填，点每项看来源，依赖决定背景（已实现）' },
+  { key: 'attributes', label: '决定属性', hint: '掷骰 / 手填，点每项看来源（已实现）' },
+  { key: 'skills', label: '选择技能', hint: '职业技能选择 + 背景固定技能（已实现）' },
+  { key: 'languages', label: '选择语言', hint: '种族母语 + 背景/种族额外语言（已实现）' },
+  { key: 'features', label: '职业特性', hint: '1 级特性选择：战斗风格 / 宿敌 / 自然探索者（已实现）' },
+  { key: 'equipment', label: '起始装备', hint: '职业起始包与武器选择，算 AC（已实现）' },
+  { key: 'description', label: '描述角色', hint: '姓名 / 性别 / 年龄 / 外貌 / 个性（已实现）' },
   { key: 'name', label: '起名', hint: '卡名与背景（占位，待实现）' },
   { key: 'summary', label: '确认卡面', hint: '提交前总览（占位，待实现）' },
 ]

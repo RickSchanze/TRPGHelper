@@ -117,6 +117,10 @@ public static class ContentExporter
                     ReadString(extra, "accent") ?? string.Empty,
                     ReadString(extra, "savingThrows") ?? string.Empty,
                     ReadString(extra, "spellcastingAbility") ?? string.Empty,
+                    ReadInt(extra, "skillChoiceCount") ?? 0,
+                    string.Join(',', ReadStringList(extra, "skillOptions")),
+                    string.Join(',', ReadStringList(extra, "armorProficiencies")),
+                    string.Join(',', ReadStringList(extra, "weaponProficiencies")),
                 };
             })
             .ToList();
@@ -155,6 +159,10 @@ public static class ContentExporter
                     ReadInt(extra, "speed") ?? 30,
                     string.Join('\n', ReadStringList(extra, "traits")),
                     BuildAbilityBonusesText(extra),
+                    string.Join(',', ReadStringList(extra, "skills")),
+                    ReadInt(extra, "skillChoiceCount") ?? 0,
+                    string.Join(',', ReadStringList(extra, "languages")),
+                    ReadInt(extra, "languageChoiceCount") ?? 0,
                 };
             })
             .ToList();
@@ -193,6 +201,132 @@ public static class ContentExporter
             })
             .ToList();
 
+        var skillRows = entries
+            .Where(entry => entry.Kind == GeneratorKind.Skill)
+            .Select(entry =>
+            {
+                var extra = ParseExtra(entry.ExtraJson);
+                return new object?[]
+                {
+                    entry.Category,
+                    entry.SystemCode ?? "dnd5e",
+                    entry.Value,
+                    ReadString(extra, "ability") ?? string.Empty,
+                    ReadString(extra, "description") ?? string.Empty,
+                };
+            })
+            .ToList();
+
+        var languageRows = entries
+            .Where(entry => entry.Kind == GeneratorKind.Language)
+            .Select(entry =>
+            {
+                var extra = ParseExtra(entry.ExtraJson);
+                return new object?[]
+                {
+                    entry.Category,
+                    entry.SystemCode ?? "dnd5e",
+                    entry.Value,
+                    ReadString(extra, "kind") ?? string.Empty,
+                    ReadString(extra, "description") ?? string.Empty,
+                };
+            })
+            .ToList();
+
+        var backgroundDetailRows = entries
+            .Where(entry => entry.Kind == GeneratorKind.BackgroundDetail)
+            .Select(entry =>
+            {
+                var extra = ParseExtra(entry.ExtraJson);
+                return new object?[]
+                {
+                    entry.Category,
+                    entry.SystemCode ?? "dnd5e",
+                    entry.Value,
+                    ReadString(extra, "description") ?? string.Empty,
+                    string.Join(',', ReadStringList(extra, "skills")),
+                    ReadString(extra, "tools") ?? string.Empty,
+                    ReadInt(extra, "languageCount") ?? 0,
+                    ReadString(extra, "equipment") ?? string.Empty,
+                    ReadString(extra, "featureName") ?? string.Empty,
+                    ReadString(extra, "featureText") ?? string.Empty,
+                };
+            })
+            .ToList();
+
+        var classOptionRows = entries
+            .Where(entry => entry.Kind == GeneratorKind.ClassOption)
+            .Select(entry =>
+            {
+                var extra = ParseExtra(entry.ExtraJson);
+                return new object?[]
+                {
+                    entry.SystemCode ?? "dnd5e",
+                    entry.Category,
+                    ReadString(extra, "optionType") ?? string.Empty,
+                    entry.Value,
+                    ReadString(extra, "description") ?? string.Empty,
+                };
+            })
+            .ToList();
+
+        var armorRows = entries
+            .Where(entry => entry.Kind == GeneratorKind.Armor)
+            .Select(entry =>
+            {
+                var extra = ParseExtra(entry.ExtraJson);
+                return new object?[]
+                {
+                    entry.Category,
+                    entry.SystemCode ?? "dnd5e",
+                    entry.Value,
+                    ReadString(extra, "type") ?? string.Empty,
+                    ReadInt(extra, "baseAc") ?? 0,
+                    ReadInt(extra, "dexCap"),
+                    ReadInt(extra, "strengthReq"),
+                    ReadBool(extra, "stealthDisadvantage") ?? false,
+                    ReadString(extra, "description") ?? string.Empty,
+                };
+            })
+            .ToList();
+
+        var weaponRows = entries
+            .Where(entry => entry.Kind == GeneratorKind.Weapon)
+            .Select(entry =>
+            {
+                var extra = ParseExtra(entry.ExtraJson);
+                return new object?[]
+                {
+                    entry.Category,
+                    entry.SystemCode ?? "dnd5e",
+                    entry.Value,
+                    ReadString(extra, "damage") ?? string.Empty,
+                    ReadString(extra, "damageType") ?? string.Empty,
+                    ReadString(extra, "ability") ?? string.Empty,
+                    ReadBool(extra, "ranged") ?? false,
+                    ReadString(extra, "properties") ?? string.Empty,
+                };
+            })
+            .ToList();
+
+        var kitRows = entries
+            .Where(entry => entry.Kind == GeneratorKind.EquipmentKit)
+            .Select(entry =>
+            {
+                var extra = ParseExtra(entry.ExtraJson);
+                return new object?[]
+                {
+                    entry.Category,
+                    entry.SystemCode ?? "dnd5e",
+                    ReadString(extra, "armorId") ?? string.Empty,
+                    ReadBool(extra, "shield") ?? false,
+                    string.Join(',', ReadStringList(extra, "weaponIds")),
+                    ReadString(extra, "defaultWeaponId") ?? string.Empty,
+                    ReadString(extra, "pack") ?? string.Empty,
+                };
+            })
+            .ToList();
+
         var inspirationRows = entries
             .Where(entry => entry.Kind == GeneratorKind.Inspiration)
             .Select(entry => new object?[]
@@ -213,7 +347,7 @@ public static class ContentExporter
         using (var workbook = new XLWorkbook())
         {
             XlsxHelpers.WriteSheet(workbook, "classes",
-                ["id", "systemId", "name", "description", "hitDie", "primaryAbility", "imageUrl", "features", "accent", "savingThrows", "spellcastingAbility"],
+                ["id", "systemId", "name", "description", "hitDie", "primaryAbility", "imageUrl", "features", "accent", "savingThrows", "spellcastingAbility", "skillChoiceCount", "skillOptions", "armorProficiencies", "weaponProficiencies"],
                 classRows,
                 new Dictionary<string, double>
                 {
@@ -228,6 +362,10 @@ public static class ContentExporter
                     ["accent"] = 12,
                     ["savingThrows"] = 22,
                     ["spellcastingAbility"] = 22,
+                    ["skillChoiceCount"] = 12,
+                    ["skillOptions"] = 40,
+                    ["armorProficiencies"] = 20,
+                    ["weaponProficiencies"] = 22,
                 },
                 new HashSet<string> { "description", "features" });
             written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.ClassesFile)));
@@ -256,7 +394,7 @@ public static class ContentExporter
         using (var workbook = new XLWorkbook())
         {
             XlsxHelpers.WriteSheet(workbook, "races",
-                ["id", "systemId", "name", "description", "abilityBonus", "speed", "traits", "abilityBonuses"],
+                ["id", "systemId", "name", "description", "abilityBonus", "speed", "traits", "abilityBonuses", "skills", "skillChoiceCount", "languages", "languageChoiceCount"],
                 raceRows,
                 new Dictionary<string, double>
                 {
@@ -268,6 +406,10 @@ public static class ContentExporter
                     ["speed"] = 8,
                     ["traits"] = 64,
                     ["abilityBonuses"] = 20,
+                    ["skills"] = 16,
+                    ["skillChoiceCount"] = 14,
+                    ["languages"] = 18,
+                    ["languageChoiceCount"] = 16,
                 },
                 new HashSet<string> { "description", "traits" });
             written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.RacesFile)));
@@ -306,6 +448,104 @@ public static class ContentExporter
                     ["accent"] = 12,
                 });
             written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.AlignmentsFile)));
+        }
+
+        using (var workbook = new XLWorkbook())
+        {
+            XlsxHelpers.WriteSheet(workbook, "skills",
+                ["id", "systemId", "name", "ability", "description"],
+                skillRows,
+                new Dictionary<string, double> { ["id"] = 16, ["systemId"] = 10, ["name"] = 12, ["ability"] = 10, ["description"] = 44 },
+                new HashSet<string> { "description" });
+            written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.SkillsFile)));
+        }
+
+        using (var workbook = new XLWorkbook())
+        {
+            XlsxHelpers.WriteSheet(workbook, "languages",
+                ["id", "systemId", "name", "kind", "description"],
+                languageRows,
+                new Dictionary<string, double> { ["id"] = 14, ["systemId"] = 10, ["name"] = 14, ["kind"] = 10, ["description"] = 30 });
+            written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.LanguagesFile)));
+        }
+
+        using (var workbook = new XLWorkbook())
+        {
+            XlsxHelpers.WriteSheet(workbook, "backgrounds",
+                ["id", "systemId", "name", "description", "skills", "tools", "languageCount", "equipment", "featureName", "featureText"],
+                backgroundDetailRows,
+                new Dictionary<string, double>
+                {
+                    ["id"] = 16,
+                    ["systemId"] = 10,
+                    ["name"] = 12,
+                    ["description"] = 38,
+                    ["skills"] = 16,
+                    ["tools"] = 30,
+                    ["languageCount"] = 12,
+                    ["equipment"] = 56,
+                    ["featureName"] = 14,
+                    ["featureText"] = 50,
+                },
+                new HashSet<string> { "description", "equipment", "featureText" });
+            written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.BackgroundDetailsFile)));
+        }
+
+        using (var workbook = new XLWorkbook())
+        {
+            XlsxHelpers.WriteSheet(workbook, "options",
+                ["systemId", "classId", "optionType", "name", "description"],
+                classOptionRows,
+                new Dictionary<string, double> { ["systemId"] = 10, ["classId"] = 12, ["optionType"] = 16, ["name"] = 16, ["description"] = 50 },
+                new HashSet<string> { "description" });
+            written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.ClassOptionsFile)));
+        }
+
+        using (var workbook = new XLWorkbook())
+        {
+            XlsxHelpers.WriteSheet(workbook, "armor",
+                ["id", "systemId", "name", "type", "baseAc", "dexCap", "strengthReq", "stealthDisadvantage", "description"],
+                armorRows,
+                new Dictionary<string, double>
+                {
+                    ["id"] = 14,
+                    ["systemId"] = 10,
+                    ["name"] = 12,
+                    ["type"] = 10,
+                    ["baseAc"] = 8,
+                    ["dexCap"] = 8,
+                    ["strengthReq"] = 10,
+                    ["stealthDisadvantage"] = 16,
+                    ["description"] = 34,
+                });
+            XlsxHelpers.WriteSheet(workbook, "weapons",
+                ["id", "systemId", "name", "damage", "damageType", "ability", "ranged", "properties"],
+                weaponRows,
+                new Dictionary<string, double>
+                {
+                    ["id"] = 14,
+                    ["systemId"] = 10,
+                    ["name"] = 12,
+                    ["damage"] = 8,
+                    ["damageType"] = 10,
+                    ["ability"] = 8,
+                    ["ranged"] = 8,
+                    ["properties"] = 36,
+                });
+            XlsxHelpers.WriteSheet(workbook, "kits",
+                ["classId", "systemId", "armorId", "shield", "weaponIds", "defaultWeaponId", "pack"],
+                kitRows,
+                new Dictionary<string, double>
+                {
+                    ["classId"] = 12,
+                    ["systemId"] = 10,
+                    ["armorId"] = 12,
+                    ["shield"] = 8,
+                    ["weaponIds"] = 28,
+                    ["defaultWeaponId"] = 16,
+                    ["pack"] = 14,
+                });
+            written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.EquipmentFile)));
         }
 
         using (var workbook = new XLWorkbook())
@@ -500,6 +740,13 @@ public static class ContentExporter
                 ? propertyValue.GetString()
                 : null;
 
+    private static bool? ReadBool(JsonElement? element, string property)
+        => element is { ValueKind: JsonValueKind.Object } value
+            && value.TryGetProperty(property, out var propertyValue)
+            && propertyValue.ValueKind is JsonValueKind.True or JsonValueKind.False
+                ? propertyValue.GetBoolean()
+                : null;
+
     private static int? ReadInt(JsonElement? element, string property)
         => element is { ValueKind: JsonValueKind.Object } value
             && value.TryGetProperty(property, out var propertyValue)
@@ -554,3 +801,4 @@ public static class ContentExporter
                 ? propertyValue.EnumerateArray().Where(item => item.ValueKind == JsonValueKind.Object)
                 : Enumerable.Empty<JsonElement>();
 }
+

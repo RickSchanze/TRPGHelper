@@ -281,8 +281,179 @@ public sealed class GeneratorCatalogService(AppDbContext db)
             ReadString(extra, "spellcastingAbility") ?? string.Empty,
             ReadStringList(extra, "features"),
             ReadString(extra, "imageUrl"),
-            ReadString(extra, "accent"));
+            ReadString(extra, "accent"),
+            ReadInt(extra, "skillChoiceCount") ?? 0,
+            ReadStringList(extra, "skillOptions"),
+            ReadStringList(extra, "armorProficiencies"),
+            ReadStringList(extra, "weaponProficiencies"));
     }
+
+    public async Task<IReadOnlyList<SkillOptionDto>> SkillsAsync(string? systemCode, CancellationToken cancellationToken)
+    {
+        var system = await ResolveSystemAsync(systemCode, cancellationToken);
+        if (system is null)
+        {
+            return [];
+        }
+
+        var entries = await EntriesAsync(system.Code, [GeneratorKind.Skill], cancellationToken);
+        return entries.Select(entry => new SkillOptionDto(
+            entry.Category,
+            entry.Value,
+            ReadString(ParseExtra(entry.ExtraJson), "ability") ?? string.Empty,
+            ReadString(ParseExtra(entry.ExtraJson), "description") ?? string.Empty)).ToList();
+    }
+
+    public async Task<IReadOnlyList<LanguageOptionDto>> LanguagesAsync(string? systemCode, CancellationToken cancellationToken)
+    {
+        var system = await ResolveSystemAsync(systemCode, cancellationToken);
+        if (system is null)
+        {
+            return [];
+        }
+
+        var entries = await EntriesAsync(system.Code, [GeneratorKind.Language], cancellationToken);
+        return entries.Select(entry =>
+        {
+            var extra = ParseExtra(entry.ExtraJson);
+            return new LanguageOptionDto(
+                entry.Category,
+                entry.Value,
+                ReadString(extra, "kind") ?? string.Empty,
+                ReadString(extra, "description") ?? string.Empty);
+        }).ToList();
+    }
+
+    public async Task<IReadOnlyList<BackgroundDetailDto>> BackgroundsAsync(string? systemCode, CancellationToken cancellationToken)
+    {
+        var system = await ResolveSystemAsync(systemCode, cancellationToken);
+        if (system is null)
+        {
+            return [];
+        }
+
+        var entries = await EntriesAsync(system.Code, [GeneratorKind.BackgroundDetail], cancellationToken);
+        return entries.Select(entry =>
+        {
+            var extra = ParseExtra(entry.ExtraJson);
+            return new BackgroundDetailDto(
+                entry.Category,
+                entry.Value,
+                ReadString(extra, "description") ?? string.Empty,
+                ReadStringList(extra, "skills"),
+                ReadString(extra, "tools") ?? string.Empty,
+                ReadInt(extra, "languageCount") ?? 0,
+                ReadString(extra, "equipment") ?? string.Empty,
+                ReadString(extra, "featureName") ?? string.Empty,
+                ReadString(extra, "featureText") ?? string.Empty);
+        }).ToList();
+    }
+
+    public async Task<IReadOnlyList<FeatureOptionDto>> ClassOptionsAsync(
+        string? systemCode,
+        string? classId,
+        CancellationToken cancellationToken)
+    {
+        var system = await ResolveSystemAsync(systemCode, cancellationToken);
+        if (system is null)
+        {
+            return [];
+        }
+
+        var entries = await EntriesAsync(system.Code, [GeneratorKind.ClassOption], cancellationToken);
+        if (!string.IsNullOrWhiteSpace(classId))
+        {
+            var code = classId.Trim().ToLowerInvariant();
+            entries = entries.Where(entry => entry.Category == code).ToList();
+        }
+
+        return entries.Select(entry =>
+        {
+            var extra = ParseExtra(entry.ExtraJson);
+            return new FeatureOptionDto(
+                entry.Category,
+                ReadString(extra, "optionType") ?? string.Empty,
+                entry.Value,
+                ReadString(extra, "description") ?? string.Empty);
+        }).ToList();
+    }
+
+    public async Task<EquipmentResponse> EquipmentAsync(
+        string? systemCode,
+        string? classId,
+        CancellationToken cancellationToken)
+    {
+        var system = await ResolveSystemAsync(systemCode, cancellationToken);
+        if (system is null)
+        {
+            return new EquipmentResponse([], [], null);
+        }
+
+        var entries = await EntriesAsync(
+            system.Code,
+            [GeneratorKind.Armor, GeneratorKind.Weapon, GeneratorKind.EquipmentKit],
+            cancellationToken);
+
+        var armor = entries
+            .Where(entry => entry.Kind == GeneratorKind.Armor)
+            .Select(entry =>
+            {
+                var extra = ParseExtra(entry.ExtraJson);
+                return new ArmorOptionDto(
+                    entry.Category,
+                    entry.Value,
+                    ReadString(extra, "type") ?? string.Empty,
+                    ReadInt(extra, "baseAc") ?? 0,
+                    ReadInt(extra, "dexCap"),
+                    ReadInt(extra, "strengthReq"),
+                    ReadBool(extra, "stealthDisadvantage") ?? false,
+                    ReadString(extra, "description") ?? string.Empty);
+            })
+            .ToList();
+
+        var weapons = entries
+            .Where(entry => entry.Kind == GeneratorKind.Weapon)
+            .Select(entry =>
+            {
+                var extra = ParseExtra(entry.ExtraJson);
+                return new WeaponOptionDto(
+                    entry.Category,
+                    entry.Value,
+                    ReadString(extra, "damage") ?? string.Empty,
+                    ReadString(extra, "damageType") ?? string.Empty,
+                    ReadString(extra, "ability") ?? string.Empty,
+                    ReadBool(extra, "ranged") ?? false,
+                    ReadString(extra, "properties") ?? string.Empty);
+            })
+            .ToList();
+
+        var code = classId?.Trim().ToLowerInvariant();
+        var kitEntry = entries
+            .Where(entry => entry.Kind == GeneratorKind.EquipmentKit)
+            .FirstOrDefault(entry => code is not null && entry.Category == code);
+
+        EquipmentKitDto? kit = null;
+        if (kitEntry is not null)
+        {
+            var extra = ParseExtra(kitEntry.ExtraJson);
+            kit = new EquipmentKitDto(
+                kitEntry.Category,
+                ReadString(extra, "armorId") ?? string.Empty,
+                ReadBool(extra, "shield") ?? false,
+                ReadStringList(extra, "weaponIds"),
+                ReadString(extra, "defaultWeaponId") ?? string.Empty,
+                ReadString(extra, "pack") ?? string.Empty);
+        }
+
+        return new EquipmentResponse(armor, weapons, kit);
+    }
+
+    internal static bool? ReadBool(JsonElement? element, string property)
+        => element is { ValueKind: JsonValueKind.Object } value
+            && value.TryGetProperty(property, out var propertyValue)
+            && propertyValue.ValueKind is JsonValueKind.True or JsonValueKind.False
+                ? propertyValue.GetBoolean()
+                : null;
 
     internal static RaceOptionDto ToRaceOption(GeneratorEntry entry)
     {
@@ -295,7 +466,11 @@ public sealed class GeneratorCatalogService(AppDbContext db)
             ReadInt(extra, "speed") ?? 30,
             ReadStringList(extra, "traits"),
             ReadAbilityBonuses(extra),
-            ReadAbilityChoices(extra));
+            ReadAbilityChoices(extra),
+            ReadStringList(extra, "skills"),
+            ReadInt(extra, "skillChoiceCount") ?? 0,
+            ReadStringList(extra, "languages"),
+            ReadInt(extra, "languageChoiceCount") ?? 0);
     }
 
     internal static IReadOnlyList<AbilityBonusDto> ReadAbilityBonuses(JsonElement? extra)

@@ -45,7 +45,83 @@
       <view class="section-title">技能</view>
       <view v-for="skill in card.sheet.skills" :key="skill.name" class="skill">
         <KeywordText :text="skill.name" />
-        <text class="muted">{{ skill.value }}</text>
+        <text class="muted">{{ skill.value }}{{ skill.note ? ` · ${skill.note}` : '' }}</text>
+      </view>
+    </view>
+
+    <view v-if="combat" class="section">
+      <view class="section-title">战斗</view>
+      <view class="stat-row">
+        <view class="stat"><view class="stat-value">{{ combat.hitPoints }}</view><view class="muted stat-label">生命上限</view></view>
+        <view class="stat"><view class="stat-value">{{ combat.armorClass }}</view><view class="muted stat-label">AC</view></view>
+        <view class="stat"><view class="stat-value">{{ signed(combat.initiative) }}</view><view class="muted stat-label">先攻</view></view>
+        <view class="stat"><view class="stat-value">{{ combat.speed }}</view><view class="muted stat-label">速度</view></view>
+        <view class="stat"><view class="stat-value">{{ signed(combat.proficiencyBonus) }}</view><view class="muted stat-label">熟练</view></view>
+        <view class="stat"><view class="stat-value">{{ combat.passivePerception }}</view><view class="muted stat-label">被动察觉</view></view>
+      </view>
+      <view v-if="savingThrowEntries.length" class="detail-row">
+        <text class="muted">豁免</text>
+        <text>{{ savingThrowEntries.map(([name, value]) => `${name} ${signed(value)}`).join(' · ') }}</text>
+      </view>
+    </view>
+
+    <view v-if="hasDescription" class="section">
+      <view class="section-title">背景与描述</view>
+      <view v-if="card.sheet.backgroundName" class="detail-row">
+        <text class="muted">背景</text><text>{{ card.sheet.backgroundName }}</text>
+      </view>
+      <view v-if="card.sheet.gender" class="detail-row">
+        <text class="muted">性别</text><text>{{ card.sheet.gender }}</text>
+      </view>
+      <view v-if="card.age" class="detail-row">
+        <text class="muted">年龄</text><text>{{ card.age }}</text>
+      </view>
+      <view v-if="card.sheet.height" class="detail-row">
+        <text class="muted">身高</text><text>{{ card.sheet.height }}</text>
+      </view>
+      <view v-if="card.sheet.weight" class="detail-row">
+        <text class="muted">体重</text><text>{{ card.sheet.weight }}</text>
+      </view>
+      <view v-if="card.sheet.appearance" class="detail-row">
+        <text class="muted">外貌</text><text>{{ card.sheet.appearance }}</text>
+      </view>
+      <view v-if="card.sheet.personality.trait" class="detail-row">
+        <text class="muted">性格</text><text>{{ card.sheet.personality.trait }}</text>
+      </view>
+      <view v-if="card.sheet.personality.ideal" class="detail-row">
+        <text class="muted">理想</text><text>{{ card.sheet.personality.ideal }}</text>
+      </view>
+      <view v-if="card.sheet.personality.bond" class="detail-row">
+        <text class="muted">牵绊</text><text>{{ card.sheet.personality.bond }}</text>
+      </view>
+      <view v-if="card.sheet.personality.flaw" class="detail-row">
+        <text class="muted">缺点</text><text>{{ card.sheet.personality.flaw }}</text>
+      </view>
+    </view>
+
+    <view v-if="card.sheet.languages.length" class="section">
+      <view class="section-title">语言</view>
+      <view class="detail-row"><text>{{ card.sheet.languages.join('、') }}</text></view>
+    </view>
+
+    <view v-if="proficiencyEntries.length" class="section">
+      <view class="section-title">熟练项</view>
+      <view v-for="entry in proficiencyEntries" :key="entry.label" class="detail-row">
+        <text class="muted">{{ entry.label }}</text><text>{{ entry.value.join('、') }}</text>
+      </view>
+    </view>
+
+    <view v-if="card.sheet.equipment.length" class="section">
+      <view class="section-title">装备</view>
+      <view v-for="item in card.sheet.equipment" :key="item.name" class="detail-row">
+        <text>{{ item.name }} ×{{ item.quantity }}</text><text class="muted">{{ item.note }}</text>
+      </view>
+    </view>
+
+    <view v-if="featureEntries.length" class="section">
+      <view class="section-title">特性选择</view>
+      <view v-for="entry in featureEntries" :key="entry.label" class="detail-row">
+        <text class="muted">{{ entry.label }}</text><text>{{ entry.value }}</text>
       </view>
     </view>
 
@@ -72,7 +148,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { request } from '../../api/http'
 import type { CardStatusKey, CharacterDetail } from '../../api/types'
@@ -95,6 +171,62 @@ const labels: Record<CardStatusKey, string> = {
 function actionLabel(status: CardStatusKey): string {
   return labels[status] ?? status
 }
+
+function signed(value: number): string {
+  return value >= 0 ? `+${value}` : String(value)
+}
+
+const combat = computed(() => {
+  const value = card.value?.sheet.combat
+  return value && value.hitPoints > 0 ? value : null
+})
+
+const savingThrowEntries = computed(() => Object.entries(combat.value?.savingThrows ?? {}))
+
+const FEATURE_LABELS: Record<string, string> = {
+  fightingStyle: '战斗风格',
+  favoredEnemy: '宿敌',
+  naturalExplorer: '自然探索者',
+}
+
+const featureEntries = computed(() =>
+  Object.entries(card.value?.sheet.featureChoices ?? {}).map(([key, value]) => ({
+    label: FEATURE_LABELS[key] ?? key,
+    value,
+  })),
+)
+
+const proficiencyEntries = computed(() => {
+  const proficiencies = card.value?.sheet.proficiencies
+  if (!proficiencies) {
+    return []
+  }
+
+  return [
+    { label: '护甲', value: proficiencies.armor },
+    { label: '武器', value: proficiencies.weapons },
+    { label: '工具', value: proficiencies.tools },
+  ].filter((entry) => entry.value.length > 0)
+})
+
+const hasDescription = computed(() => {
+  const sheet = card.value?.sheet
+  if (!sheet) {
+    return false
+  }
+
+  return Boolean(
+    sheet.backgroundName ||
+      sheet.gender ||
+      sheet.height ||
+      sheet.weight ||
+      sheet.appearance ||
+      sheet.personality?.trait ||
+      sheet.personality?.ideal ||
+      sheet.personality?.bond ||
+      sheet.personality?.flaw,
+  )
+})
 
 /** 「系统 · 职业 · 子职 · 种族 · 亚种 · 阵营 · 职业 · 年龄」一行，交给关键词组件统一渲染。 */
 function metaText(detail: CharacterDetail): string {
@@ -263,6 +395,41 @@ onLoad((options) => {
   font-size: 18rpx;
 }
 
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 4rpx;
+}
+
+.stat {
+  width: 33.33%;
+  padding: 10rpx 0;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 40rpx;
+  font-weight: 600;
+  color: $trpg-accent-deep;
+}
+
+.stat-label {
+  font-size: 20rpx;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 12rpx 0;
+  border-bottom: 2rpx solid $trpg-line;
+  font-size: 24rpx;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
 .skill,
 .log {
   padding: 16rpx 0;
@@ -361,6 +528,25 @@ onLoad((options) => {
 
   .attr-formula {
     font-size: 11px;
+  }
+
+  .stat {
+    width: 16.66%;
+    padding: 8px 0;
+  }
+
+  .stat-value {
+    font-size: 24px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+  }
+
+  .detail-row {
+    padding: 8px 0;
+    border-bottom-width: 1px;
+    font-size: 13px;
   }
 
   .skill,

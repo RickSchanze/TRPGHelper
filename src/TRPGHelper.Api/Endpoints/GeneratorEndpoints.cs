@@ -52,6 +52,26 @@ public static class GeneratorEndpoints
                 Results.Ok(await catalog.AlignmentsAsync(systemCode, cancellationToken)))
             .WithSummary("阵营列表（九宫格，带图标）");
 
+        group.MapGet("/skills", async (string? systemCode, GeneratorCatalogService catalog, CancellationToken cancellationToken) =>
+                Results.Ok(await catalog.SkillsAsync(systemCode, cancellationToken)))
+            .WithSummary("技能列表（18 项，带关联属性）");
+
+        group.MapGet("/languages", async (string? systemCode, GeneratorCatalogService catalog, CancellationToken cancellationToken) =>
+                Results.Ok(await catalog.LanguagesAsync(systemCode, cancellationToken)))
+            .WithSummary("语言列表（标准语 / 异界语）");
+
+        group.MapGet("/backgrounds", async (string? systemCode, GeneratorCatalogService catalog, CancellationToken cancellationToken) =>
+                Results.Ok(await catalog.BackgroundsAsync(systemCode, cancellationToken)))
+            .WithSummary("背景列表（技能 / 工具 / 语言 / 装备 / 特性）");
+
+        group.MapGet("/class-options", async (string? systemCode, string? classId, GeneratorCatalogService catalog, CancellationToken cancellationToken) =>
+                Results.Ok(await catalog.ClassOptionsAsync(systemCode, classId, cancellationToken)))
+            .WithSummary("1 级职业特性选项（战斗风格 / 宿敌 / 自然探索者）");
+
+        group.MapGet("/equipment", async (string? systemCode, string? classId, GeneratorCatalogService catalog, CancellationToken cancellationToken) =>
+                Results.Ok(await catalog.EquipmentAsync(systemCode, classId, cancellationToken)))
+            .WithSummary("装备（护甲 / 武器 / 职业起始包）");
+
         group.MapGet("/inspirations", async (string? systemCode, int? count, GeneratorCatalogService catalog, CancellationToken cancellationToken) =>
                 Results.Ok(await catalog.InspirationsAsync(systemCode, count ?? 3, null, cancellationToken)))
             .WithSummary("车卡灵感（故事钩子）");

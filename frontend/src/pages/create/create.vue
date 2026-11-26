@@ -359,6 +359,44 @@
             <KeywordText :text="currentStep.description" />
           </view>
 
+          <view class="bg-section-title">背景</view>
+          <view v-if="!backgroundCatalog.length" class="muted">正在加载背景…</view>
+          <view v-else class="bg-cards">
+            <view
+              v-for="item in backgroundCatalog"
+              :key="item.id"
+              class="bg-card"
+              :class="{ 'bg-card-selected': draft.backgroundCode === item.id }"
+              @tap="pickBackground(item)"
+            >
+              <view class="bg-card-head">
+                <view class="bg-card-name">
+                  <KeywordText :text="'[' + item.name + ']'" />
+                </view>
+                <view v-if="draft.backgroundCode === item.id" class="race-check">✓</view>
+              </view>
+              <view class="bg-card-desc muted">{{ item.description }}</view>
+              <view class="bg-card-meta muted">技能：{{ item.skills.join('、') }}</view>
+            </view>
+          </view>
+
+          <view v-if="backgroundOption" class="bg-grant">
+            <view class="bg-grant-row"><text class="muted">技能熟练</text><text>{{ backgroundOption.skills.join('、') }}</text></view>
+            <view v-if="backgroundOption.tools && backgroundOption.tools !== '无'" class="bg-grant-row">
+              <text class="muted">工具</text><text>{{ backgroundOption.tools }}</text>
+            </view>
+            <view v-if="backgroundOption.languageCount" class="bg-grant-row">
+              <text class="muted">额外语言</text><text>{{ backgroundOption.languageCount }} 门</text>
+            </view>
+            <view class="bg-grant-row"><text class="muted">装备</text><text>{{ backgroundOption.equipment }}</text></view>
+            <view class="bg-grant-row">
+              <text class="muted">背景特性</text>
+              <text>{{ backgroundOption.featureName }}：{{ backgroundOption.featureText }}</text>
+            </view>
+          </view>
+
+          <view class="bg-section-title">阵营</view>
+
           <view v-if="alignmentsLoading" class="muted">正在加载阵营…</view>
           <view v-else-if="alignmentsError" class="load-error" @tap="loadAlignments">
             <text class="muted">阵营加载失败，点这里重试</text>
@@ -531,6 +569,234 @@
           </template>
         </view>
 
+        <!-- 选择技能 -->
+        <view v-else-if="isSkillsStep" class="panel">
+          <view class="panel-title"><KeywordText :text="currentStep?.title || '选择技能'" /></view>
+          <view v-if="currentStep?.description" class="muted step-hint">
+            <KeywordText :text="currentStep.description" />
+          </view>
+          <view class="muted option-hint">
+            职业可自选 {{ classOption?.skillChoiceCount ?? 0 }} 项<template v-if="raceOption?.skillChoiceCount">，{{ raceOption?.name }} 再自选 {{ raceOption?.skillChoiceCount }} 项</template>；背景与种族固定给的已锁定。
+          </view>
+          <view v-if="!skillCatalog.length" class="muted">正在加载技能…</view>
+          <view v-else class="skill-grid">
+            <view
+              v-for="row in skillRows"
+              :key="row.id"
+              class="skill-chip"
+              :class="{
+                'skill-granted': row.granted,
+                'skill-chosen': row.chosen,
+                'skill-locked': !row.granted && !row.selectable,
+              }"
+              @tap="pickSkill(row.name)"
+            >
+              <text>{{ row.name }}</text>
+              <text class="skill-ability muted">{{ row.ability }}</text>
+            </view>
+          </view>
+          <view class="muted option-count">已选 {{ draft.selectedSkills.length }} / {{ skillPickCount }}</view>
+        </view>
+
+        <!-- 选择语言 -->
+        <view v-else-if="isLanguagesStep" class="panel">
+          <view class="panel-title"><KeywordText :text="currentStep?.title || '选择语言'" /></view>
+          <view v-if="currentStep?.description" class="muted step-hint">
+            <KeywordText :text="currentStep.description" />
+          </view>
+          <view class="muted option-hint">
+            种族母语：{{ grantedLanguages.join('、') || '无' }}；背景额外 {{ backgroundOption?.languageCount ?? 0 }} 门，种族额外 {{ raceOption?.languageChoiceCount ?? 0 }} 门。
+          </view>
+          <view v-if="!languageCatalog.length" class="muted">正在加载语言…</view>
+          <view v-else class="skill-grid">
+            <view
+              v-for="row in languageRows"
+              :key="row.id"
+              class="skill-chip"
+              :class="{ 'skill-granted': row.granted, 'skill-chosen': row.chosen }"
+              @tap="pickLanguage(row.name)"
+            >
+              <text>{{ row.name }}</text>
+              <text class="skill-ability muted">{{ row.kind }}</text>
+            </view>
+          </view>
+          <view class="muted option-count">已选 {{ draft.selectedLanguages.length }} / {{ languagePickCount }}</view>
+        </view>
+
+        <!-- 1 级职业特性 -->
+        <view v-else-if="isFeaturesStep" class="panel">
+          <view class="panel-title"><KeywordText :text="currentStep?.title || '职业特性'" /></view>
+          <view v-if="currentStep?.description" class="muted step-hint">
+            <KeywordText :text="currentStep.description" />
+          </view>
+          <view v-if="!featureGroups.length" class="muted">这个职业 1 级没有可选特性，直接下一步。</view>
+          <view v-for="group in featureGroups" :key="group.type" class="feature-group">
+            <view class="bg-section-title">{{ group.label }}</view>
+            <view class="skill-grid">
+              <view
+                v-for="option in group.options"
+                :key="option.name"
+                class="skill-chip"
+                :class="{ 'skill-chosen': draft.featureChoices[group.type] === option.name }"
+                @tap="pickFeature(group.type, option.name)"
+              >
+                <text>{{ option.name }}</text>
+              </view>
+            </view>
+          </view>
+          <view v-if="featureGroups.length" class="muted option-count">每个类别选 1 项</view>
+        </view>
+
+        <!-- 起始装备 -->
+        <view v-else-if="isEquipmentStep" class="panel">
+          <view class="panel-title"><KeywordText :text="currentStep?.title || '起始装备'" /></view>
+          <view v-if="currentStep?.description" class="muted step-hint">
+            <KeywordText :text="currentStep.description" />
+          </view>
+          <view v-if="!equipmentCatalog" class="muted">正在加载装备…</view>
+          <view v-else-if="!equipmentCatalog.kit" class="muted">这个职业还没配置起始装备，直接下一步。</view>
+          <template v-else>
+            <view class="equip-kit">
+              <view class="equip-row"><text class="muted">护甲</text><text>{{ armorOption?.name || '无甲' }}</text></view>
+              <view class="equip-row"><text class="muted">盾</text><text>{{ equipmentCatalog.kit.shield ? '有（AC +2）' : '无' }}</text></view>
+              <view class="equip-row"><text class="muted">装备包</text><text>{{ equipmentCatalog.kit.pack || '无' }}</text></view>
+            </view>
+            <view class="bg-section-title">武器</view>
+            <view class="skill-grid">
+              <view
+                v-for="weapon in weaponOptions"
+                :key="weapon.id"
+                class="skill-chip"
+                :class="{ 'skill-chosen': selectedWeapon?.id === weapon.id }"
+                @tap="pickWeapon(weapon.id)"
+              >
+                <text>{{ weapon.name }}</text>
+                <text class="skill-ability muted">{{ weapon.damage }}</text>
+              </view>
+            </view>
+            <view class="equip-stats">
+              <view class="equip-stat">
+                <text class="equip-stat-value">{{ combatSummary.hitPoints }}</text>
+                <text class="muted">生命上限</text>
+              </view>
+              <view class="equip-stat">
+                <text class="equip-stat-value">{{ combatSummary.armorClass }}</text>
+                <text class="muted">AC</text>
+              </view>
+              <view class="equip-stat">
+                <text class="equip-stat-value">{{ signed(combatSummary.initiative) }}</text>
+                <text class="muted">先攻</text>
+              </view>
+              <view class="equip-stat">
+                <text class="equip-stat-value">{{ signed(combatSummary.attackBonus) }}</text>
+                <text class="muted">{{ combatSummary.weaponName }}攻击</text>
+              </view>
+            </view>
+          </template>
+        </view>
+
+        <!-- 描述角色 -->
+        <view v-else-if="isDescriptionStep" class="panel">
+          <view class="panel-title"><KeywordText :text="currentStep?.title || '描述角色'" /></view>
+          <view v-if="currentStep?.description" class="muted step-hint">
+            <KeywordText :text="currentStep.description" />
+          </view>
+          <view class="desc-field">
+            <text class="desc-label muted">名字</text>
+            <view class="desc-name-row">
+              <input
+                class="desc-input"
+                :value="draft.characterName"
+                placeholder="给角色起个名字"
+                @input="setDraftText('characterName', $event.detail.value)"
+              />
+              <view class="desc-random" @tap="randomCharacterName">随机</view>
+            </view>
+          </view>
+          <view class="desc-field">
+            <text class="desc-label muted">性别</text>
+            <input
+              class="desc-input"
+              :value="draft.gender"
+              placeholder="男 / 女 / 其他"
+              @input="setDraftText('gender', $event.detail.value)"
+            />
+          </view>
+          <view class="desc-field">
+            <text class="desc-label muted">年龄</text>
+            <input
+              class="desc-input"
+              type="number"
+              :value="draft.age ? String(draft.age) : ''"
+              placeholder="例如 25"
+              @input="setDraftAge($event.detail.value)"
+            />
+          </view>
+          <view class="desc-field">
+            <text class="desc-label muted">身高</text>
+            <input
+              class="desc-input"
+              :value="draft.height"
+              placeholder="例如 5 尺 8 寸"
+              @input="setDraftText('height', $event.detail.value)"
+            />
+          </view>
+          <view class="desc-field">
+            <text class="desc-label muted">体重</text>
+            <input
+              class="desc-input"
+              :value="draft.weight"
+              placeholder="例如 150 磅"
+              @input="setDraftText('weight', $event.detail.value)"
+            />
+          </view>
+          <view class="desc-field">
+            <text class="desc-label muted">外貌</text>
+            <textarea
+              class="desc-textarea"
+              :value="draft.appearance"
+              placeholder="发色、眼睛、衣着、习惯动作…"
+              @input="setDraftText('appearance', $event.detail.value)"
+            />
+          </view>
+          <view class="desc-field">
+            <text class="desc-label muted">性格特质</text>
+            <input
+              class="desc-input"
+              :value="draft.trait"
+              placeholder="一句话性格"
+              @input="setDraftText('trait', $event.detail.value)"
+            />
+          </view>
+          <view class="desc-field">
+            <text class="desc-label muted">理想</text>
+            <input
+              class="desc-input"
+              :value="draft.ideal"
+              placeholder="角色相信什么"
+              @input="setDraftText('ideal', $event.detail.value)"
+            />
+          </view>
+          <view class="desc-field">
+            <text class="desc-label muted">牵绊</text>
+            <input
+              class="desc-input"
+              :value="draft.bond"
+              placeholder="放不下的人或事"
+              @input="setDraftText('bond', $event.detail.value)"
+            />
+          </view>
+          <view class="desc-field">
+            <text class="desc-label muted">缺点</text>
+            <input
+              class="desc-input"
+              :value="draft.flaw"
+              placeholder="弱点或秘密"
+              @input="setDraftText('flaw', $event.detail.value)"
+            />
+          </view>
+        </view>
+
         <!-- 其它类型的步骤：面板还没做，先按配置占位 -->
         <view v-else class="panel placeholder-panel">
           <view class="panel-title">
@@ -683,13 +949,19 @@ import { request } from '../../api/http'
 import type {
   AbilityScoresResponse,
   AlignmentOption,
+  BackgroundDetail,
   ClassOption,
   CreationFlow,
   CreationStep,
+  EquipmentResponse,
+  FeatureOption,
   GameSystem,
+  LanguageOption,
   RaceOption,
+  SkillOption,
   SubclassOption,
   SubraceOption,
+  WeaponOption,
 } from '../../api/types'
 import { clearDraft, emptyDraft, loadDraft, saveDraft, type CreateDraft } from '../../stores/createDraft'
 import { ensureKeywords, findKeyword, openKeyword } from '../../stores/keywords'
@@ -1045,6 +1317,26 @@ const canNext = computed(() => {
     return attributesReady()
   }
 
+  if (isSkillsStep.value) {
+    return skillsReady.value
+  }
+
+  if (isLanguagesStep.value) {
+    return languagesReady.value
+  }
+
+  if (isFeaturesStep.value) {
+    return featuresReady.value
+  }
+
+  if (isEquipmentStep.value) {
+    return equipmentReady.value
+  }
+
+  if (isDescriptionStep.value) {
+    return descriptionReady.value
+  }
+
   return true
 })
 
@@ -1082,6 +1374,16 @@ function isStepDone(index: number): boolean {
       return Boolean(draft.value.alignmentCode) || (alignmentsLoaded.value && alignments.value.length === 0)
     case 'attributes':
       return attributesReady()
+    case 'skills':
+      return skillsReady.value
+    case 'languages':
+      return languagesReady.value
+    case 'features':
+      return featuresReady.value
+    case 'equipment':
+      return equipmentReady.value
+    case 'description':
+      return descriptionReady.value
     default:
       return false
   }
@@ -1141,6 +1443,26 @@ watch(
 
     if (item?.kind === 'attributes') {
       void ensureAttributeContext()
+    }
+
+    if (item?.kind === 'background') {
+      void ensureBackgroundData()
+    }
+
+    if (item?.kind === 'skills') {
+      void ensureSkillsData()
+    }
+
+    if (item?.kind === 'languages') {
+      void ensureLanguagesData()
+    }
+
+    if (item?.kind === 'features') {
+      void ensureFeaturesData()
+    }
+
+    if (item?.kind === 'equipment') {
+      void ensureEquipmentData()
     }
   },
 )
@@ -1459,6 +1781,26 @@ async function init(): Promise<void> {
 
   if (currentStep.value?.kind === 'attributes') {
     void ensureAttributeContext()
+  }
+
+  if (currentStep.value?.kind === 'background') {
+    void ensureBackgroundData()
+  }
+
+  if (currentStep.value?.kind === 'skills') {
+    void ensureSkillsData()
+  }
+
+  if (currentStep.value?.kind === 'languages') {
+    void ensureLanguagesData()
+  }
+
+  if (currentStep.value?.kind === 'features') {
+    void ensureFeaturesData()
+  }
+
+  if (currentStep.value?.kind === 'equipment') {
+    void ensureEquipmentData()
   }
 }
 
@@ -1875,6 +2217,395 @@ function pickHouseBonus(slot: 'housePlus2' | 'housePlus1', key: string): void {
 /** 可选规则：所有种族改用「任意两项 +2 / +1」，替换各族的固定属性加值。 */
 const HOUSE_RULE_BONUS = '[属性值加成]：任意两项 +2 / +1'
 
+/* ---------------- 背景详情 / 技能 / 语言 / 职业特性 / 装备 / 描述 ---------------- */
+
+const FEATURE_LABELS: Record<string, string> = {
+  fightingStyle: '战斗风格',
+  favoredEnemy: '宿敌',
+  naturalExplorer: '自然探索者',
+}
+
+const skillCatalog = ref<SkillOption[]>([])
+const languageCatalog = ref<LanguageOption[]>([])
+const backgroundCatalog = ref<BackgroundDetail[]>([])
+const featureCatalog = ref<FeatureOption[]>([])
+const equipmentCatalog = ref<EquipmentResponse | null>(null)
+
+const isSkillsStep = computed(() => currentStep.value?.kind === 'skills')
+const isLanguagesStep = computed(() => currentStep.value?.kind === 'languages')
+const isFeaturesStep = computed(() => currentStep.value?.kind === 'features')
+const isEquipmentStep = computed(() => currentStep.value?.kind === 'equipment')
+const isDescriptionStep = computed(() => currentStep.value?.kind === 'description')
+
+const classOption = computed<ClassOption | null>(
+  () => classes.value.find((item) => item.code === draft.value.classCode) ?? null,
+)
+const backgroundOption = computed<BackgroundDetail | null>(
+  () => backgroundCatalog.value.find((item) => item.id === draft.value.backgroundCode) ?? null,
+)
+
+const armorOption = computed(() => {
+  const kit = equipmentCatalog.value?.kit
+  if (!kit?.armorId) {
+    return null
+  }
+
+  return equipmentCatalog.value?.armor.find((item) => item.id === kit.armorId) ?? null
+})
+const weaponOptions = computed<WeaponOption[]>(() => {
+  const kit = equipmentCatalog.value?.kit
+  if (!kit) {
+    return []
+  }
+
+  return kit.weaponIds
+    .map((id) => equipmentCatalog.value?.weapons.find((weapon) => weapon.id === id))
+    .filter((weapon): weapon is WeaponOption => Boolean(weapon))
+})
+const selectedWeapon = computed<WeaponOption | null>(() => {
+  const id = draft.value.equipmentWeaponId
+  const found = id ? equipmentCatalog.value?.weapons.find((weapon) => weapon.id === id) : null
+  return found ?? weaponOptions.value[0] ?? null
+})
+
+/** 背景 + 种族直接给的技能，不可再选 */
+const grantedSkills = computed(
+  () => new Set<string>([...(backgroundOption.value?.skills ?? []), ...(raceOption.value?.skills ?? [])]),
+)
+const skillPickCount = computed(
+  () => (classOption.value?.skillChoiceCount ?? 0) + (raceOption.value?.skillChoiceCount ?? 0),
+)
+const allowedSkillNames = computed(() => {
+  const allowed = new Set(classOption.value?.skillOptions ?? [])
+  if ((raceOption.value?.skillChoiceCount ?? 0) > 0) {
+    for (const skill of skillCatalog.value) {
+      allowed.add(skill.name)
+    }
+  }
+
+  return allowed
+})
+const skillRows = computed(() =>
+  skillCatalog.value.map((skill) => ({
+    ...skill,
+    granted: grantedSkills.value.has(skill.name),
+    chosen: draft.value.selectedSkills.includes(skill.name),
+    selectable: allowedSkillNames.value.has(skill.name),
+  })),
+)
+const skillsReady = computed(() => draft.value.selectedSkills.length >= skillPickCount.value)
+
+const grantedLanguages = computed(() => raceOption.value?.languages ?? [])
+const languagePickCount = computed(
+  () => (backgroundOption.value?.languageCount ?? 0) + (raceOption.value?.languageChoiceCount ?? 0),
+)
+const languageRows = computed(() =>
+  languageCatalog.value.map((language) => ({
+    ...language,
+    granted: grantedLanguages.value.includes(language.name),
+    chosen: draft.value.selectedLanguages.includes(language.name),
+  })),
+)
+const languagesReady = computed(() => draft.value.selectedLanguages.length >= languagePickCount.value)
+
+const featureGroups = computed(() => {
+  const groups = new Map<string, FeatureOption[]>()
+  for (const option of featureCatalog.value) {
+    const list = groups.get(option.optionType) ?? []
+    list.push(option)
+    groups.set(option.optionType, list)
+  }
+
+  return [...groups.entries()].map(([type, options]) => ({
+    type,
+    label: FEATURE_LABELS[type] ?? type,
+    options,
+  }))
+})
+const featuresReady = computed(() =>
+  featureGroups.value.every((group) => Boolean(draft.value.featureChoices[group.type])),
+)
+
+const equipmentReady = computed(() => Boolean(selectedWeapon.value))
+const descriptionReady = computed(() => draft.value.characterName.trim().length > 0)
+
+const attributeFinal = computed(() => {
+  const map: Record<string, number> = {}
+  for (const row of attributeRows.value) {
+    map[row.key] = row.final
+  }
+
+  return map
+})
+
+function modifierOf(key: string): number {
+  return Math.floor(((attributeFinal.value[key] ?? 10) - 10) / 2)
+}
+
+const proficientSkillNames = computed(
+  () => new Set([...grantedSkills.value, ...draft.value.selectedSkills]),
+)
+
+const ABILITY_LABELS: Record<string, string> = {
+  力量: 'STR',
+  敏捷: 'DEX',
+  体质: 'CON',
+  智力: 'INT',
+  感知: 'WIS',
+  魅力: 'CHA',
+}
+
+/** 车卡里能算出来的战斗数值；装备一改就跟着变 */
+const combatSummary = computed(() => {
+  const dex = modifierOf('DEX')
+  const con = modifierOf('CON')
+  const wis = modifierOf('WIS')
+  const sides = Number((classOption.value?.hitDie ?? 'd8').replace(/\D/g, '')) || 8
+  const armor = armorOption.value
+  const shield = equipmentCatalog.value?.kit?.shield ? 2 : 0
+  let armorClass = 10 + dex
+
+  if (armor) {
+    const cap = armor.type === '重甲' ? 0 : armor.dexCap
+    const dexPart = cap === null || cap === undefined ? dex : Math.min(dex, cap)
+    armorClass = armor.baseAc + dexPart + shield
+  } else if (draft.value.classCode === 'monk') {
+    armorClass = 10 + dex + wis
+  } else {
+    armorClass = 10 + dex + shield
+  }
+
+  const weapon = selectedWeapon.value
+  const weaponMod = weapon ? modifierOf(weapon.ability === '力量' ? 'STR' : 'DEX') : 0
+
+  const savingThrows: Record<string, number> = {}
+  for (const name of (classOption.value?.savingThrows ?? '').split(',').map((item) => item.trim())) {
+    const key = ABILITY_LABELS[name]
+    if (key) {
+      savingThrows[name] = modifierOf(key) + 2
+    }
+  }
+
+  return {
+    hitPoints: Math.max(1, sides + con),
+    armorClass,
+    initiative: dex,
+    speed: raceOption.value?.speed ?? 30,
+    proficiencyBonus: 2,
+    passivePerception: 10 + wis + (proficientSkillNames.value.has('察觉') ? 2 : 0),
+    savingThrows,
+    attackBonus: weapon ? 2 + weaponMod : 0,
+    damage: weapon ? `${weapon.damage}${weaponMod >= 0 ? '+' : ''}${weaponMod}` : '',
+    weaponName: weapon?.name ?? '',
+  }
+})
+
+const sheetSkills = computed(() =>
+  skillRows.value
+    .filter((skill) => skill.granted || skill.chosen)
+    .map((skill) => ({
+      name: skill.name,
+      value: modifierOf(ABILITY_LABELS[skill.ability] ?? 'STR') + 2,
+      note: `${skill.ability}熟练`,
+    })),
+)
+
+const sheetLanguages = computed(() => [...grantedLanguages.value, ...draft.value.selectedLanguages])
+
+async function loadSkillCatalog(): Promise<void> {
+  if (skillCatalog.value.length) {
+    return
+  }
+
+  try {
+    const code = draft.value.systemCode ?? 'dnd5e'
+    skillCatalog.value = await request<SkillOption[]>({
+      url: `/api/generator/skills?systemCode=${code}`,
+      auth: false,
+    })
+  } catch {
+    toast('技能加载失败')
+  }
+}
+
+async function loadLanguageCatalog(): Promise<void> {
+  if (languageCatalog.value.length) {
+    return
+  }
+
+  try {
+    const code = draft.value.systemCode ?? 'dnd5e'
+    languageCatalog.value = await request<LanguageOption[]>({
+      url: `/api/generator/languages?systemCode=${code}`,
+      auth: false,
+    })
+  } catch {
+    toast('语言加载失败')
+  }
+}
+
+async function loadBackgroundCatalog(): Promise<void> {
+  if (backgroundCatalog.value.length) {
+    return
+  }
+
+  try {
+    const code = draft.value.systemCode ?? 'dnd5e'
+    backgroundCatalog.value = await request<BackgroundDetail[]>({
+      url: `/api/generator/backgrounds?systemCode=${code}`,
+      auth: false,
+    })
+  } catch {
+    toast('背景加载失败')
+  }
+}
+
+async function loadFeatureCatalog(): Promise<void> {
+  if (!draft.value.classCode) {
+    featureCatalog.value = []
+    return
+  }
+
+  try {
+    const code = draft.value.systemCode ?? 'dnd5e'
+    featureCatalog.value = await request<FeatureOption[]>({
+      url: `/api/generator/class-options?systemCode=${code}&classId=${encodeURIComponent(draft.value.classCode)}`,
+      auth: false,
+    })
+  } catch {
+    featureCatalog.value = []
+  }
+}
+
+async function loadEquipmentCatalog(): Promise<void> {
+  if (!draft.value.classCode) {
+    equipmentCatalog.value = null
+    return
+  }
+
+  try {
+    const code = draft.value.systemCode ?? 'dnd5e'
+    equipmentCatalog.value = await request<EquipmentResponse>({
+      url: `/api/generator/equipment?systemCode=${code}&classId=${encodeURIComponent(draft.value.classCode)}`,
+      auth: false,
+    })
+  } catch {
+    equipmentCatalog.value = null
+  }
+}
+
+async function ensureBackgroundData(): Promise<void> {
+  if (!races.value.length) {
+    await loadRaces()
+  }
+
+  await loadBackgroundCatalog()
+}
+
+async function ensureSkillsData(): Promise<void> {
+  await ensureBackgroundData()
+  await loadSkillCatalog()
+}
+
+async function ensureLanguagesData(): Promise<void> {
+  await ensureBackgroundData()
+  await loadLanguageCatalog()
+}
+
+async function ensureFeaturesData(): Promise<void> {
+  await loadFeatureCatalog()
+}
+
+async function ensureEquipmentData(): Promise<void> {
+  await loadEquipmentCatalog()
+}
+
+function pickBackground(item: BackgroundDetail): void {
+  if (draft.value.backgroundCode === item.id) {
+    return
+  }
+
+  draft.value.backgroundCode = item.id
+  draft.value.backgroundName = item.name
+  draft.value.selectedSkills = []
+  draft.value.selectedLanguages = []
+  saveDraft(draft.value)
+}
+
+function pickSkill(name: string): void {
+  const row = skillRows.value.find((item) => item.name === name)
+  if (!row || row.granted || !row.selectable) {
+    return
+  }
+
+  const selected = [...draft.value.selectedSkills]
+  const index = selected.indexOf(name)
+  if (index >= 0) {
+    selected.splice(index, 1)
+  } else if (selected.length < skillPickCount.value) {
+    selected.push(name)
+  } else {
+    toast(`最多选 ${skillPickCount.value} 项技能`)
+    return
+  }
+
+  draft.value.selectedSkills = selected
+}
+
+function pickLanguage(name: string): void {
+  const row = languageRows.value.find((item) => item.name === name)
+  if (!row || row.granted) {
+    return
+  }
+
+  const selected = [...draft.value.selectedLanguages]
+  const index = selected.indexOf(name)
+  if (index >= 0) {
+    selected.splice(index, 1)
+  } else if (selected.length < languagePickCount.value) {
+    selected.push(name)
+  } else {
+    toast(`最多再选 ${languagePickCount.value} 门语言`)
+    return
+  }
+
+  draft.value.selectedLanguages = selected
+}
+
+function pickFeature(type: string, name: string): void {
+  draft.value.featureChoices = { ...draft.value.featureChoices, [type]: name }
+}
+
+function pickWeapon(id: string): void {
+  draft.value.equipmentWeaponId = id
+}
+
+function setDraftText(
+  key: 'characterName' | 'gender' | 'height' | 'weight' | 'appearance' | 'trait' | 'ideal' | 'bond' | 'flaw',
+  value: string,
+): void {
+  draft.value[key] = value
+}
+
+function setDraftAge(value: string): void {
+  const age = Number(value)
+  draft.value.age = Number.isFinite(age) && age > 0 ? Math.floor(age) : null
+}
+
+async function randomCharacterName(): Promise<void> {
+  try {
+    const names = await request<string[]>({
+      url: `/api/generator/names?systemCode=${draft.value.systemCode}&count=1`,
+      auth: false,
+    })
+    if (names[0]) {
+      draft.value.characterName = names[0]
+    }
+  } catch {
+    toast('名字生成失败')
+  }
+}
+
 function abilityText(option: RaceOption): string {
   return draft.value.houseRuleAbilityScores ? HOUSE_RULE_BONUS : option.abilityBonus
 }
@@ -1914,8 +2645,14 @@ function pickSystem(system: GameSystem): void {
     draft.value.subraceName = ''
     draft.value.alignmentCode = null
     draft.value.alignmentName = ''
+    draft.value.backgroundCode = null
+    draft.value.backgroundName = ''
     draft.value.attributeValues = {}
     draft.value.attributeChoices = {}
+    draft.value.selectedSkills = []
+    draft.value.selectedLanguages = []
+    draft.value.featureChoices = {}
+    draft.value.equipmentWeaponId = null
     draft.value.classStates = {}
     classes.value = []
     subclasses.value = []
@@ -1929,6 +2666,9 @@ function pickSystem(system: GameSystem): void {
     failedCovers.value = {}
     failedSubclassCovers.value = {}
     failedAlignmentIcons.value = {}
+    backgroundCatalog.value = []
+    featureCatalog.value = []
+    equipmentCatalog.value = null
     void loadFlow()
     void loadClasses()
   }
@@ -1974,6 +2714,11 @@ function pickClass(option: ClassOption): void {
   draft.value.className = option.name
   draft.value.subclassCode = saved?.subclassCode ?? null
   draft.value.subclassName = saved?.subclassName ?? ''
+  draft.value.selectedSkills = []
+  draft.value.featureChoices = {}
+  draft.value.equipmentWeaponId = null
+  featureCatalog.value = []
+  equipmentCatalog.value = null
   subclasses.value = []
   subclassCatalogCode.value = null
 }
@@ -2014,6 +2759,16 @@ function jumpToStep(index: number): void {
 
   if (item?.kind === 'attributes' && !draft.value.alignmentCode) {
     toast('请先决定阵营')
+    return
+  }
+
+  if ((item?.kind === 'skills' || item?.kind === 'languages') && !draft.value.backgroundCode) {
+    toast('请先选择背景')
+    return
+  }
+
+  if ((item?.kind === 'features' || item?.kind === 'equipment') && !draft.value.classCode) {
+    toast('请先选择职业')
     return
   }
 
@@ -2080,15 +2835,38 @@ async function finish(): Promise<void> {
 
   finishing.value = true
   try {
-    let name = ''
-    try {
-      const names = await request<string[]>({
-        url: `/api/generator/names?systemCode=${draft.value.systemCode}&count=1`,
-        auth: false,
+    let name = draft.value.characterName.trim()
+    if (!name) {
+      try {
+        const names = await request<string[]>({
+          url: `/api/generator/names?systemCode=${draft.value.systemCode}&count=1`,
+          auth: false,
+        })
+        name = names[0] ?? ''
+      } catch {
+        // 名字生成失败就用占位名
+      }
+    }
+
+    const equipmentItems: Array<{ name: string; quantity: number; note?: string }> = []
+    if (armorOption.value) {
+      equipmentItems.push({ name: armorOption.value.name, quantity: 1, note: armorOption.value.type })
+    }
+
+    if (equipmentCatalog.value?.kit?.shield) {
+      equipmentItems.push({ name: '盾', quantity: 1, note: 'AC +2' })
+    }
+
+    if (selectedWeapon.value) {
+      equipmentItems.push({
+        name: selectedWeapon.value.name,
+        quantity: 1,
+        note: `${selectedWeapon.value.damage} ${selectedWeapon.value.damageType}`,
       })
-      name = names[0] ?? ''
-    } catch {
-      // 名字生成失败就用占位名
+    }
+
+    if (equipmentCatalog.value?.kit?.pack) {
+      equipmentItems.push({ name: equipmentCatalog.value.kit.pack, quantity: 1 })
     }
 
     const created = await request<{ id: string }>({
@@ -2111,8 +2889,40 @@ async function finish(): Promise<void> {
               value: row.final,
               formula: row.formula,
             })),
-          skills: [],
+          skills: sheetSkills.value,
           items: [],
+          background: draft.value.backgroundName || null,
+          backgroundName: draft.value.backgroundName || null,
+          gender: draft.value.gender || null,
+          height: draft.value.height || null,
+          weight: draft.value.weight || null,
+          appearance: draft.value.appearance || null,
+          languages: sheetLanguages.value,
+          proficiencies: {
+            armor: classOption.value?.armorProficiencies ?? [],
+            weapons: classOption.value?.weaponProficiencies ?? [],
+            tools: (backgroundOption.value?.tools ?? '')
+              .split(/[、,，]/)
+              .map((item) => item.trim())
+              .filter((item) => item && item !== '无'),
+          },
+          equipment: equipmentItems,
+          combat: {
+            hitPoints: combatSummary.value.hitPoints,
+            armorClass: combatSummary.value.armorClass,
+            initiative: combatSummary.value.initiative,
+            speed: combatSummary.value.speed,
+            proficiencyBonus: combatSummary.value.proficiencyBonus,
+            passivePerception: combatSummary.value.passivePerception,
+            savingThrows: combatSummary.value.savingThrows,
+          },
+          personality: {
+            trait: draft.value.trait || null,
+            ideal: draft.value.ideal || null,
+            bond: draft.value.bond || null,
+            flaw: draft.value.flaw || null,
+          },
+          featureChoices: draft.value.featureChoices,
         },
       },
     })
@@ -3218,6 +4028,219 @@ function scrollTop(): void {
   margin-top: 24rpx;
 }
 
+/* ---------------- 背景 / 技能 / 语言 / 特性 / 装备 / 描述 ---------------- */
+
+.bg-section-title {
+  margin: 24rpx 0 12rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+}
+
+.bg-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.bg-card {
+  padding: 18rpx 20rpx;
+  border: 2rpx solid $trpg-line;
+  border-radius: 14rpx;
+  background: #fff;
+}
+
+.bg-card-selected {
+  border-color: $trpg-accent;
+  background: #fffdf8;
+  box-shadow: 0 8rpx 24rpx rgba(91, 70, 54, 0.12);
+}
+
+.bg-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bg-card-name {
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.bg-card-desc {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
+.bg-card-meta {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+}
+
+.bg-grant {
+  padding: 16rpx 18rpx;
+  margin-top: 14rpx;
+  border: 2rpx dashed #d8c6a5;
+  border-radius: 12rpx;
+  background: #fffdf8;
+}
+
+.bg-grant-row {
+  display: flex;
+  gap: 14rpx;
+  font-size: 22rpx;
+  line-height: 1.7;
+}
+
+.bg-grant-row text:first-child {
+  flex: none;
+  width: 110rpx;
+}
+
+.option-hint {
+  margin-bottom: 14rpx;
+  font-size: 20rpx;
+  line-height: 1.6;
+}
+
+.option-count {
+  margin-top: 14rpx;
+  font-size: 20rpx;
+}
+
+.skill-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.skill-chip {
+  display: flex;
+  align-items: baseline;
+  gap: 8rpx;
+  padding: 10rpx 18rpx;
+  border: 2rpx solid $trpg-line;
+  border-radius: 999rpx;
+  background: #fff;
+  font-size: 22rpx;
+}
+
+.skill-chip .skill-ability {
+  font-size: 18rpx;
+}
+
+.skill-granted {
+  border-color: #d8c6a5;
+  background: #f3e7d4;
+  color: $trpg-accent-deep;
+}
+
+.skill-chosen {
+  border-color: $trpg-accent;
+  background: $trpg-accent;
+  color: #fffaf0;
+}
+
+.skill-locked {
+  opacity: 0.4;
+}
+
+.feature-group {
+  margin-top: 18rpx;
+}
+
+.equip-kit {
+  padding: 16rpx 18rpx;
+  border: 2rpx solid $trpg-line;
+  border-radius: 12rpx;
+  background: #fff;
+}
+
+.equip-row {
+  display: flex;
+  gap: 14rpx;
+  font-size: 22rpx;
+  line-height: 1.7;
+}
+
+.equip-row text:first-child {
+  flex: none;
+  width: 110rpx;
+}
+
+.equip-stats {
+  display: flex;
+  padding-top: 16rpx;
+  margin-top: 20rpx;
+  border-top: 2rpx dashed $trpg-line;
+}
+
+.equip-stat {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+  font-size: 20rpx;
+  text-align: center;
+}
+
+.equip-stat-value {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: $trpg-accent-deep;
+}
+
+.desc-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 14rpx;
+  padding: 14rpx 0;
+  border-bottom: 2rpx solid $trpg-line;
+}
+
+.desc-field:last-child {
+  border-bottom: none;
+}
+
+.desc-label {
+  flex: none;
+  width: 110rpx;
+  font-size: 22rpx;
+  line-height: 56rpx;
+}
+
+.desc-input {
+  flex: 1;
+  height: 56rpx;
+  font-size: 24rpx;
+}
+
+.desc-textarea {
+  flex: 1;
+  width: 100%;
+  min-height: 140rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.desc-name-row {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.desc-random {
+  flex: none;
+  padding: 6rpx 16rpx;
+  border: 2rpx solid #d8c6a5;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  color: $trpg-accent-deep;
+}
+
 .race-house-rule {
   display: flex;
   align-items: center;
@@ -3776,6 +4799,120 @@ function scrollTop(): void {
 
   .attr-source-note {
     font-size: 12px;
+  }
+
+  .bg-section-title {
+    margin: 16px 0 8px;
+    font-size: 14px;
+  }
+
+  .bg-cards {
+    gap: 10px;
+  }
+
+  .bg-card {
+    padding: 14px;
+    border-width: 1px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .bg-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(91, 70, 54, 0.1);
+  }
+
+  .bg-card-name {
+    font-size: 14px;
+  }
+
+  .bg-card-desc {
+    font-size: 13px;
+  }
+
+  .bg-card-meta {
+    font-size: 12px;
+  }
+
+  .bg-grant {
+    padding: 12px 14px;
+    border-width: 1px;
+    border-radius: 10px;
+  }
+
+  .bg-grant-row {
+    font-size: 13px;
+  }
+
+  .bg-grant-row text:first-child {
+    width: 70px;
+  }
+
+  .skill-chip {
+    padding: 6px 12px;
+    border-width: 1px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .skill-chip .skill-ability {
+    font-size: 11px;
+  }
+
+  .option-hint,
+  .option-count {
+    font-size: 12px;
+  }
+
+  .equip-kit {
+    padding: 12px 14px;
+    border-width: 1px;
+    border-radius: 10px;
+  }
+
+  .equip-row {
+    font-size: 13px;
+  }
+
+  .equip-row text:first-child {
+    width: 70px;
+  }
+
+  .equip-stat {
+    font-size: 12px;
+  }
+
+  .equip-stat-value {
+    font-size: 20px;
+  }
+
+  .desc-field {
+    padding: 10px 0;
+    border-bottom-width: 1px;
+  }
+
+  .desc-label {
+    width: 70px;
+    font-size: 12px;
+    line-height: 32px;
+  }
+
+  .desc-input {
+    height: 32px;
+    font-size: 13px;
+  }
+
+  .desc-textarea {
+    min-height: 90px;
+    font-size: 13px;
+  }
+
+  .desc-random {
+    padding: 4px 10px;
+    border-width: 1px;
+    font-size: 12px;
+    cursor: pointer;
   }
 
   .race-card {
