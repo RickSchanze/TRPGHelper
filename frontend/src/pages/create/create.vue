@@ -254,9 +254,9 @@
             @tap="toggleHouseRule"
           >
             <view class="house-rule-body">
-              <view class="house-rule-title">可选：任意两项 +2 / +1</view>
+              <view class="house-rule-title">种族加值：任意两项 +2 / +1</view>
               <view class="house-rule-hint muted">
-                可选规则。开启后不采用各族的固定属性加值，所有种族都改为自选两项属性分别 +2 / +1。
+                开启后不采用各族的固定属性加值，所有种族都改为自选两项属性分别 +2 / +1。
               </view>
             </view>
             <view class="house-rule-switch" :class="{ on: draft.houseRuleAbilityScores }">
@@ -407,8 +407,19 @@
 
         <!-- 决定属性：六项数值，点每张卡看「来源」 -->
         <view v-else-if="isAttributesStep" class="panel">
-          <view class="panel-title">
-            <KeywordText :text="currentStep?.title || '决定属性'" />
+          <view class="attr-head">
+            <view class="panel-title attr-head-title">
+              <KeywordText :text="currentStep?.title || '决定属性'" />
+            </view>
+            <button
+              class="btn attr-roll"
+              hover-class="btn-pressed"
+              hover-stay-time="80"
+              :disabled="attributeRolling"
+              @tap="rollAttributeValues"
+            >
+              {{ attributeRolling ? '投掷中…' : '投掷' }}
+            </button>
           </view>
           <view v-if="currentStep?.description" class="muted step-hint">
             <KeywordText :text="currentStep.description" />
@@ -417,22 +428,9 @@
           <view v-if="!attributeRows.length" class="muted">这个规则书还没配置属性模板。</view>
 
           <template v-else>
-            <view class="attr-methods">
-              <view
-                v-for="method in ATTRIBUTE_METHODS"
-                :key="method.key"
-                class="attr-method"
-                :class="{ 'attr-method-active': draft.attributeMethod === method.key }"
-                @tap="useAttributeMethod(method.key)"
-              >
-                <view class="attr-method-label">{{ method.label }}</view>
-              </view>
-            </view>
-            <view class="muted attr-method-hint">{{ attributeMethodOption.hint }}</view>
-
-            <view v-if="attributeRolling" class="muted attr-rolling">正在生成属性…</view>
-            <view v-else-if="attributeError" class="load-error" @tap="generateAttributeScores()">
-              <text class="muted">属性生成失败，点这里重试</text>
+            <view v-if="attributeRolling" class="muted attr-rolling">正在投掷…</view>
+            <view v-else-if="attributeError" class="load-error" @tap="rollAttributeValues">
+              <text class="muted">投掷失败，点这里重试</text>
             </view>
 
             <view class="attr-grid">
@@ -446,13 +444,23 @@
                 <view class="attr-card-head">
                   <KeywordText class="attr-name" :text="'[' + row.label + ']'" />
                   <text class="attr-mod" :class="row.modifier >= 0 ? 'attr-mod-up' : 'attr-mod-down'">
-                    {{ signed(row.modifier) }}
+                    {{ row.base > 0 ? signed(row.modifier) : '' }}
                   </text>
                 </view>
-                <view class="attr-value" :class="{ 'attr-value-empty': row.base === 0 }">
-                  {{ row.base > 0 ? row.final : '—' }}
+                <view class="attr-input-wrap" @tap.stop>
+                  <input
+                    class="attr-input"
+                    type="number"
+                    :value="row.base > 0 ? String(row.base) : ''"
+                    placeholder="—"
+                    placeholder-style="color:#c9bca8"
+                    @input="setAttributeValue(row.key, $event.detail.value)"
+                  />
                 </view>
-                <view class="attr-short muted">{{ row.shortSource }}</view>
+                <view class="attr-short muted">
+                  <text v-if="row.base > 0">最终 {{ row.final }} · {{ row.shortSource }}</text>
+                  <text v-else>还没填</text>
+                </view>
                 <view class="attr-source-link">来源 ›</view>
               </view>
             </view>
@@ -478,12 +486,12 @@
               </view>
             </view>
 
-            <!-- 可选规则：种族加值改成任意两项 +2 / +1 -->
+            <!-- 种族加值改为「任意两项 +2 / +1」时，直接在这里选 -->
             <view v-if="draft.houseRuleAbilityScores" class="attr-choice">
-              <view class="attr-choice-title">可选规则：任意两项 +2 / +1</view>
-              <view class="attr-choice-hint muted">
-                开了这条规则就不再使用种族 / 亚种的固定加值；先挑 +2 的那项，再挑 +1 的那项。
+              <view class="attr-choice-title">
+                <KeywordText :text="raceOption?.name" />：任意两项 +2 / +1
               </view>
+              <view class="attr-choice-hint muted">先挑 +2 的那项，再挑 +1 的那项。</view>
               <view class="attr-choice-row">
                 <text class="attr-chip-label">+2</text>
                 <view class="attr-chips">
@@ -642,23 +650,13 @@
           <view v-for="(source, index) in attributeSheetRow.sources" :key="index" class="attr-source">
             <view class="attr-source-main">
               <text class="attr-source-label">{{ source.label }}</text>
-              <text class="attr-source-value" :class="{ 'attr-source-plus': source.label !== '基础值' }">
-                {{ source.label === '基础值' ? source.value : signed(source.value) }}
+              <text class="attr-source-value" :class="{ 'attr-source-plus': source.label !== '初始' }">
+                {{ source.label === '初始' ? source.value : signed(source.value) }}
               </text>
             </view>
             <view class="attr-source-note muted">{{ source.note }}</view>
           </view>
           <view v-if="!attributeSheetRow.sources.length" class="muted">还没有数值。</view>
-        </view>
-
-        <view class="attr-adjust">
-          <text class="muted">基础值</text>
-          <view class="attr-adjust-buttons">
-            <view class="attr-adjust-btn" @tap="adjustAttribute(attributeSheetRow.key, -1)">−</view>
-            <text class="attr-adjust-value">{{ attributeSheetRow.base }}</text>
-            <view class="attr-adjust-btn" @tap="adjustAttribute(attributeSheetRow.key, 1)">+</view>
-          </view>
-          <text class="muted attr-adjust-hint">3–18</text>
         </view>
 
         <button class="btn attr-sheet-done" hover-class="btn-pressed" hover-stay-time="80" @tap="closeAttributeSheet">
@@ -693,7 +691,7 @@ import type {
   SubclassOption,
   SubraceOption,
 } from '../../api/types'
-import { clearDraft, emptyDraft, loadDraft, saveDraft, type AttributeMethod, type CreateDraft } from '../../stores/createDraft'
+import { clearDraft, emptyDraft, loadDraft, saveDraft, type CreateDraft } from '../../stores/createDraft'
 import { ensureKeywords, findKeyword, openKeyword } from '../../stores/keywords'
 import AppHeader from '../../components/AppHeader/AppHeader.vue'
 import KeywordText from '../../components/KeywordText/KeywordText.vue'
@@ -703,9 +701,6 @@ import ClassDetailModal from '../../components/ClassDetailModal/ClassDetailModal
 /** 内容里没配主色时的兜底（纯展示默认值，不是内容） */
 const DEFAULT_ACCENT = '#5b4636'
 
-/** 标准数组（5E 不全书：15、14、13、12、10、8） */
-const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8]
-
 /** 规则系统没配属性模板时的兜底（DND 5E 六维） */
 const DEFAULT_ATTRIBUTE_TEMPLATES = [
   { key: 'STR', label: '力量', formula: '4d6kh3' },
@@ -714,18 +709,6 @@ const DEFAULT_ATTRIBUTE_TEMPLATES = [
   { key: 'INT', label: '智力', formula: '4d6kh3' },
   { key: 'WIS', label: '感知', formula: '4d6kh3' },
   { key: 'CHA', label: '魅力', formula: '4d6kh3' },
-]
-
-interface AttributeMethodOption {
-  key: AttributeMethod
-  label: string
-  hint: string
-}
-
-const ATTRIBUTE_METHODS: AttributeMethodOption[] = [
-  { key: 'roll', label: '掷骰', hint: '每项 4d6 取高 3，点一下重掷' },
-  { key: 'standard', label: '标准数组', hint: '15、14、13、12、10、8 依次摆好' },
-  { key: 'manual', label: '手动填写', hint: '从 10 开始，自己一项项调' },
 ]
 
 interface AttributeSource {
@@ -822,9 +805,6 @@ const attributeTemplates = computed(() => {
   const system = systems.value.find((item) => item.code === draft.value.systemCode)
   return system?.attributes?.length ? system.attributes : DEFAULT_ATTRIBUTE_TEMPLATES
 })
-const attributeMethodOption = computed<AttributeMethodOption>(
-  () => ATTRIBUTE_METHODS.find((item) => item.key === draft.value.attributeMethod) ?? ATTRIBUTE_METHODS[0],
-)
 const raceOption = computed<RaceOption | null>(
   () => races.value.find((item) => item.code === draft.value.raceCode) ?? null,
 )
@@ -840,23 +820,35 @@ const chosenRaceChoices = computed(() => draft.value.attributeChoices['race'] ??
 const raceChoiceLabel = computed(() => (raceChoice.value?.label ?? '').replace(/\+/g, ' + ').trim())
 const housePlus2 = computed(() => draft.value.attributeChoices['housePlus2']?.[0] ?? '')
 const housePlus1 = computed(() => draft.value.attributeChoices['housePlus1']?.[0] ?? '')
-/** 六项属性：基础值 + 种族 / 亚种 / 自选加值，每一项都带着来源 */
+/** 六项属性：初始数值 + 种族 / 亚种 / 自选加值，每一项都带着来源 */
 const attributeRows = computed<AttributeRow[]>(() =>
-  attributeTemplates.value.map((template, index) => {
-    const base = draft.value.attributeBase[template.key] ?? 0
+  attributeTemplates.value.map((template) => {
+    const base = draft.value.attributeValues[template.key] ?? 0
     const sources: AttributeSource[] = []
 
     if (base > 0) {
-      sources.push({ label: '基础值', note: baseNote(template.key, base, index), value: base })
+      sources.push({ label: '初始', note: '车卡时填写', value: base })
     }
 
     if (draft.value.houseRuleAbilityScores) {
+      const raceName = raceOption.value?.name ?? '种族'
+
       if (housePlus2.value === template.key) {
-        sources.push({ label: '可选规则 +2', note: '任意两项 +2 / +1：这一项 +2', value: 2, short: '自选 +2' })
+        sources.push({
+          label: `种族「${raceName}」`,
+          note: '任意两项 +2 / +1',
+          value: 2,
+          short: '种族 +2',
+        })
       }
 
       if (housePlus1.value === template.key) {
-        sources.push({ label: '可选规则 +1', note: '任意两项 +2 / +1：这一项 +1', value: 1, short: '自选 +1' })
+        sources.push({
+          label: `种族「${raceName}」`,
+          note: '任意两项 +2 / +1',
+          value: 1,
+          short: '种族 +1',
+        })
       }
     } else {
       const race = raceOption.value
@@ -865,7 +857,7 @@ const attributeRows = computed<AttributeRow[]>(() =>
           if (bonus.key === template.key) {
             sources.push({
               label: `种族「${race.name}」`,
-              note: `属性值加成：${bonus.label} +${bonus.value}`,
+              note: `${bonus.label} +${bonus.value}`,
               value: bonus.value,
               short: `${race.name} +${bonus.value}`,
             })
@@ -875,7 +867,7 @@ const attributeRows = computed<AttributeRow[]>(() =>
         if (raceChoice.value && chosenRaceChoices.value.includes(template.key)) {
           sources.push({
             label: `种族「${race.name}」`,
-            note: `${raceChoice.value.label}：这一项 +${raceChoice.value.value}`,
+            note: raceChoice.value.label,
             value: raceChoice.value.value,
             short: `自选 +${raceChoice.value.value}`,
           })
@@ -888,7 +880,7 @@ const attributeRows = computed<AttributeRow[]>(() =>
           if (bonus.key === template.key) {
             sources.push({
               label: `亚种「${subrace.name}」`,
-              note: `属性值加成：${bonus.label} +${bonus.value}`,
+              note: `${bonus.label} +${bonus.value}`,
               value: bonus.value,
               short: `${subrace.name} +${bonus.value}`,
             })
@@ -898,7 +890,7 @@ const attributeRows = computed<AttributeRow[]>(() =>
     }
 
     const final = sources.reduce((sum, source) => sum + source.value, 0)
-    const bonusSources = sources.filter((source) => source.label !== '基础值')
+    const bonusSources = sources.filter((source) => source.label !== '初始')
 
     return {
       key: template.key,
@@ -910,14 +902,12 @@ const attributeRows = computed<AttributeRow[]>(() =>
         ? bonusSources.map((source) => source.short ?? '').filter(Boolean).join(' · ')
         : base > 0
           ? '无种族加值'
-          : '还没定',
+          : '还没填',
       formula: sources
         .map((source) =>
-          source.label === '基础值'
-            ? `${source.value}`
-            : `${source.value > 0 ? '+' : ''}${source.value}(${source.short ?? source.label})`,
+          source.label === '初始' ? `初始 ${source.value}` : `${source.short ?? source.label} +${source.value}`,
         )
-        .join(' '),
+        .join(' + '),
       sources,
     }
   }),
@@ -1764,32 +1754,10 @@ function signed(value: number): string {
   return value >= 0 ? `+${value}` : String(value)
 }
 
-/** 基础值是怎么来的：掷骰 / 标准数组 / 手动，以及被手动改过的说明 */
-function baseNote(key: string, base: number, index: number): string {
-  if (draft.value.attributeMethod === 'roll') {
-    const dice = draft.value.attributeDice[key]
-    if (dice?.length) {
-      const kept = draft.value.attributeKept[key] ?? []
-      const total = kept.reduce((sum, item) => sum + item, 0)
-      return base === total
-        ? `掷骰 4d6 取高 3（${dice.join('、')}）→ ${base}`
-        : `手动调整 → ${base}`
-    }
-
-    return `手动填写 → ${base}`
-  }
-
-  if (draft.value.attributeMethod === 'standard') {
-    return base === STANDARD_ARRAY[index] ? `标准数组 → ${base}` : `手动调整 → ${base}`
-  }
-
-  return `手动填写 → ${base}`
-}
-
-/** 六项都定了、需要自选的加值也选完了，才能进入下一步 */
+/** 六项都填了、需要自选的加值也选完了，才能进入下一步 */
 function attributesReady(): boolean {
   const rows = attributeRows.value
-  if (!rows.length || rows.some((row) => row.base < 3)) {
+  if (!rows.length || rows.some((row) => row.base <= 0)) {
     return false
   }
 
@@ -1804,12 +1772,12 @@ function attributesReady(): boolean {
   return true
 }
 
-async function generateAttributeScores(method?: AttributeMethod): Promise<void> {
+/** 投掷：4d6 取高 3 给六个数，直接填进六项；之后怎么改都随你 */
+async function rollAttributeValues(): Promise<void> {
   if (attributeRolling.value) {
     return
   }
 
-  const target = method ?? draft.value.attributeMethod
   attributeRolling.value = true
   attributeError.value = false
 
@@ -1818,47 +1786,38 @@ async function generateAttributeScores(method?: AttributeMethod): Promise<void> 
     const result = await request<AbilityScoresResponse>({
       url: '/api/generator/ability-scores',
       method: 'POST',
-      data: { systemCode: code, method: target },
+      data: { systemCode: code, method: 'roll' },
     })
 
-    draft.value.attributeMethod = (result.method as AttributeMethod) ?? target
-
-    const base: Record<string, number> = {}
-    const dice: Record<string, number[]> = {}
-    const kept: Record<string, number[]> = {}
-
+    const values: Record<string, number> = { ...draft.value.attributeValues }
     for (const item of result.attributes ?? []) {
-      base[item.key] = item.base
-      if (item.dice?.length) {
-        dice[item.key] = item.dice
-        kept[item.key] = item.kept ?? []
-      }
+      values[item.key] = item.base
     }
 
-    draft.value.attributeBase = base
-    draft.value.attributeDice = dice
-    draft.value.attributeKept = kept
+    draft.value.attributeValues = values
     saveDraft(draft.value)
   } catch {
     attributeError.value = true
-    toast('属性生成失败，检查后端是否在跑')
+    toast('投掷失败，检查后端是否在跑')
   } finally {
     attributeRolling.value = false
   }
 }
 
-/** 点生成方式：点当前这项（掷骰）= 重掷一组 */
-function useAttributeMethod(method: AttributeMethod): void {
-  if (method !== draft.value.attributeMethod) {
-    draft.value.attributeMethod = method
-    draft.value.attributeDice = {}
-    draft.value.attributeKept = {}
+/** 卡片上直接改初始数值；清空或 0 都算没填 */
+function setAttributeValue(key: string, raw: string): void {
+  const value = Number(raw)
+  const next = { ...draft.value.attributeValues }
+  if (!Number.isFinite(value) || value <= 0) {
+    delete next[key]
+  } else {
+    next[key] = Math.min(99, Math.floor(value))
   }
 
-  void generateAttributeScores(method)
+  draft.value.attributeValues = next
 }
 
-/** 进入这一步时还没有属性就先生成一组；种族 / 亚种内容也顺手加载 */
+/** 进入这一步时先把种族 / 亚种内容准备好，属性本身留空等玩家自己填 */
 async function ensureAttributeContext(): Promise<void> {
   if (!races.value.length) {
     await loadRaces()
@@ -1866,10 +1825,6 @@ async function ensureAttributeContext(): Promise<void> {
 
   if (draft.value.raceCode && !subraces.value.length) {
     await loadSubraces()
-  }
-
-  if (Object.keys(draft.value.attributeBase).length === 0) {
-    await generateAttributeScores(draft.value.attributeMethod)
   }
 }
 
@@ -1880,14 +1835,6 @@ function openAttributeSheet(key: string): void {
 
 function closeAttributeSheet(): void {
   attributeSheetVisible.value = false
-}
-
-/** 来源弹窗里直接改基础值；改过之后来源会写成「手动调整」 */
-function adjustAttribute(key: string, delta: number): void {
-  const current = draft.value.attributeBase[key] ?? 10
-  const next = Math.min(18, Math.max(3, current + delta))
-  draft.value.attributeBase = { ...draft.value.attributeBase, [key]: next }
-  saveDraft(draft.value)
 }
 
 /** 半精灵「任选两项 +1」：点一下选中，再点取消 */
@@ -1967,10 +1914,7 @@ function pickSystem(system: GameSystem): void {
     draft.value.subraceName = ''
     draft.value.alignmentCode = null
     draft.value.alignmentName = ''
-    draft.value.attributeMethod = 'roll'
-    draft.value.attributeBase = {}
-    draft.value.attributeDice = {}
-    draft.value.attributeKept = {}
+    draft.value.attributeValues = {}
     draft.value.attributeChoices = {}
     draft.value.classStates = {}
     classes.value = []
@@ -2989,34 +2933,24 @@ function scrollTop(): void {
 
 /* ---------------- 决定属性：六项属性卡 + 来源弹窗 ---------------- */
 
-.attr-methods {
+.attr-head {
   display: flex;
-  gap: 8rpx;
-  padding: 6rpx;
-  margin-bottom: 10rpx;
-  border: 2rpx solid $trpg-line;
-  border-radius: 14rpx;
-  background: #fff;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-bottom: 20rpx;
 }
 
-.attr-method {
-  flex: 1;
-  padding: 14rpx 0;
-  border-radius: 10rpx;
+.attr-head-title {
+  margin-bottom: 0;
+}
+
+.attr-roll {
+  flex: none;
+  height: 64rpx;
+  padding: 0 28rpx;
   font-size: 24rpx;
-  color: $trpg-muted;
-  text-align: center;
-}
-
-.attr-method-active {
-  background: $trpg-accent;
-  color: #fffaf0;
-  font-weight: 600;
-}
-
-.attr-method-hint {
-  margin-bottom: 18rpx;
-  font-size: 20rpx;
+  line-height: 64rpx;
 }
 
 .attr-rolling {
@@ -3069,16 +3003,21 @@ function scrollTop(): void {
   color: #8a3b34;
 }
 
-.attr-value {
-  margin-top: 6rpx;
-  font-size: 58rpx;
-  font-weight: 600;
-  line-height: 1.1;
-  color: $trpg-accent-deep;
+.attr-input-wrap {
+  margin-top: 8rpx;
 }
 
-.attr-value-empty {
-  color: #c9bca8;
+.attr-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 96rpx;
+  padding: 0 16rpx;
+  border: 2rpx solid $trpg-line;
+  border-radius: 12rpx;
+  background: #fffdf8;
+  font-size: 58rpx;
+  font-weight: 600;
+  color: $trpg-accent-deep;
 }
 
 .attr-short {
@@ -3271,47 +3210,6 @@ function scrollTop(): void {
   margin-top: 4rpx;
   font-size: 20rpx;
   line-height: 1.5;
-}
-
-.attr-adjust {
-  display: flex;
-  align-items: center;
-  gap: 14rpx;
-  margin-top: 20rpx;
-  font-size: 22rpx;
-}
-
-.attr-adjust-buttons {
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  border: 2rpx solid $trpg-line;
-  border-radius: 999rpx;
-  background: #fff;
-}
-
-.attr-adjust-btn {
-  width: 56rpx;
-  padding: 8rpx 0;
-  font-size: 30rpx;
-  line-height: 1;
-  text-align: center;
-  color: $trpg-accent-deep;
-}
-
-.attr-adjust-btn:active {
-  background: #f3e7d4;
-}
-
-.attr-adjust-value {
-  min-width: 60rpx;
-  font-size: 26rpx;
-  font-weight: 600;
-  text-align: center;
-}
-
-.attr-adjust-hint {
-  font-size: 20rpx;
 }
 
 .attr-sheet-done {
@@ -3757,24 +3655,16 @@ function scrollTop(): void {
     font-size: 11px;
   }
 
-  .attr-methods {
-    gap: 6px;
-    padding: 4px;
-    margin-bottom: 8px;
-    border-width: 1px;
-    border-radius: 10px;
+  .attr-head {
+    gap: 12px;
+    margin-bottom: 16px;
   }
 
-  .attr-method {
-    padding: 8px 0;
-    border-radius: 8px;
+  .attr-roll {
+    height: 36px;
+    padding: 0 18px;
     font-size: 13px;
-    cursor: pointer;
-  }
-
-  .attr-method-hint {
-    margin-bottom: 14px;
-    font-size: 12px;
+    line-height: 36px;
   }
 
   .attr-grid {
@@ -3800,7 +3690,11 @@ function scrollTop(): void {
     letter-spacing: 1px;
   }
 
-  .attr-value {
+  .attr-input {
+    height: 52px;
+    padding: 0 10px;
+    border-width: 1px;
+    border-radius: 8px;
     font-size: 34px;
   }
 
@@ -3880,26 +3774,6 @@ function scrollTop(): void {
 
   .attr-source-note {
     font-size: 12px;
-  }
-
-  .attr-adjust {
-    font-size: 12px;
-  }
-
-  .attr-adjust-buttons {
-    border-width: 1px;
-  }
-
-  .attr-adjust-btn {
-    width: 32px;
-    padding: 5px 0;
-    font-size: 17px;
-    cursor: pointer;
-  }
-
-  .attr-adjust-value {
-    min-width: 36px;
-    font-size: 14px;
   }
 
   .race-card {

@@ -4,10 +4,8 @@ export interface ClassSelectionState {
   subclassName: string
 }
 
-export type AttributeMethod = 'roll' | 'standard' | 'manual'
-
 export interface CreateDraft {
-  version: 12
+  version: 13
   /** 当前步骤序号，从 1 开始；步骤数量由后端的车卡流程配置决定。 */
   step: number
   systemCode: string | null
@@ -24,12 +22,9 @@ export interface CreateDraft {
   /** 阵营在「决定背景」这一步里选，和职业 / 种族无关 */
   alignmentCode: string | null
   alignmentName: string
-  /** 决定属性：生成方式、各项基础值、掷骰明细、需要玩家自选的加值 */
-  attributeMethod: AttributeMethod
-  attributeBase: Record<string, number>
-  attributeDice: Record<string, number[]>
-  attributeKept: Record<string, number[]>
-  /** 自选加值：race = 半精灵那类「任选两项 +1」；housePlus2 / housePlus1 = 可选规则 */
+  /** 决定属性：开局是空的，六项都要自己填；「投掷」只是给一组参考数值 */
+  attributeValues: Record<string, number>
+  /** 自选加值：race = 半精灵那类「任选两项 +1」；housePlus2 / housePlus1 = 任意两项 +2 / +1 */
   attributeChoices: Record<string, string[]>
   /** 可选规则：种族属性加值改为任意两项 +2 / +1 */
   houseRuleAbilityScores: boolean
@@ -39,7 +34,7 @@ export interface CreateDraft {
 }
 
 const STORAGE_KEY = 'trpg_create_draft'
-const DRAFT_VERSION = 12
+const DRAFT_VERSION = 13
 
 export function emptyDraft(): CreateDraft {
   return {
@@ -56,10 +51,7 @@ export function emptyDraft(): CreateDraft {
     subraceName: '',
     alignmentCode: null,
     alignmentName: '',
-    attributeMethod: 'roll',
-    attributeBase: {},
-    attributeDice: {},
-    attributeKept: {},
+    attributeValues: {},
     attributeChoices: {},
     houseRuleAbilityScores: false,
     classStates: {},
@@ -112,24 +104,6 @@ function readNumberMap(raw: unknown): Record<string, number> {
   return map
 }
 
-function readNumberListMap(raw: unknown): Record<string, number[]> {
-  const map: Record<string, number[]> = {}
-  if (!raw || typeof raw !== 'object') {
-    return map
-  }
-
-  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
-    if (!Array.isArray(value)) {
-      continue
-    }
-
-    const numbers = value.map((item) => Number(item)).filter((item) => Number.isFinite(item))
-    map[key] = numbers.map((item) => Math.floor(item))
-  }
-
-  return map
-}
-
 function readStringListMap(raw: unknown): Record<string, string[]> {
   const map: Record<string, string[]> = {}
   if (!raw || typeof raw !== 'object') {
@@ -147,19 +121,15 @@ function readStringListMap(raw: unknown): Record<string, string[]> {
   return map
 }
 
-function readAttributeMethod(raw: unknown): AttributeMethod {
-  return raw === 'standard' || raw === 'manual' || raw === 'roll' ? raw : 'roll'
-}
-
 function normalize(raw: unknown): CreateDraft | null {
   if (!raw || typeof raw !== 'object') {
     return null
   }
 
-  const draft = raw as Partial<CreateDraft> & { version?: number }
+  const draft = raw as Partial<CreateDraft> & { version?: number; attributeBase?: unknown }
   const version = Number(draft.version)
-  // 5 - 12：旧草稿都能升上来，缺的字段补默认值（v7 的属性选择在 v8 里丢弃，v12 重新加回来）
-  if (![5, 6, 7, 8, 9, 10, 11, DRAFT_VERSION].includes(version)) {
+  // 5 - 13：旧草稿都能升上来，缺的字段补默认值；v13 起属性只存「初始数值」，v12 的 attributeBase 直接搬过来
+  if (![5, 6, 7, 8, 9, 10, 11, 12, DRAFT_VERSION].includes(version)) {
     return null
   }
 
@@ -188,10 +158,7 @@ function normalize(raw: unknown): CreateDraft | null {
     subraceName: asString(draft.subraceName),
     alignmentCode: asCode(draft.alignmentCode),
     alignmentName: asString(draft.alignmentName),
-    attributeMethod: readAttributeMethod(draft.attributeMethod),
-    attributeBase: readNumberMap(draft.attributeBase),
-    attributeDice: readNumberListMap(draft.attributeDice),
-    attributeKept: readNumberListMap(draft.attributeKept),
+    attributeValues: readNumberMap(draft.attributeValues ?? draft.attributeBase),
     attributeChoices: readStringListMap(draft.attributeChoices),
     houseRuleAbilityScores: draft.houseRuleAbilityScores === true,
     classStates,

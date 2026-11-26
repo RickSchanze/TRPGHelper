@@ -146,7 +146,7 @@
 | 列 | 必填 | 说明 |
 | --- | --- | --- |
 | `systemId` | 否 | 引用 `systems.id`；留空表示通用 |
-| `kind` | 是 | 步骤类型：`class` / `subclass` / `race` / `subrace` / `background` / `attributes` / `name` / `summary`；`background` = 决定背景（当前实现为九宫格阵营），`attributes` = 决定属性（掷骰 / 标准数组 / 手动，带来源明细） |
+| `kind` | 是 | 步骤类型：`class` / `subclass` / `race` / `subrace` / `background` / `attributes` / `name` / `summary`；`background` = 决定背景（当前实现为九宫格阵营），`attributes` = 决定属性（初始数值自己填，「投掷」给一组参考值；点属性看来源） |
 | `title` | 是 | 步骤标题（stepper 上显示） |
 | `description` | 否 | 步骤说明 |
 | `isEnabled` | 否 | 是否启用 |
