@@ -2936,7 +2936,7 @@ function scrollTop(): void {
 .attr-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 16rpx;
   margin-bottom: 20rpx;
 }
@@ -2949,6 +2949,8 @@ function scrollTop(): void {
   flex: none;
   height: 64rpx;
   padding: 0 28rpx;
+  margin-left: auto;
+  margin-right: 0;
   font-size: 24rpx;
   line-height: 64rpx;
 }
