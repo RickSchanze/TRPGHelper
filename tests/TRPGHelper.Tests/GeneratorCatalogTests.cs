@@ -59,7 +59,7 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
 
         var steps = await _db.CreationSteps.OrderBy(step => step.SortOrder).ToListAsync();
 
-        Assert.Equal(9, steps.Count);
+        Assert.Equal(8, steps.Count);
 
         var first = steps[0];
         Assert.Equal("dnd5e", first.SystemCode);
@@ -93,11 +93,9 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
         Assert.True(sixth.IsEnabled);
 
         Assert.Equal(CreationStepKind.Skills, steps[6].Kind);
-        Assert.Equal("选择技能", steps[6].Title);
-        Assert.Equal(CreationStepKind.Features, steps[7].Kind);
-        Assert.Equal("职业特性", steps[7].Title);
-        Assert.Equal(CreationStepKind.Equipment, steps[8].Kind);
-        Assert.Equal("起始装备", steps[8].Title);
+        Assert.Equal("技能与特性", steps[6].Title);
+        Assert.Equal(CreationStepKind.Equipment, steps[7].Kind);
+        Assert.Equal("起始装备", steps[7].Title);
     }
 
     [Fact]

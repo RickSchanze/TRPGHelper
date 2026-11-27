@@ -212,7 +212,7 @@
 | 列 | 必填 | 说明 |
 | --- | --- | --- |
 | `systemId` | 否 | 引用 `systems.id`；留空表示通用 |
-| `kind` | 是 | 步骤类型：`class` / `subclass` / `race` / `subrace` / `background` / `attributes` / `skills` / `languages` / `features` / `equipment` / `description` / `name` / `summary`；`background` = 决定背景（阵营 → 背景 → 语言 → 描述角色，四段都在这一步），`attributes` = 决定属性，`skills` = 技能，`features` = 1 级职业特性，`equipment` = 起始装备；`languages` / `description` 仍保留兼容，但新流程不再单独使用 |
+| `kind` | 是 | 步骤类型：`class` / `subclass` / `race` / `subrace` / `background` / `attributes` / `skills` / `languages` / `features` / `equipment` / `description` / `name` / `summary`；`background` = 决定背景（阵营 → 背景 → 语言 → 描述角色，四段都在这一步），`attributes` = 决定属性，`skills` = 技能与 1 级职业特性，`equipment` = 起始装备；`features` / `languages` / `description` 仍保留兼容，但新流程不再单独使用（特性和技能合并、语言和描述并进决定背景） |
 | `title` | 是 | 步骤标题（stepper 上显示） |
 | `description` | 否 | 步骤说明 |
 | `isEnabled` | 否 | 是否启用 |

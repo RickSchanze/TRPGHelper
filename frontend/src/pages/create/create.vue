@@ -775,9 +775,9 @@
           </template>
         </view>
 
-        <!-- 选择技能 -->
+        <!-- 技能与特性 -->
         <view v-else-if="isSkillsStep" class="panel">
-          <view class="panel-title"><KeywordText :text="currentStep?.title || '选择技能'" /></view>
+          <view class="panel-title"><KeywordText :text="currentStep?.title || '技能与特性'" /></view>
           <view v-if="currentStep?.description" class="muted step-hint">
             <KeywordText :text="currentStep.description" />
           </view>
@@ -802,6 +802,73 @@
             </view>
           </view>
           <view class="muted option-count">已选 {{ draft.selectedSkills.length }} / {{ skillPickCount }}</view>
+
+          <view v-if="featureGroups.length" class="feature-block">
+            <view class="bg-block-title">职业特性</view>
+            <view v-for="group in featureGroups" :key="group.type" class="feature-group">
+              <view class="bg-section-title">{{ group.label }}</view>
+              <view class="skill-grid">
+                <view
+                  v-for="option in group.options"
+                  :key="option.name"
+                  class="skill-chip"
+                  :class="{ 'skill-chosen': draft.featureChoices[group.type] === option.name }"
+                  @tap="pickFeature(group.type, option.name)"
+                >
+                  <text>{{ option.name }}</text>
+                </view>
+              </view>
+            </view>
+            <view class="muted option-count">每个类别选 1 项</view>
+          </view>
+        </view>
+
+        <!-- 起始装备 -->
+        <view v-else-if="isEquipmentStep" class="panel">
+          <view class="panel-title"><KeywordText :text="currentStep?.title || '起始装备'" /></view>
+          <view v-if="currentStep?.description" class="muted step-hint">
+            <KeywordText :text="currentStep.description" />
+          </view>
+          <view v-if="!equipmentCatalog" class="muted">正在加载装备…</view>
+          <view v-else-if="!equipmentCatalog.kit" class="muted">这个职业还没配置起始装备，直接下一步。</view>
+          <template v-else>
+            <view class="equip-kit">
+              <view class="equip-row"><text class="muted">护甲</text><text>{{ armorOption?.name || '无甲' }}</text></view>
+              <view class="equip-row"><text class="muted">盾</text><text>{{ equipmentCatalog.kit.shield ? '有（AC +2）' : '无' }}</text></view>
+              <view class="equip-row"><text class="muted">装备包</text><text>{{ equipmentCatalog.kit.pack || '无' }}</text></view>
+            </view>
+            <view class="bg-section-title">武器</view>
+            <view class="skill-grid">
+              <view
+                v-for="weapon in weaponOptions"
+                :key="weapon.id"
+                class="skill-chip"
+                :class="{ 'skill-chosen': selectedWeapon?.id === weapon.id }"
+                @tap="pickWeapon(weapon.id)"
+              >
+                <text>{{ weapon.name }}</text>
+                <text class="skill-ability muted">{{ weapon.damage }}</text>
+              </view>
+            </view>
+            <view class="equip-stats">
+              <view class="equip-stat">
+                <text class="equip-stat-value">{{ combatSummary.hitPoints }}</text>
+                <text class="muted">生命上限</text>
+              </view>
+              <view class="equip-stat">
+                <text class="equip-stat-value">{{ combatSummary.armorClass }}</text>
+                <text class="muted">AC</text>
+              </view>
+              <view class="equip-stat">
+                <text class="equip-stat-value">{{ signed(combatSummary.initiative) }}</text>
+                <text class="muted">先攻</text>
+              </view>
+              <view class="equip-stat">
+                <text class="equip-stat-value">{{ signed(combatSummary.attackBonus) }}</text>
+                <text class="muted">{{ combatSummary.weaponName }}攻击</text>
+              </view>
+            </view>
+          </template>
         </view>
 
         <!-- 其它类型的步骤：面板还没做，先按配置占位 -->
@@ -1372,11 +1439,7 @@ const canNext = computed(() => {
   }
 
   if (isSkillsStep.value) {
-    return skillsReady.value
-  }
-
-  if (isFeaturesStep.value) {
-    return featuresReady.value
+    return skillsReady.value && featuresReady.value
   }
 
   if (isEquipmentStep.value) {
@@ -1425,9 +1488,7 @@ function isStepDone(index: number): boolean {
     case 'attributes':
       return attributesReady()
     case 'skills':
-      return skillsReady.value
-    case 'features':
-      return featuresReady.value
+      return skillsReady.value && featuresReady.value
     case 'equipment':
       return equipmentReady.value
     default:
@@ -1497,10 +1558,6 @@ watch(
 
     if (item?.kind === 'skills') {
       void ensureSkillsData()
-    }
-
-    if (item?.kind === 'features') {
-      void ensureFeaturesData()
     }
 
     if (item?.kind === 'equipment') {
@@ -1831,10 +1888,6 @@ async function init(): Promise<void> {
 
   if (currentStep.value?.kind === 'skills') {
     void ensureSkillsData()
-  }
-
-  if (currentStep.value?.kind === 'features') {
-    void ensureFeaturesData()
   }
 
   if (currentStep.value?.kind === 'equipment') {
@@ -2272,7 +2325,6 @@ const backgroundDetailVisible = ref(false)
 const backgroundDetailItem = ref<BackgroundDetail | null>(null)
 
 const isSkillsStep = computed(() => currentStep.value?.kind === 'skills')
-const isFeaturesStep = computed(() => currentStep.value?.kind === 'features')
 const isEquipmentStep = computed(() => currentStep.value?.kind === 'equipment')
 
 const classOption = computed<ClassOption | null>(
@@ -2559,6 +2611,7 @@ async function ensureBackgroundData(): Promise<void> {
 async function ensureSkillsData(): Promise<void> {
   await ensureBackgroundData()
   await loadSkillCatalog()
+  await loadFeatureCatalog()
 }
 
 async function ensureLanguagesData(): Promise<void> {
@@ -2870,7 +2923,7 @@ function jumpToStep(index: number): void {
     return
   }
 
-  if ((item?.kind === 'features' || item?.kind === 'equipment') && !draft.value.classCode) {
+  if (item?.kind === 'equipment' && !draft.value.classCode) {
     toast('请先选择职业')
     return
   }
@@ -2900,7 +2953,9 @@ function next(): void {
                 ? '先从九宫格里选一个阵营'
                 : isAttributesStep.value
                   ? '先把六项属性定下来'
-                  : '这一步还不能继续',
+                  : isSkillsStep.value
+                    ? '先选好技能，再把职业特性选掉'
+                    : '这一步还不能继续',
     )
     return
   }
@@ -4323,6 +4378,12 @@ function scrollTop(): void {
   margin-top: 18rpx;
 }
 
+.feature-block {
+  padding-top: 20rpx;
+  margin-top: 24rpx;
+  border-top: 2rpx dashed $trpg-line;
+}
+
 .equip-kit {
   padding: 16rpx 18rpx;
   border: 2rpx solid $trpg-line;
@@ -5061,6 +5122,16 @@ function scrollTop(): void {
 
   .skill-chip .skill-ability {
     font-size: 11px;
+  }
+
+  .feature-group {
+    margin-top: 14px;
+  }
+
+  .feature-block {
+    padding-top: 14px;
+    margin-top: 18px;
+    border-top-width: 1px;
   }
 
   .option-hint,
