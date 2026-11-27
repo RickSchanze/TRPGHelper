@@ -70,6 +70,10 @@
       <view v-if="card.sheet.backgroundName" class="detail-row">
         <text class="muted">背景</text><text>{{ card.sheet.backgroundName }}</text>
       </view>
+      <view v-if="card.sheet.backgroundFeatureName" class="detail-row">
+        <text class="muted">背景特性</text>
+        <text>{{ card.sheet.backgroundFeatureName }}{{ card.sheet.backgroundFeatureText ? `：${card.sheet.backgroundFeatureText}` : '' }}</text>
+      </view>
       <view v-if="card.sheet.gender" class="detail-row">
         <text class="muted">性别</text><text>{{ card.sheet.gender }}</text>
       </view>

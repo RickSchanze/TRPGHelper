@@ -4,8 +4,19 @@ export interface ClassSelectionState {
   subclassName: string
 }
 
+export interface CustomBackground {
+  name: string
+  description: string
+  skills: string[]
+  tools: string
+  languageCount: number
+  equipment: string
+  featureName: string
+  featureText: string
+}
+
 export interface CreateDraft {
-  version: 14
+  version: 15
   /** 当前步骤序号，从 1 开始；步骤数量由后端的车卡流程配置决定。 */
   step: number
   systemCode: string | null
@@ -19,9 +30,10 @@ export interface CreateDraft {
   /** 亚种跟随种族，切换种族时清空 */
   subraceCode: string | null
   subraceName: string
-  /** 背景与阵营在「决定背景」里选 */
+  /** 背景与阵营在「决定背景」里选；backgroundCode = custom 时用 customBackground */
   backgroundCode: string | null
   backgroundName: string
+  customBackground: CustomBackground
   alignmentCode: string | null
   alignmentName: string
   /** 决定属性 */
@@ -54,7 +66,7 @@ export interface CreateDraft {
 }
 
 const STORAGE_KEY = 'trpg_create_draft'
-const DRAFT_VERSION = 14
+const DRAFT_VERSION = 15
 
 export function emptyDraft(): CreateDraft {
   return {
@@ -71,6 +83,16 @@ export function emptyDraft(): CreateDraft {
     subraceName: '',
     backgroundCode: null,
     backgroundName: '',
+    customBackground: {
+      name: '',
+      description: '',
+      skills: [],
+      tools: '',
+      languageCount: 0,
+      equipment: '',
+      featureName: '',
+      featureText: '',
+    },
     alignmentCode: null,
     alignmentName: '',
     attributeValues: {},
@@ -178,6 +200,20 @@ function readStringListMap(raw: unknown): Record<string, string[]> {
   return map
 }
 
+function readCustomBackground(raw: unknown): CustomBackground {
+  const value = (raw && typeof raw === 'object' ? raw : {}) as Partial<CustomBackground>
+  return {
+    name: asString(value.name),
+    description: asString(value.description),
+    skills: readStringArray(value.skills),
+    tools: asString(value.tools),
+    languageCount: Number.isFinite(Number(value.languageCount)) ? Math.max(0, Math.floor(Number(value.languageCount))) : 0,
+    equipment: asString(value.equipment),
+    featureName: asString(value.featureName),
+    featureText: asString(value.featureText),
+  }
+}
+
 function normalize(raw: unknown): CreateDraft | null {
   if (!raw || typeof raw !== 'object') {
     return null
@@ -185,8 +221,8 @@ function normalize(raw: unknown): CreateDraft | null {
 
   const draft = raw as Partial<CreateDraft> & { version?: number; attributeBase?: unknown }
   const version = Number(draft.version)
-  // 5 - 14：旧草稿都能升上来，缺的字段补默认值；v13 起属性只存「初始数值」，v12 的 attributeBase 直接搬过来
-  if (![5, 6, 7, 8, 9, 10, 11, 12, 13, DRAFT_VERSION].includes(version)) {
+  // 5 - 15：旧草稿都能升上来，缺的字段补默认值
+  if (![5, 6, 7, 8, 9, 10, 11, 12, 13, 14, DRAFT_VERSION].includes(version)) {
     return null
   }
 
@@ -215,6 +251,7 @@ function normalize(raw: unknown): CreateDraft | null {
     subraceName: asString(draft.subraceName),
     backgroundCode: asCode(draft.backgroundCode),
     backgroundName: asString(draft.backgroundName),
+    customBackground: readCustomBackground(draft.customBackground),
     alignmentCode: asCode(draft.alignmentCode),
     alignmentName: asString(draft.alignmentName),
     attributeValues: readNumberMap(draft.attributeValues ?? draft.attributeBase),

@@ -19,6 +19,10 @@ public sealed class CharacterSheet
     /// <summary>背景名（与 <see cref="Background"/> 并存，车卡流程写入这里）。</summary>
     public string? BackgroundName { get; set; }
 
+    public string? BackgroundFeatureName { get; set; }
+
+    public string? BackgroundFeatureText { get; set; }
+
     public string? Gender { get; set; }
 
     public string? Height { get; set; }

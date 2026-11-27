@@ -29,6 +29,8 @@ public sealed record CharacterSheetDto(
     string? Background,
     string? Notes,
     string? BackgroundName,
+    string? BackgroundFeatureName,
+    string? BackgroundFeatureText,
     string? Gender,
     string? Height,
     string? Weight,

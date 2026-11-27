@@ -59,7 +59,7 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
 
         var steps = await _db.CreationSteps.OrderBy(step => step.SortOrder).ToListAsync();
 
-        Assert.Equal(11, steps.Count);
+        Assert.Equal(9, steps.Count);
 
         var first = steps[0];
         Assert.Equal("dnd5e", first.SystemCode);
@@ -94,14 +94,10 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
 
         Assert.Equal(CreationStepKind.Skills, steps[6].Kind);
         Assert.Equal("选择技能", steps[6].Title);
-        Assert.Equal(CreationStepKind.Languages, steps[7].Kind);
-        Assert.Equal("选择语言", steps[7].Title);
-        Assert.Equal(CreationStepKind.Features, steps[8].Kind);
-        Assert.Equal("职业特性", steps[8].Title);
-        Assert.Equal(CreationStepKind.Equipment, steps[9].Kind);
-        Assert.Equal("起始装备", steps[9].Title);
-        Assert.Equal(CreationStepKind.Description, steps[10].Kind);
-        Assert.Equal("描述角色", steps[10].Title);
+        Assert.Equal(CreationStepKind.Features, steps[7].Kind);
+        Assert.Equal("职业特性", steps[7].Title);
+        Assert.Equal(CreationStepKind.Equipment, steps[8].Kind);
+        Assert.Equal("起始装备", steps[8].Title);
     }
 
     [Fact]
@@ -131,6 +127,7 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
             ["战斗"] = "005",
             ["种族"] = "006",
             ["阵营"] = "007",
+            ["背景"] = "008",
         };
         Assert.All(keywords, keyword => Assert.StartsWith(categoryCodes[keyword.Category], keyword.Code));
         Assert.Contains(keywords, keyword => keyword.Key == "敏捷");

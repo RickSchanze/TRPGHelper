@@ -359,86 +359,292 @@
             <KeywordText :text="currentStep.description" />
           </view>
 
-          <view class="bg-section-title">背景</view>
-          <view v-if="!backgroundCatalog.length" class="muted">正在加载背景…</view>
-          <view v-else class="bg-cards">
-            <view
-              v-for="item in backgroundCatalog"
-              :key="item.id"
-              class="bg-card"
-              :class="{ 'bg-card-selected': draft.backgroundCode === item.id }"
-              @tap="pickBackground(item)"
-            >
-              <view class="bg-card-head">
-                <view class="bg-card-name">
-                  <KeywordText :text="'[' + item.name + ']'" />
+          <!-- 阵营 -->
+          <view class="bg-block">
+            <view class="bg-block-title">阵营</view>
+            <view v-if="alignmentsLoading" class="muted">正在加载阵营…</view>
+            <view v-else-if="alignmentsError" class="load-error" @tap="loadAlignments">
+              <text class="muted">阵营加载失败，点这里重试</text>
+            </view>
+            <view v-else-if="!alignments.length" class="muted background-empty">
+              这个规则书还没配置阵营，这一段可以先跳过。
+            </view>
+            <view v-else class="background-fields">
+              <view
+                class="bg-field"
+                :class="{ 'bg-field-filled': Boolean(pickedAlignment) }"
+                @tap="openAlignmentSheet"
+              >
+                <view class="bg-field-body">
+                  <view class="bg-field-label">阵营</view>
+                  <view v-if="pickedAlignment" class="bg-field-value">
+                    <image
+                      v-if="pickedAlignment.iconUrl && !failedAlignmentIcons[pickedAlignment.code]"
+                      class="bg-field-icon"
+                      :src="pickedAlignment.iconUrl"
+                      mode="aspectFit"
+                      @error="markAlignmentIconFailed(pickedAlignment.code)"
+                    />
+                    <view
+                      v-else
+                      class="bg-field-icon bg-field-icon-fallback"
+                      :style="{ backgroundColor: pickedAlignment.accent || DEFAULT_ACCENT }"
+                    >
+                      <text>{{ pickedAlignment.name.slice(0, 1) }}</text>
+                    </view>
+                    <view class="bg-field-name" @tap.stop>
+                      <KeywordText :text="'[' + pickedAlignment.name + ']'" />
+                    </view>
+                  </view>
+                  <view v-else class="bg-field-value muted">点这里，从九宫格里挑一个</view>
                 </view>
-                <view v-if="draft.backgroundCode === item.id" class="race-check">✓</view>
+                <text class="bg-field-arrow">›</text>
               </view>
-              <view class="bg-card-desc muted">{{ item.description }}</view>
-              <view class="bg-card-meta muted">技能：{{ item.skills.join('、') }}</view>
+              <view class="muted bg-field-tip">
+                点阵营名可以看词条解释；守序 ↔ 混乱是做事的方式，善良 ↔ 邪恶是动机。
+              </view>
             </view>
           </view>
 
-          <view v-if="backgroundOption" class="bg-grant">
-            <view class="bg-grant-row"><text class="muted">技能熟练</text><text>{{ backgroundOption.skills.join('、') }}</text></view>
-            <view v-if="backgroundOption.tools && backgroundOption.tools !== '无'" class="bg-grant-row">
-              <text class="muted">工具</text><text>{{ backgroundOption.tools }}</text>
-            </view>
-            <view v-if="backgroundOption.languageCount" class="bg-grant-row">
-              <text class="muted">额外语言</text><text>{{ backgroundOption.languageCount }} 门</text>
-            </view>
-            <view class="bg-grant-row"><text class="muted">装备</text><text>{{ backgroundOption.equipment }}</text></view>
-            <view class="bg-grant-row">
-              <text class="muted">背景特性</text>
-              <text>{{ backgroundOption.featureName }}：{{ backgroundOption.featureText }}</text>
-            </view>
-          </view>
+          <!-- 背景 -->
+          <view class="bg-block">
+            <view class="bg-block-title">背景</view>
+            <view v-if="!backgroundCatalog.length" class="muted">正在加载背景…</view>
+            <view v-else class="bg-cards">
+              <view
+                v-for="item in backgroundCatalog"
+                :key="item.id"
+                class="bg-card"
+                :class="{ 'bg-card-selected': draft.backgroundCode === item.id }"
+                @tap="pickBackground(item)"
+              >
+                <view class="bg-card-head">
+                  <view class="bg-card-name">
+                    <KeywordText :text="'[' + item.name + ']'" />
+                  </view>
+                  <view class="bg-card-actions">
+                    <text class="bg-card-detail" @tap.stop="openBackgroundDetail(item)">详情 ›</text>
+                    <view v-if="draft.backgroundCode === item.id" class="race-check">✓</view>
+                  </view>
+                </view>
+                <view class="bg-card-desc muted">{{ item.description }}</view>
+              </view>
 
-          <view class="bg-section-title">阵营</view>
+              <view
+                class="bg-card bg-card-custom"
+                :class="{ 'bg-card-selected': draft.backgroundCode === CUSTOM_BACKGROUND_CODE }"
+                @tap="pickBackground({ id: CUSTOM_BACKGROUND_CODE, name: '自定义背景', description: '自己定技能、工具、语言、装备和特性；填多少都按 DM 同意处理。', skills: [], tools: '', languageCount: 0, equipment: '', featureName: '', featureText: '' })"
+              >
+                <view class="bg-card-head">
+                  <view class="bg-card-name">自定义背景</view>
+                  <view v-if="draft.backgroundCode === CUSTOM_BACKGROUND_CODE" class="race-check">✓</view>
+                </view>
+                <view class="bg-card-desc muted">自己定技能、工具、语言、装备和特性；填多少都按 DM 同意处理。</view>
+              </view>
+            </view>
 
-          <view v-if="alignmentsLoading" class="muted">正在加载阵营…</view>
-          <view v-else-if="alignmentsError" class="load-error" @tap="loadAlignments">
-            <text class="muted">阵营加载失败，点这里重试</text>
-          </view>
-          <view v-else-if="!alignments.length" class="muted background-empty">
-            这个规则书还没配置阵营，这一步可以先跳过，直接点「下一步」。
-          </view>
-
-          <view v-else class="background-fields">
-            <view
-              class="bg-field"
-              :class="{ 'bg-field-filled': Boolean(pickedAlignment) }"
-              @tap="openAlignmentSheet"
-            >
-              <view class="bg-field-body">
-                <view class="bg-field-label">阵营</view>
-                <view v-if="pickedAlignment" class="bg-field-value">
-                  <image
-                    v-if="pickedAlignment.iconUrl && !failedAlignmentIcons[pickedAlignment.code]"
-                    class="bg-field-icon"
-                    :src="pickedAlignment.iconUrl"
-                    mode="aspectFit"
-                    @error="markAlignmentIconFailed(pickedAlignment.code)"
-                  />
+            <view v-if="draft.backgroundCode === CUSTOM_BACKGROUND_CODE" class="custom-bg">
+              <view class="desc-field">
+                <text class="desc-label muted">名称</text>
+                <input
+                  class="desc-input"
+                  :value="draft.customBackground.name"
+                  placeholder="例如：走私船船长"
+                  @input="setCustomBackgroundText('name', $event.detail.value)"
+                />
+              </view>
+              <view class="desc-field">
+                <text class="desc-label muted">描述</text>
+                <input
+                  class="desc-input"
+                  :value="draft.customBackground.description"
+                  placeholder="一句话说明"
+                  @input="setCustomBackgroundText('description', $event.detail.value)"
+                />
+              </view>
+              <view class="desc-field custom-skills">
+                <text class="desc-label muted">技能熟练</text>
+                <view class="skill-grid">
                   <view
-                    v-else
-                    class="bg-field-icon bg-field-icon-fallback"
-                    :style="{ backgroundColor: pickedAlignment.accent || DEFAULT_ACCENT }"
+                    v-for="skill in skillRows"
+                    :key="skill.id"
+                    class="skill-chip"
+                    :class="{ 'skill-chosen': draft.customBackground.skills.includes(skill.name) }"
+                    @tap="toggleCustomSkill(skill.name)"
                   >
-                    <text>{{ pickedAlignment.name.slice(0, 1) }}</text>
-                  </view>
-                  <view class="bg-field-name" @tap.stop>
-                    <KeywordText :text="'[' + pickedAlignment.name + ']'" />
+                    <text>{{ skill.name }}</text>
                   </view>
                 </view>
-                <view v-else class="bg-field-value muted">点这里，从九宫格里挑一个</view>
               </view>
-              <text class="bg-field-arrow">›</text>
+              <view class="desc-field">
+                <text class="desc-label muted">工具</text>
+                <input
+                  class="desc-input"
+                  :value="draft.customBackground.tools"
+                  placeholder="例如：盗贼工具、航海工具"
+                  @input="setCustomBackgroundText('tools', $event.detail.value)"
+                />
+              </view>
+              <view class="desc-field">
+                <text class="desc-label muted">额外语言</text>
+                <input
+                  class="desc-input"
+                  type="number"
+                  :value="String(draft.customBackground.languageCount)"
+                  placeholder="0"
+                  @input="setCustomLanguageCount($event.detail.value)"
+                />
+              </view>
+              <view class="desc-field">
+                <text class="desc-label muted">装备</text>
+                <input
+                  class="desc-input"
+                  :value="draft.customBackground.equipment"
+                  placeholder="例如：匕首、绳索、15 gp"
+                  @input="setCustomBackgroundText('equipment', $event.detail.value)"
+                />
+              </view>
+              <view class="desc-field">
+                <text class="desc-label muted">特性名</text>
+                <input
+                  class="desc-input"
+                  :value="draft.customBackground.featureName"
+                  placeholder="例如：船运人脉"
+                  @input="setCustomBackgroundText('featureName', $event.detail.value)"
+                />
+              </view>
+              <view class="desc-field">
+                <text class="desc-label muted">特性说明</text>
+                <input
+                  class="desc-input"
+                  :value="draft.customBackground.featureText"
+                  placeholder="这个特性做什么"
+                  @input="setCustomBackgroundText('featureText', $event.detail.value)"
+                />
+              </view>
             </view>
+          </view>
 
-            <view class="muted bg-field-tip">
-              点阵营名可以看词条解释；守序 ↔ 混乱是做事的方式，善良 ↔ 邪恶是动机。
+          <!-- 语言 -->
+          <view class="bg-block">
+            <view class="bg-block-title">语言</view>
+            <view class="muted option-hint">
+              种族母语：{{ grantedLanguages.join('、') || '无' }}；背景额外 {{ backgroundOption?.languageCount ?? 0 }} 门，种族额外 {{ raceOption?.languageChoiceCount ?? 0 }} 门。可以留空。
+            </view>
+            <view v-if="!languageCatalog.length" class="muted">正在加载语言…</view>
+            <view v-else class="skill-grid">
+              <view
+                v-for="row in languageRows"
+                :key="row.id"
+                class="skill-chip"
+                :class="{ 'skill-granted': row.granted, 'skill-chosen': row.chosen }"
+                @tap="pickLanguage(row.name)"
+              >
+                <text>{{ row.name }}</text>
+                <text class="skill-ability muted">{{ row.kind }}</text>
+              </view>
+            </view>
+            <view class="muted option-count">
+              已选 {{ draft.selectedLanguages.length }} / 最多 {{ languagePickCount }} 门（可以不选）
+            </view>
+          </view>
+
+          <!-- 描述角色 -->
+          <view class="bg-block">
+            <view class="bg-block-title">描述角色</view>
+            <view class="desc-field">
+              <text class="desc-label muted">名字</text>
+              <view class="desc-name-row">
+                <input
+                  class="desc-input"
+                  :value="draft.characterName"
+                  placeholder="留空则提交时随机"
+                  @input="setDraftText('characterName', $event.detail.value)"
+                />
+                <view class="desc-random" @tap="randomCharacterName">随机</view>
+              </view>
+            </view>
+            <view class="desc-field">
+              <text class="desc-label muted">性别</text>
+              <input
+                class="desc-input"
+                :value="draft.gender"
+                placeholder="男 / 女 / 其他"
+                @input="setDraftText('gender', $event.detail.value)"
+              />
+            </view>
+            <view class="desc-field">
+              <text class="desc-label muted">年龄</text>
+              <input
+                class="desc-input"
+                type="number"
+                :value="draft.age ? String(draft.age) : ''"
+                placeholder="例如 25"
+                @input="setDraftAge($event.detail.value)"
+              />
+            </view>
+            <view class="desc-field">
+              <text class="desc-label muted">身高</text>
+              <input
+                class="desc-input"
+                :value="draft.height"
+                placeholder="例如 5 尺 8 寸"
+                @input="setDraftText('height', $event.detail.value)"
+              />
+            </view>
+            <view class="desc-field">
+              <text class="desc-label muted">体重</text>
+              <input
+                class="desc-input"
+                :value="draft.weight"
+                placeholder="例如 150 磅"
+                @input="setDraftText('weight', $event.detail.value)"
+              />
+            </view>
+            <view class="desc-field">
+              <text class="desc-label muted">外貌</text>
+              <textarea
+                class="desc-textarea"
+                :value="draft.appearance"
+                placeholder="发色、眼睛、衣着、习惯动作…（可以留空）"
+                @input="setDraftText('appearance', $event.detail.value)"
+              />
+            </view>
+            <view class="desc-field">
+              <text class="desc-label muted">性格特质</text>
+              <input
+                class="desc-input"
+                :value="draft.trait"
+                placeholder="一句话性格（可以留空）"
+                @input="setDraftText('trait', $event.detail.value)"
+              />
+            </view>
+            <view class="desc-field">
+              <text class="desc-label muted">理想</text>
+              <input
+                class="desc-input"
+                :value="draft.ideal"
+                placeholder="角色相信什么（可以留空）"
+                @input="setDraftText('ideal', $event.detail.value)"
+              />
+            </view>
+            <view class="desc-field">
+              <text class="desc-label muted">牵绊</text>
+              <input
+                class="desc-input"
+                :value="draft.bond"
+                placeholder="放不下的人或事（可以留空）"
+                @input="setDraftText('bond', $event.detail.value)"
+              />
+            </view>
+            <view class="desc-field">
+              <text class="desc-label muted">缺点</text>
+              <input
+                class="desc-input"
+                :value="draft.flaw"
+                placeholder="弱点或秘密（可以留空）"
+                @input="setDraftText('flaw', $event.detail.value)"
+              />
             </view>
           </view>
         </view>
@@ -598,205 +804,6 @@
           <view class="muted option-count">已选 {{ draft.selectedSkills.length }} / {{ skillPickCount }}</view>
         </view>
 
-        <!-- 选择语言 -->
-        <view v-else-if="isLanguagesStep" class="panel">
-          <view class="panel-title"><KeywordText :text="currentStep?.title || '选择语言'" /></view>
-          <view v-if="currentStep?.description" class="muted step-hint">
-            <KeywordText :text="currentStep.description" />
-          </view>
-          <view class="muted option-hint">
-            种族母语：{{ grantedLanguages.join('、') || '无' }}；背景额外 {{ backgroundOption?.languageCount ?? 0 }} 门，种族额外 {{ raceOption?.languageChoiceCount ?? 0 }} 门。
-          </view>
-          <view v-if="!languageCatalog.length" class="muted">正在加载语言…</view>
-          <view v-else class="skill-grid">
-            <view
-              v-for="row in languageRows"
-              :key="row.id"
-              class="skill-chip"
-              :class="{ 'skill-granted': row.granted, 'skill-chosen': row.chosen }"
-              @tap="pickLanguage(row.name)"
-            >
-              <text>{{ row.name }}</text>
-              <text class="skill-ability muted">{{ row.kind }}</text>
-            </view>
-          </view>
-          <view class="muted option-count">已选 {{ draft.selectedLanguages.length }} / {{ languagePickCount }}</view>
-        </view>
-
-        <!-- 1 级职业特性 -->
-        <view v-else-if="isFeaturesStep" class="panel">
-          <view class="panel-title"><KeywordText :text="currentStep?.title || '职业特性'" /></view>
-          <view v-if="currentStep?.description" class="muted step-hint">
-            <KeywordText :text="currentStep.description" />
-          </view>
-          <view v-if="!featureGroups.length" class="muted">这个职业 1 级没有可选特性，直接下一步。</view>
-          <view v-for="group in featureGroups" :key="group.type" class="feature-group">
-            <view class="bg-section-title">{{ group.label }}</view>
-            <view class="skill-grid">
-              <view
-                v-for="option in group.options"
-                :key="option.name"
-                class="skill-chip"
-                :class="{ 'skill-chosen': draft.featureChoices[group.type] === option.name }"
-                @tap="pickFeature(group.type, option.name)"
-              >
-                <text>{{ option.name }}</text>
-              </view>
-            </view>
-          </view>
-          <view v-if="featureGroups.length" class="muted option-count">每个类别选 1 项</view>
-        </view>
-
-        <!-- 起始装备 -->
-        <view v-else-if="isEquipmentStep" class="panel">
-          <view class="panel-title"><KeywordText :text="currentStep?.title || '起始装备'" /></view>
-          <view v-if="currentStep?.description" class="muted step-hint">
-            <KeywordText :text="currentStep.description" />
-          </view>
-          <view v-if="!equipmentCatalog" class="muted">正在加载装备…</view>
-          <view v-else-if="!equipmentCatalog.kit" class="muted">这个职业还没配置起始装备，直接下一步。</view>
-          <template v-else>
-            <view class="equip-kit">
-              <view class="equip-row"><text class="muted">护甲</text><text>{{ armorOption?.name || '无甲' }}</text></view>
-              <view class="equip-row"><text class="muted">盾</text><text>{{ equipmentCatalog.kit.shield ? '有（AC +2）' : '无' }}</text></view>
-              <view class="equip-row"><text class="muted">装备包</text><text>{{ equipmentCatalog.kit.pack || '无' }}</text></view>
-            </view>
-            <view class="bg-section-title">武器</view>
-            <view class="skill-grid">
-              <view
-                v-for="weapon in weaponOptions"
-                :key="weapon.id"
-                class="skill-chip"
-                :class="{ 'skill-chosen': selectedWeapon?.id === weapon.id }"
-                @tap="pickWeapon(weapon.id)"
-              >
-                <text>{{ weapon.name }}</text>
-                <text class="skill-ability muted">{{ weapon.damage }}</text>
-              </view>
-            </view>
-            <view class="equip-stats">
-              <view class="equip-stat">
-                <text class="equip-stat-value">{{ combatSummary.hitPoints }}</text>
-                <text class="muted">生命上限</text>
-              </view>
-              <view class="equip-stat">
-                <text class="equip-stat-value">{{ combatSummary.armorClass }}</text>
-                <text class="muted">AC</text>
-              </view>
-              <view class="equip-stat">
-                <text class="equip-stat-value">{{ signed(combatSummary.initiative) }}</text>
-                <text class="muted">先攻</text>
-              </view>
-              <view class="equip-stat">
-                <text class="equip-stat-value">{{ signed(combatSummary.attackBonus) }}</text>
-                <text class="muted">{{ combatSummary.weaponName }}攻击</text>
-              </view>
-            </view>
-          </template>
-        </view>
-
-        <!-- 描述角色 -->
-        <view v-else-if="isDescriptionStep" class="panel">
-          <view class="panel-title"><KeywordText :text="currentStep?.title || '描述角色'" /></view>
-          <view v-if="currentStep?.description" class="muted step-hint">
-            <KeywordText :text="currentStep.description" />
-          </view>
-          <view class="desc-field">
-            <text class="desc-label muted">名字</text>
-            <view class="desc-name-row">
-              <input
-                class="desc-input"
-                :value="draft.characterName"
-                placeholder="给角色起个名字"
-                @input="setDraftText('characterName', $event.detail.value)"
-              />
-              <view class="desc-random" @tap="randomCharacterName">随机</view>
-            </view>
-          </view>
-          <view class="desc-field">
-            <text class="desc-label muted">性别</text>
-            <input
-              class="desc-input"
-              :value="draft.gender"
-              placeholder="男 / 女 / 其他"
-              @input="setDraftText('gender', $event.detail.value)"
-            />
-          </view>
-          <view class="desc-field">
-            <text class="desc-label muted">年龄</text>
-            <input
-              class="desc-input"
-              type="number"
-              :value="draft.age ? String(draft.age) : ''"
-              placeholder="例如 25"
-              @input="setDraftAge($event.detail.value)"
-            />
-          </view>
-          <view class="desc-field">
-            <text class="desc-label muted">身高</text>
-            <input
-              class="desc-input"
-              :value="draft.height"
-              placeholder="例如 5 尺 8 寸"
-              @input="setDraftText('height', $event.detail.value)"
-            />
-          </view>
-          <view class="desc-field">
-            <text class="desc-label muted">体重</text>
-            <input
-              class="desc-input"
-              :value="draft.weight"
-              placeholder="例如 150 磅"
-              @input="setDraftText('weight', $event.detail.value)"
-            />
-          </view>
-          <view class="desc-field">
-            <text class="desc-label muted">外貌</text>
-            <textarea
-              class="desc-textarea"
-              :value="draft.appearance"
-              placeholder="发色、眼睛、衣着、习惯动作…"
-              @input="setDraftText('appearance', $event.detail.value)"
-            />
-          </view>
-          <view class="desc-field">
-            <text class="desc-label muted">性格特质</text>
-            <input
-              class="desc-input"
-              :value="draft.trait"
-              placeholder="一句话性格"
-              @input="setDraftText('trait', $event.detail.value)"
-            />
-          </view>
-          <view class="desc-field">
-            <text class="desc-label muted">理想</text>
-            <input
-              class="desc-input"
-              :value="draft.ideal"
-              placeholder="角色相信什么"
-              @input="setDraftText('ideal', $event.detail.value)"
-            />
-          </view>
-          <view class="desc-field">
-            <text class="desc-label muted">牵绊</text>
-            <input
-              class="desc-input"
-              :value="draft.bond"
-              placeholder="放不下的人或事"
-              @input="setDraftText('bond', $event.detail.value)"
-            />
-          </view>
-          <view class="desc-field">
-            <text class="desc-label muted">缺点</text>
-            <input
-              class="desc-input"
-              :value="draft.flaw"
-              placeholder="弱点或秘密"
-              @input="setDraftText('flaw', $event.detail.value)"
-            />
-          </view>
-        </view>
-
         <!-- 其它类型的步骤：面板还没做，先按配置占位 -->
         <view v-else class="panel placeholder-panel">
           <view class="panel-title">
@@ -892,6 +899,50 @@
             <view v-if="draft.alignmentCode === item.code" class="align-check">✓</view>
           </view>
         </view>
+      </view>
+    </view>
+
+    <!-- 背景详情：点「详情」看技能 / 工具 / 语言 / 装备 / 特性 -->
+    <view v-if="backgroundDetailVisible && backgroundDetailItem" class="attr-mask" @tap="closeBackgroundDetail">
+      <view class="attr-sheet" @tap.stop>
+        <view class="attr-sheet-head">
+          <view class="attr-sheet-title">
+            <KeywordText :text="'[' + backgroundDetailItem.name + ']'" />
+          </view>
+          <text class="attr-sheet-close" @tap="closeBackgroundDetail">×</text>
+        </view>
+        <view v-if="backgroundDetailItem.description" class="bg-detail-desc muted">
+          {{ backgroundDetailItem.description }}
+        </view>
+        <view class="bg-grant">
+          <view class="bg-grant-row">
+            <text class="muted">技能熟练</text>
+            <text>{{ backgroundDetailItem.skills.join('、') || '无' }}</text>
+          </view>
+          <view class="bg-grant-row">
+            <text class="muted">工具</text>
+            <text>{{ backgroundDetailItem.tools || '无' }}</text>
+          </view>
+          <view class="bg-grant-row">
+            <text class="muted">额外语言</text>
+            <text>{{ backgroundDetailItem.languageCount }} 门</text>
+          </view>
+          <view class="bg-grant-row">
+            <text class="muted">装备</text>
+            <text>{{ backgroundDetailItem.equipment || '无' }}</text>
+          </view>
+          <view class="bg-grant-row">
+            <text class="muted">背景特性</text>
+            <text>
+              {{ backgroundDetailItem.featureName
+                ? `${backgroundDetailItem.featureName}：${backgroundDetailItem.featureText}`
+                : '无' }}
+            </text>
+          </view>
+        </view>
+        <button class="btn attr-sheet-done" hover-class="btn-pressed" hover-stay-time="80" @tap="closeBackgroundDetail">
+          完成
+        </button>
       </view>
     </view>
 
@@ -1305,12 +1356,15 @@ const canNext = computed(() => {
   }
 
   if (isBackgroundStep.value) {
-    if (alignmentsLoading.value && !draft.value.alignmentCode) {
+    if (alignmentsLoading.value) {
       return false
     }
 
-    // 还没配阵营内容时允许跳过
-    return alignments.value.length === 0 || Boolean(draft.value.alignmentCode)
+    const alignmentReady = alignments.value.length === 0 || Boolean(draft.value.alignmentCode)
+    const backgroundReady =
+      Boolean(draft.value.backgroundCode) &&
+      (draft.value.backgroundCode !== CUSTOM_BACKGROUND_CODE || draft.value.customBackground.name.trim().length > 0)
+    return alignmentReady && backgroundReady
   }
 
   if (isAttributesStep.value) {
@@ -1321,20 +1375,12 @@ const canNext = computed(() => {
     return skillsReady.value
   }
 
-  if (isLanguagesStep.value) {
-    return languagesReady.value
-  }
-
   if (isFeaturesStep.value) {
     return featuresReady.value
   }
 
   if (isEquipmentStep.value) {
     return equipmentReady.value
-  }
-
-  if (isDescriptionStep.value) {
-    return descriptionReady.value
   }
 
   return true
@@ -1371,19 +1417,19 @@ function isStepDone(index: number): boolean {
           subraces.value.length === 0)
       )
     case 'background':
-      return Boolean(draft.value.alignmentCode) || (alignmentsLoaded.value && alignments.value.length === 0)
+      return (
+        (Boolean(draft.value.alignmentCode) || (alignmentsLoaded.value && alignments.value.length === 0)) &&
+        Boolean(draft.value.backgroundCode) &&
+        (draft.value.backgroundCode !== CUSTOM_BACKGROUND_CODE || draft.value.customBackground.name.trim().length > 0)
+      )
     case 'attributes':
       return attributesReady()
     case 'skills':
       return skillsReady.value
-    case 'languages':
-      return languagesReady.value
     case 'features':
       return featuresReady.value
     case 'equipment':
       return equipmentReady.value
-    case 'description':
-      return descriptionReady.value
     default:
       return false
   }
@@ -1451,10 +1497,6 @@ watch(
 
     if (item?.kind === 'skills') {
       void ensureSkillsData()
-    }
-
-    if (item?.kind === 'languages') {
-      void ensureLanguagesData()
     }
 
     if (item?.kind === 'features') {
@@ -1789,10 +1831,6 @@ async function init(): Promise<void> {
 
   if (currentStep.value?.kind === 'skills') {
     void ensureSkillsData()
-  }
-
-  if (currentStep.value?.kind === 'languages') {
-    void ensureLanguagesData()
   }
 
   if (currentStep.value?.kind === 'features') {
@@ -2230,19 +2268,35 @@ const languageCatalog = ref<LanguageOption[]>([])
 const backgroundCatalog = ref<BackgroundDetail[]>([])
 const featureCatalog = ref<FeatureOption[]>([])
 const equipmentCatalog = ref<EquipmentResponse | null>(null)
+const backgroundDetailVisible = ref(false)
+const backgroundDetailItem = ref<BackgroundDetail | null>(null)
 
 const isSkillsStep = computed(() => currentStep.value?.kind === 'skills')
-const isLanguagesStep = computed(() => currentStep.value?.kind === 'languages')
 const isFeaturesStep = computed(() => currentStep.value?.kind === 'features')
 const isEquipmentStep = computed(() => currentStep.value?.kind === 'equipment')
-const isDescriptionStep = computed(() => currentStep.value?.kind === 'description')
 
 const classOption = computed<ClassOption | null>(
   () => classes.value.find((item) => item.code === draft.value.classCode) ?? null,
 )
-const backgroundOption = computed<BackgroundDetail | null>(
-  () => backgroundCatalog.value.find((item) => item.id === draft.value.backgroundCode) ?? null,
-)
+const CUSTOM_BACKGROUND_CODE = 'custom'
+const backgroundOption = computed<BackgroundDetail | null>(() => {
+  const custom = draft.value.customBackground
+  if (draft.value.backgroundCode === CUSTOM_BACKGROUND_CODE) {
+    return {
+      id: CUSTOM_BACKGROUND_CODE,
+      name: custom.name || '自定义背景',
+      description: custom.description,
+      skills: custom.skills,
+      tools: custom.tools,
+      languageCount: custom.languageCount,
+      equipment: custom.equipment,
+      featureName: custom.featureName,
+      featureText: custom.featureText,
+    }
+  }
+
+  return backgroundCatalog.value.find((item) => item.id === draft.value.backgroundCode) ?? null
+})
 
 const armorOption = computed(() => {
   const kit = equipmentCatalog.value?.kit
@@ -2306,7 +2360,6 @@ const languageRows = computed(() =>
     chosen: draft.value.selectedLanguages.includes(language.name),
   })),
 )
-const languagesReady = computed(() => draft.value.selectedLanguages.length >= languagePickCount.value)
 
 const featureGroups = computed(() => {
   const groups = new Map<string, FeatureOption[]>()
@@ -2327,7 +2380,6 @@ const featuresReady = computed(() =>
 )
 
 const equipmentReady = computed(() => Boolean(selectedWeapon.value))
-const descriptionReady = computed(() => draft.value.characterName.trim().length > 0)
 
 const attributeFinal = computed(() => {
   const map: Record<string, number> = {}
@@ -2500,6 +2552,8 @@ async function ensureBackgroundData(): Promise<void> {
   }
 
   await loadBackgroundCatalog()
+  await loadSkillCatalog()
+  await loadLanguageCatalog()
 }
 
 async function ensureSkillsData(): Promise<void> {
@@ -2526,9 +2580,54 @@ function pickBackground(item: BackgroundDetail): void {
   }
 
   draft.value.backgroundCode = item.id
-  draft.value.backgroundName = item.name
+  draft.value.backgroundName = item.id === CUSTOM_BACKGROUND_CODE
+    ? draft.value.customBackground.name || '自定义背景'
+    : item.name
   draft.value.selectedSkills = []
   draft.value.selectedLanguages = []
+  saveDraft(draft.value)
+}
+
+function openBackgroundDetail(item: BackgroundDetail): void {
+  backgroundDetailItem.value = item
+  backgroundDetailVisible.value = true
+}
+
+function closeBackgroundDetail(): void {
+  backgroundDetailVisible.value = false
+}
+
+function setCustomBackgroundText(
+  key: 'name' | 'description' | 'tools' | 'equipment' | 'featureName' | 'featureText',
+  value: string,
+): void {
+  draft.value.customBackground = { ...draft.value.customBackground, [key]: value }
+  if (key === 'name') {
+    draft.value.backgroundName = value || '自定义背景'
+  }
+
+  saveDraft(draft.value)
+}
+
+function setCustomLanguageCount(value: string): void {
+  const count = Number(value)
+  draft.value.customBackground = {
+    ...draft.value.customBackground,
+    languageCount: Number.isFinite(count) ? Math.min(5, Math.max(0, Math.floor(count))) : 0,
+  }
+  saveDraft(draft.value)
+}
+
+function toggleCustomSkill(name: string): void {
+  const skills = [...draft.value.customBackground.skills]
+  const index = skills.indexOf(name)
+  if (index >= 0) {
+    skills.splice(index, 1)
+  } else {
+    skills.push(name)
+  }
+
+  draft.value.customBackground = { ...draft.value.customBackground, skills }
   saveDraft(draft.value)
 }
 
@@ -2555,6 +2654,10 @@ function pickSkill(name: string): void {
 function pickLanguage(name: string): void {
   const row = languageRows.value.find((item) => item.name === name)
   if (!row || row.granted) {
+    return
+  }
+
+  if (languagePickCount.value <= 0) {
     return
   }
 
@@ -2762,7 +2865,7 @@ function jumpToStep(index: number): void {
     return
   }
 
-  if ((item?.kind === 'skills' || item?.kind === 'languages') && !draft.value.backgroundCode) {
+  if (item?.kind === 'skills' && !draft.value.backgroundCode) {
     toast('请先选择背景')
     return
   }
@@ -2869,6 +2972,14 @@ async function finish(): Promise<void> {
       equipmentItems.push({ name: equipmentCatalog.value.kit.pack, quantity: 1 })
     }
 
+    const backgroundEquipment = (backgroundOption.value?.equipment ?? '')
+      .split(/[、,，]/)
+      .map((item) => item.trim())
+      .filter((item) => item && item !== '无')
+    for (const item of backgroundEquipment) {
+      equipmentItems.push({ name: item, quantity: 1, note: '背景装备' })
+    }
+
     const created = await request<{ id: string }>({
       url: '/api/characters',
       method: 'POST',
@@ -2893,6 +3004,8 @@ async function finish(): Promise<void> {
           items: [],
           background: draft.value.backgroundName || null,
           backgroundName: draft.value.backgroundName || null,
+          backgroundFeatureName: backgroundOption.value?.featureName || null,
+          backgroundFeatureText: backgroundOption.value?.featureText || null,
           gender: draft.value.gender || null,
           height: draft.value.height || null,
           weight: draft.value.weight || null,
@@ -4037,6 +4150,25 @@ function scrollTop(): void {
   letter-spacing: 2rpx;
 }
 
+.bg-block {
+  padding: 20rpx;
+  margin-top: 20rpx;
+  border: 2rpx solid $trpg-line;
+  border-radius: 16rpx;
+  background: #fffdf8;
+}
+
+.bg-block:first-of-type {
+  margin-top: 0;
+}
+
+.bg-block-title {
+  margin-bottom: 14rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+}
+
 .bg-cards {
   display: flex;
   flex-direction: column;
@@ -4076,6 +4208,47 @@ function scrollTop(): void {
 .bg-card-meta {
   margin-top: 4rpx;
   font-size: 20rpx;
+}
+
+.bg-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.bg-card-detail {
+  padding: 2rpx 12rpx;
+  border: 2rpx solid #d8c6a5;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  color: $trpg-accent-deep;
+}
+
+.bg-card-custom {
+  border-style: dashed;
+}
+
+.custom-bg {
+  padding: 4rpx 16rpx;
+  margin-top: 16rpx;
+  border: 2rpx dashed #d8c6a5;
+  border-radius: 12rpx;
+  background: #fff;
+}
+
+.custom-skills {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.custom-skills .skill-grid {
+  margin-top: 8rpx;
+}
+
+.bg-detail-desc {
+  margin: 4rpx 0 14rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
 }
 
 .bg-grant {
@@ -4833,6 +5006,36 @@ function scrollTop(): void {
 
   .bg-card-meta {
     font-size: 12px;
+  }
+
+  .bg-block {
+    padding: 16px;
+    margin-top: 16px;
+    border-width: 1px;
+    border-radius: 12px;
+  }
+
+  .bg-block-title {
+    margin-bottom: 10px;
+    font-size: 15px;
+  }
+
+  .bg-card-detail {
+    padding: 1px 8px;
+    border-width: 1px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .custom-bg {
+    padding: 2px 12px;
+    margin-top: 12px;
+    border-width: 1px;
+    border-radius: 10px;
+  }
+
+  .bg-detail-desc {
+    font-size: 13px;
   }
 
   .bg-grant {

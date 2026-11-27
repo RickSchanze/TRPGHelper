@@ -212,7 +212,7 @@
 | 列 | 必填 | 说明 |
 | --- | --- | --- |
 | `systemId` | 否 | 引用 `systems.id`；留空表示通用 |
-| `kind` | 是 | 步骤类型：`class` / `subclass` / `race` / `subrace` / `background` / `attributes` / `skills` / `languages` / `features` / `equipment` / `description` / `name` / `summary`；`background` = 决定背景（背景 + 阵营），`attributes` = 决定属性，`skills` / `languages` = 技能 / 语言，`features` = 1 级职业特性，`equipment` = 起始装备，`description` = 姓名 / 外貌 / 个性 |
+| `kind` | 是 | 步骤类型：`class` / `subclass` / `race` / `subrace` / `background` / `attributes` / `skills` / `languages` / `features` / `equipment` / `description` / `name` / `summary`；`background` = 决定背景（阵营 → 背景 → 语言 → 描述角色，四段都在这一步），`attributes` = 决定属性，`skills` = 技能，`features` = 1 级职业特性，`equipment` = 起始装备；`languages` / `description` 仍保留兼容，但新流程不再单独使用 |
 | `title` | 是 | 步骤标题（stepper 上显示） |
 | `description` | 否 | 步骤说明 |
 | `isEnabled` | 否 | 是否启用 |
@@ -233,7 +233,7 @@
 
 ## 关键词.<分类>.xlsx（工作表 keywords）
 
-文件按分类拆分，例如 `关键词.属性.xlsx`、`关键词.战斗.xlsx`、`关键词.法术.xlsx`、`关键词.种族.xlsx`、`关键词.阵营.xlsx`。分类编号与名称登记在 `关键词分类.xlsx`（当前：001 法术 / 002 职业 / 003 属性 / 004 规则 / 005 战斗 / 006 种族 / 007 阵营）。
+文件按分类拆分，例如 `关键词.属性.xlsx`、`关键词.战斗.xlsx`、`关键词.法术.xlsx`、`关键词.种族.xlsx`、`关键词.阵营.xlsx`。分类编号与名称登记在 `关键词分类.xlsx`（当前：001 法术 / 002 职业 / 003 属性 / 004 规则 / 005 战斗 / 006 种族 / 007 阵营 / 008 背景）。
 
 | 列 | 必填 | 说明 |
 | --- | --- | --- |

@@ -83,6 +83,8 @@ export interface CharacterSheet {
   background?: string
   notes?: string
   backgroundName?: string
+  backgroundFeatureName?: string
+  backgroundFeatureText?: string
   gender?: string
   height?: string
   weight?: string
