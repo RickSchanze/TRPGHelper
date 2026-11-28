@@ -340,6 +340,7 @@ public sealed class GeneratorCatalogService(AppDbContext db)
                 entry.Category,
                 entry.Value,
                 ReadString(extra, "description") ?? string.Empty,
+                ReadString(extra, "detail") ?? string.Empty,
                 ReadStringList(extra, "skills"),
                 ReadString(extra, "tools") ?? string.Empty,
                 ReadInt(extra, "languageCount") ?? 0,
@@ -386,7 +387,7 @@ public sealed class GeneratorCatalogService(AppDbContext db)
         var system = await ResolveSystemAsync(systemCode, cancellationToken);
         if (system is null)
         {
-            return new EquipmentResponse([], [], null);
+            return new EquipmentResponse([], [], []);
         }
 
         var entries = await EntriesAsync(
@@ -428,24 +429,25 @@ public sealed class GeneratorCatalogService(AppDbContext db)
             .ToList();
 
         var code = classId?.Trim().ToLowerInvariant();
-        var kitEntry = entries
+        var kits = entries
             .Where(entry => entry.Kind == GeneratorKind.EquipmentKit)
-            .FirstOrDefault(entry => code is not null && entry.Category == code);
+            .Where(entry => code is not null && entry.Category == code)
+            .Select(entry =>
+            {
+                var extra = ParseExtra(entry.ExtraJson);
+                return new EquipmentKitDto(
+                    ReadString(extra, "kitId") ?? entry.Value,
+                    entry.Category,
+                    ReadString(extra, "name") ?? entry.Value,
+                    ReadString(extra, "armorId") ?? string.Empty,
+                    ReadBool(extra, "shield") ?? false,
+                    ReadStringList(extra, "weaponIds"),
+                    ReadString(extra, "defaultWeaponId") ?? string.Empty,
+                    ReadString(extra, "pack") ?? string.Empty);
+            })
+            .ToList();
 
-        EquipmentKitDto? kit = null;
-        if (kitEntry is not null)
-        {
-            var extra = ParseExtra(kitEntry.ExtraJson);
-            kit = new EquipmentKitDto(
-                kitEntry.Category,
-                ReadString(extra, "armorId") ?? string.Empty,
-                ReadBool(extra, "shield") ?? false,
-                ReadStringList(extra, "weaponIds"),
-                ReadString(extra, "defaultWeaponId") ?? string.Empty,
-                ReadString(extra, "pack") ?? string.Empty);
-        }
-
-        return new EquipmentResponse(armor, weapons, kit);
+        return new EquipmentResponse(armor, weapons, kits);
     }
 
     internal static bool? ReadBool(JsonElement? element, string property)

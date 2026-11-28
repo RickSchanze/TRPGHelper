@@ -244,6 +244,7 @@ public static class ContentExporter
                     entry.SystemCode ?? "dnd5e",
                     entry.Value,
                     ReadString(extra, "description") ?? string.Empty,
+                    ReadString(extra, "detail") ?? string.Empty,
                     string.Join(',', ReadStringList(extra, "skills")),
                     ReadString(extra, "tools") ?? string.Empty,
                     ReadInt(extra, "languageCount") ?? 0,
@@ -316,8 +317,10 @@ public static class ContentExporter
                 var extra = ParseExtra(entry.ExtraJson);
                 return new object?[]
                 {
+                    ReadString(extra, "kitId") ?? entry.Value,
                     entry.Category,
                     entry.SystemCode ?? "dnd5e",
+                    ReadString(extra, "name") ?? entry.Value,
                     ReadString(extra, "armorId") ?? string.Empty,
                     ReadBool(extra, "shield") ?? false,
                     string.Join(',', ReadStringList(extra, "weaponIds")),
@@ -472,7 +475,7 @@ public static class ContentExporter
         using (var workbook = new XLWorkbook())
         {
             XlsxHelpers.WriteSheet(workbook, "backgrounds",
-                ["id", "systemId", "name", "description", "skills", "tools", "languageCount", "equipment", "featureName", "featureText"],
+                ["id", "systemId", "name", "description", "detail", "skills", "tools", "languageCount", "equipment", "featureName", "featureText"],
                 backgroundDetailRows,
                 new Dictionary<string, double>
                 {
@@ -480,6 +483,7 @@ public static class ContentExporter
                     ["systemId"] = 10,
                     ["name"] = 12,
                     ["description"] = 38,
+                    ["detail"] = 72,
                     ["skills"] = 16,
                     ["tools"] = 30,
                     ["languageCount"] = 12,
@@ -487,7 +491,7 @@ public static class ContentExporter
                     ["featureName"] = 14,
                     ["featureText"] = 50,
                 },
-                new HashSet<string> { "description", "equipment", "featureText" });
+                new HashSet<string> { "description", "detail", "equipment", "featureText" });
             written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.BackgroundDetailsFile)));
         }
 
@@ -533,16 +537,18 @@ public static class ContentExporter
                     ["properties"] = 36,
                 });
             XlsxHelpers.WriteSheet(workbook, "kits",
-                ["classId", "systemId", "armorId", "shield", "weaponIds", "defaultWeaponId", "pack"],
+                ["kitId", "classId", "systemId", "name", "armorId", "shield", "weaponIds", "defaultWeaponId", "pack"],
                 kitRows,
                 new Dictionary<string, double>
                 {
+                    ["kitId"] = 16,
                     ["classId"] = 12,
                     ["systemId"] = 10,
+                    ["name"] = 16,
                     ["armorId"] = 12,
                     ["shield"] = 8,
                     ["weaponIds"] = 28,
-                    ["defaultWeaponId"] = 16,
+                    ["defaultWeaponId"] = 18,
                     ["pack"] = 14,
                 });
             written.Add(Save(workbook, Path.Combine(dataPath, ContentPaths.EquipmentFile)));

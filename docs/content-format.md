@@ -172,7 +172,8 @@
 | `id` | 是 | 背景 code（例如 `soldier`） |
 | `systemId` | 是 | 引用 `systems.id` |
 | `name` | 是 | 背景名，例如「士兵」 |
-| `description` | 否 | 一句话介绍 |
+| `description` | 否 | 一句话介绍，显示在背景卡片上 |
+| `detail` | 否 | 详细介绍，点「详情」时显示；留空则只显示一句话介绍 |
 | `skills` | 是 | 固定技能熟练，逗号分隔，例如「运动,威吓」 |
 | `tools` | 否 | 工具熟练文案 |
 | `languageCount` | 否 | 背景给的额外语言数量 |
@@ -197,7 +198,7 @@
 
 - `armor`：`id`、`systemId`、`name`、`type`（轻甲 / 中甲 / 重甲 / 盾）、`baseAc`、`dexCap`（重甲填 0、中甲填 2、轻甲留空）、`strengthReq`、`stealthDisadvantage`、`description`
 - `weapons`：`id`、`systemId`、`name`、`damage`（例如 `1d8`）、`damageType`、`ability`（力量 / 敏捷）、`ranged`、`properties`
-- `kits`：`classId`、`systemId`、`armorId`、`shield`、`weaponIds`（逗号分隔）、`defaultWeaponId`、`pack`
+- `kits`：每个职业 2～3 套起始装备，玩家在「起始装备」里挑一套。列：`kitId`（套装稳定 id）、`classId`、`systemId`、`name`（套装名）、`armorId`、`shield`、`weaponIds`（逗号分隔）、`defaultWeaponId`（默认主手）、`pack`。整套由 `tools/build_equipment_kits.py` 生成，改套装优先改脚本再重跑。
 
 ## 职业灵感.xlsx（工作表 inspirations）
 

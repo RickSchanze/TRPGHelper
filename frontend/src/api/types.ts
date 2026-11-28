@@ -208,7 +208,10 @@ export interface LanguageOption {
 export interface BackgroundDetail {
   id: string
   name: string
+  /** 卡片上的一句话说明 */
   description: string
+  /** 「详情」里显示的长介绍 */
+  detail: string
   skills: string[]
   tools: string
   languageCount: number
@@ -247,7 +250,10 @@ export interface WeaponOption {
 }
 
 export interface EquipmentKit {
+  kitId: string
   classId: string
+  /** 套装名，例如「重装战士」 */
+  name: string
   armorId: string
   shield: boolean
   weaponIds: string[]
@@ -258,7 +264,8 @@ export interface EquipmentKit {
 export interface EquipmentResponse {
   armor: ArmorOption[]
   weapons: WeaponOption[]
-  kit: EquipmentKit | null
+  /** 职业给的起始装备套装，玩家挑一套；空数组表示这个职业还没配 */
+  kits: EquipmentKit[]
 }
 
 /** 关键词词条：点击 [关键词] 时弹出的解释。 */

@@ -550,6 +550,7 @@ public static class ContentLoader
                 JsonSerializer.Serialize(new
                 {
                     description = row["description"].Trim(),
+                    detail = row["detail"].Trim(),
                     skills = SplitList(row["skills"]),
                     tools = row["tools"].Trim(),
                     languageCount = row.Int("languageCount", 0),
@@ -660,7 +661,7 @@ public static class ContentLoader
         foreach (var row in XlsxHelpers.ReadRows(
                      XlsxHelpers.RequireSheet(workbook, path, "kits"),
                      path,
-                     ["classId", "systemId", "armorId", "shield", "weaponIds", "defaultWeaponId", "pack"]))
+                     ["kitId", "classId", "systemId", "name", "armorId", "shield", "weaponIds", "defaultWeaponId", "pack"]))
         {
             var systemId = RequireSystem(row, systems, path);
             var classId = row.Required("classId", path).ToLowerInvariant();
@@ -669,9 +670,11 @@ public static class ContentLoader
                 systemId,
                 JsonKey(GeneratorKind.EquipmentKit),
                 classId,
-                classId,
+                row.Required("name", path),
                 JsonSerializer.Serialize(new
                 {
+                    kitId = row.Required("kitId", path),
+                    name = row.Required("name", path),
                     armorId = row["armorId"].Trim(),
                     shield = row.Bool("shield", false),
                     weaponIds = SplitList(row["weaponIds"]),

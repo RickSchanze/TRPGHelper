@@ -16,7 +16,7 @@ export interface CustomBackground {
 }
 
 export interface CreateDraft {
-  version: 15
+  version: 16
   /** 当前步骤序号，从 1 开始；步骤数量由后端的车卡流程配置决定。 */
   step: number
   systemCode: string | null
@@ -46,6 +46,8 @@ export interface CreateDraft {
   /** 1 级职业特性选择：optionType -> 选项名 */
   featureChoices: Record<string, string>
   /** 起始装备里选的武器 */
+  /** 起始装备里选的套装（kits[].kitId），空则用第一套 */
+  equipmentKitId: string | null
   equipmentWeaponId: string | null
   /** 描述角色 */
   characterName: string
@@ -66,7 +68,7 @@ export interface CreateDraft {
 }
 
 const STORAGE_KEY = 'trpg_create_draft'
-const DRAFT_VERSION = 15
+const DRAFT_VERSION = 16
 
 export function emptyDraft(): CreateDraft {
   return {
@@ -100,6 +102,7 @@ export function emptyDraft(): CreateDraft {
     selectedSkills: [],
     selectedLanguages: [],
     featureChoices: {},
+    equipmentKitId: null,
     equipmentWeaponId: null,
     characterName: '',
     gender: '',
@@ -222,7 +225,8 @@ function normalize(raw: unknown): CreateDraft | null {
   const draft = raw as Partial<CreateDraft> & { version?: number; attributeBase?: unknown }
   const version = Number(draft.version)
   // 5 - 15：旧草稿都能升上来，缺的字段补默认值
-  if (![5, 6, 7, 8, 9, 10, 11, 12, 13, 14, DRAFT_VERSION].includes(version)) {
+  // 5 - 16：旧草稿都能升上来，缺的字段补默认值
+  if (![5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, DRAFT_VERSION].includes(version)) {
     return null
   }
 
@@ -259,6 +263,7 @@ function normalize(raw: unknown): CreateDraft | null {
     selectedSkills: readStringArray(draft.selectedSkills),
     selectedLanguages: readStringArray(draft.selectedLanguages),
     featureChoices: readStringMap(draft.featureChoices),
+    equipmentKitId: asCode(draft.equipmentKitId),
     equipmentWeaponId: asCode(draft.equipmentWeaponId),
     characterName: asString(draft.characterName),
     gender: asString(draft.gender),

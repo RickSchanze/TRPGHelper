@@ -126,6 +126,9 @@ public sealed class GeneratorCatalogTests : IAsyncLifetime
             ["种族"] = "006",
             ["阵营"] = "007",
             ["背景"] = "008",
+            ["技能"] = "009",
+            ["怪物"] = "010",
+            ["地形"] = "011",
         };
         Assert.All(keywords, keyword => Assert.StartsWith(categoryCodes[keyword.Category], keyword.Code));
         Assert.Contains(keywords, keyword => keyword.Key == "敏捷");

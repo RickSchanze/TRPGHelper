@@ -433,7 +433,7 @@
               <view
                 class="bg-card bg-card-custom"
                 :class="{ 'bg-card-selected': draft.backgroundCode === CUSTOM_BACKGROUND_CODE }"
-                @tap="pickBackground({ id: CUSTOM_BACKGROUND_CODE, name: '自定义背景', description: '自己定技能、工具、语言、装备和特性；填多少都按 DM 同意处理。', skills: [], tools: '', languageCount: 0, equipment: '', featureName: '', featureText: '' })"
+                @tap="pickBackground({ id: CUSTOM_BACKGROUND_CODE, name: '自定义背景', description: '自己定技能、工具、语言、装备和特性；填多少都按 DM 同意处理。', detail: '', skills: [], tools: '', languageCount: 0, equipment: '', featureName: '', featureText: '' })"
               >
                 <view class="bg-card-head">
                   <view class="bg-card-name">自定义背景</view>
@@ -463,7 +463,7 @@
                 />
               </view>
               <view class="desc-field custom-skills">
-                <text class="desc-label muted">技能熟练</text>
+                <KeywordText class="desc-label muted" :text="'[技能熟练]'" />
                 <view class="skill-grid">
                   <view
                     v-for="skill in skillRows"
@@ -472,7 +472,7 @@
                     :class="{ 'skill-chosen': draft.customBackground.skills.includes(skill.name) }"
                     @tap="toggleCustomSkill(skill.name)"
                   >
-                    <text>{{ skill.name }}</text>
+                    <KeywordText :text="'[' + skill.name + ']'" />
                   </view>
                 </view>
               </view>
@@ -683,15 +683,11 @@
                 :key="row.key"
                 class="attr-card"
                 :class="{ 'attr-card-ready': row.base > 0 }"
-                @tap="openAttributeSheet(row.key)"
               >
                 <view class="attr-card-head">
                   <KeywordText class="attr-name" :text="'[' + row.label + ']'" />
-                  <text class="attr-mod" :class="row.modifier >= 0 ? 'attr-mod-up' : 'attr-mod-down'">
-                    {{ row.base > 0 ? signed(row.modifier) : '' }}
-                  </text>
                 </view>
-                <view class="attr-input-wrap" @tap.stop>
+                <view class="attr-input-wrap">
                   <input
                     class="attr-input"
                     type="number"
@@ -701,11 +697,6 @@
                     @input="setAttributeValue(row.key, $event.detail.value)"
                   />
                 </view>
-                <view class="attr-short muted">
-                  <text v-if="row.base > 0">最终 {{ row.final }} · {{ row.shortSource }}</text>
-                  <text v-else>还没填</text>
-                </view>
-                <view class="attr-source-link">来源 ›</view>
               </view>
             </view>
 
@@ -766,10 +757,35 @@
               </view>
             </view>
 
+            <view v-if="hasFilledAttributes" class="attr-final">
+              <view class="attr-final-head">
+                <view class="attr-final-title">最终属性</view>
+                <view class="attr-final-hint muted">初始值 + 种族 / 亚种加值，点任意一项看来源</view>
+              </view>
+              <view class="attr-final-grid">
+                <view
+                  v-for="row in attributeRows"
+                  :key="row.key"
+                  class="attr-final-cell"
+                  :class="{ 'attr-final-empty': !row.base }"
+                  @tap="openAttributeSheet(row.key)"
+                >
+                  <view class="attr-final-value">{{ row.base > 0 ? row.final : '—' }}</view>
+                  <view class="attr-final-label muted">{{ row.label }}</view>
+                </view>
+              </view>
+            </view>
+
             <view v-if="attributeSnapshot.length" class="attr-snapshot">
-              <view v-for="item in attributeSnapshot" :key="item.label" class="attr-snap">
+              <view
+                v-for="item in attributeSnapshot"
+                :key="item.key"
+                class="attr-snap"
+                @tap="openStatSheet(item.key)"
+              >
                 <view class="attr-snap-value">{{ item.value }}</view>
                 <view class="attr-snap-label muted">{{ item.label }}</view>
+                <view class="attr-snap-link">来源 ›</view>
               </view>
             </view>
           </template>
@@ -782,7 +798,7 @@
             <KeywordText :text="currentStep.description" />
           </view>
           <view class="muted option-hint">
-            职业可自选 {{ classOption?.skillChoiceCount ?? 0 }} 项<template v-if="raceOption?.skillChoiceCount">，{{ raceOption?.name }} 再自选 {{ raceOption?.skillChoiceCount }} 项</template>；背景与种族固定给的已锁定。
+            <KeywordText :text="skillHintText" />
           </view>
           <view v-if="!skillCatalog.length" class="muted">正在加载技能…</view>
           <view v-else class="skill-grid">
@@ -797,16 +813,20 @@
               }"
               @tap="pickSkill(row.name)"
             >
-              <text>{{ row.name }}</text>
-              <text class="skill-ability muted">{{ row.ability }}</text>
+              <KeywordText :text="'[' + row.name + ']'" />
+              <KeywordText class="skill-ability muted" :text="'[' + row.ability + ']'" />
             </view>
           </view>
           <view class="muted option-count">已选 {{ draft.selectedSkills.length }} / {{ skillPickCount }}</view>
 
           <view v-if="featureGroups.length" class="feature-block">
-            <view class="bg-block-title">职业特性</view>
+            <view class="bg-block-title">
+              <KeywordText :text="'[职业特性]'" />
+            </view>
             <view v-for="group in featureGroups" :key="group.type" class="feature-group">
-              <view class="bg-section-title">{{ group.label }}</view>
+              <view class="bg-section-title">
+                <KeywordText :text="'[' + group.label + ']'" />
+              </view>
               <view class="skill-grid">
                 <view
                   v-for="option in group.options"
@@ -815,7 +835,7 @@
                   :class="{ 'skill-chosen': draft.featureChoices[group.type] === option.name }"
                   @tap="pickFeature(group.type, option.name)"
                 >
-                  <text>{{ option.name }}</text>
+                  <KeywordText :text="'[' + option.name + ']'" />
                 </view>
               </view>
             </view>
@@ -830,14 +850,31 @@
             <KeywordText :text="currentStep.description" />
           </view>
           <view v-if="!equipmentCatalog" class="muted">正在加载装备…</view>
-          <view v-else-if="!equipmentCatalog.kit" class="muted">这个职业还没配置起始装备，直接下一步。</view>
+          <view v-else-if="!equipmentKits.length" class="muted">这个职业还没配置起始装备，直接下一步。</view>
           <template v-else>
+            <view class="bg-section-title">起始套装</view>
+            <view class="equip-kits">
+              <view
+                v-for="kit in equipmentKits"
+                :key="kit.kitId"
+                class="equip-kit-card"
+                :class="{ 'equip-kit-on': selectedKit?.kitId === kit.kitId }"
+                @tap="pickKit(kit.kitId)"
+              >
+                <view class="equip-kit-head">
+                  <text class="equip-kit-name">{{ kit.name }}</text>
+                  <view v-if="selectedKit?.kitId === kit.kitId" class="race-check">✓</view>
+                </view>
+                <view class="equip-kit-line muted">{{ kitSummary(kit) }}</view>
+              </view>
+            </view>
+
             <view class="equip-kit">
               <view class="equip-row"><text class="muted">护甲</text><text>{{ armorOption?.name || '无甲' }}</text></view>
-              <view class="equip-row"><text class="muted">盾</text><text>{{ equipmentCatalog.kit.shield ? '有（AC +2）' : '无' }}</text></view>
-              <view class="equip-row"><text class="muted">装备包</text><text>{{ equipmentCatalog.kit.pack || '无' }}</text></view>
+              <view class="equip-row"><text class="muted">盾</text><text>{{ selectedKit?.shield ? '有（AC +2）' : '无' }}</text></view>
+              <view class="equip-row"><text class="muted">装备包</text><text>{{ selectedKit?.pack || '无' }}</text></view>
             </view>
-            <view class="bg-section-title">武器</view>
+            <view class="bg-section-title">武器（选一把当主手，其余随身携带）</view>
             <view class="skill-grid">
               <view
                 v-for="weapon in weaponOptions"
@@ -981,9 +1018,13 @@
         <view v-if="backgroundDetailItem.description" class="bg-detail-desc muted">
           {{ backgroundDetailItem.description }}
         </view>
+        <view v-if="backgroundDetailItem.detail" class="bg-detail-long">
+          <view class="bg-detail-long-title">详细介绍</view>
+          <view class="bg-detail-long-text">{{ backgroundDetailItem.detail }}</view>
+        </view>
         <view class="bg-grant">
           <view class="bg-grant-row">
-            <text class="muted">技能熟练</text>
+            <KeywordText class="muted" :text="'[技能熟练]'" />
             <text>{{ backgroundDetailItem.skills.join('、') || '无' }}</text>
           </view>
           <view class="bg-grant-row">
@@ -1049,6 +1090,36 @@
       </view>
     </view>
 
+    <!-- 衍生数值来源：生命值 / AC / 先攻 / 被动察觉，点一下看怎么算出来的 -->
+    <view v-if="statSheetVisible && statSheetRow" class="attr-mask" @tap="closeStatSheet">
+      <view class="attr-sheet" @tap.stop>
+        <view class="attr-sheet-head">
+          <view class="attr-sheet-title">{{ statSheetRow.label }}</view>
+          <text class="attr-sheet-close" @tap="closeStatSheet">×</text>
+        </view>
+
+        <view class="attr-sheet-total">
+          <text class="attr-sheet-number">{{ statSheetRow.value }}</text>
+        </view>
+
+        <view class="attr-sources">
+          <view v-for="(source, index) in statSheetRow.sources" :key="index" class="attr-source">
+            <view class="attr-source-main">
+              <text class="attr-source-label">{{ source.label }}</text>
+              <text class="attr-source-value" :class="{ 'attr-source-plus': source.plus }">
+                {{ source.plus ? signed(source.value) : source.value }}
+              </text>
+            </view>
+            <view class="attr-source-note muted">{{ source.note }}</view>
+          </view>
+        </view>
+
+        <button class="btn attr-sheet-done" hover-class="btn-pressed" hover-stay-time="80" @tap="closeStatSheet">
+          完成
+        </button>
+      </view>
+    </view>
+
     <KeywordModal />
 
     <ClassDetailModal
@@ -1071,6 +1142,7 @@ import type {
   ClassOption,
   CreationFlow,
   CreationStep,
+  EquipmentKit,
   EquipmentResponse,
   FeatureOption,
   GameSystem,
@@ -1114,9 +1186,24 @@ interface AttributeRow {
   base: number
   final: number
   modifier: number
-  shortSource: string
   formula: string
   sources: AttributeSource[]
+}
+
+/** 衍生数值的来源：基础值不带符号，加值显示 +N */
+interface StatSource {
+  label: string
+  note: string
+  value: number
+  plus: boolean
+}
+
+/** 面板底部的衍生数值：值 + 怎么算出来的 */
+interface StatRow {
+  key: string
+  label: string
+  value: string
+  sources: StatSource[]
 }
 
 const draft = ref<CreateDraft>(emptyDraft())
@@ -1135,6 +1222,9 @@ const attributeRolling = ref(false)
 const attributeError = ref(false)
 const attributeSheetVisible = ref(false)
 const attributeSheetKey = ref<string | null>(null)
+/** 衍生数值（生命值 / AC / 先攻 / 被动察觉）的来源弹窗 */
+const statSheetVisible = ref(false)
+const statSheetKey = ref<string | null>(null)
 /** 子职 / 亚种列表是按哪个职业 / 种族加载的，用来判断「没有内容」是不是真的 */
 const subclassCatalogCode = ref<string | null>(null)
 const subraceCatalogCode = ref<string | null>(null)
@@ -1280,7 +1370,6 @@ const attributeRows = computed<AttributeRow[]>(() =>
     }
 
     const final = sources.reduce((sum, source) => sum + source.value, 0)
-    const bonusSources = sources.filter((source) => source.label !== '初始')
 
     return {
       key: template.key,
@@ -1288,11 +1377,6 @@ const attributeRows = computed<AttributeRow[]>(() =>
       base,
       final,
       modifier: Math.floor((final - 10) / 2),
-      shortSource: bonusSources.length
-        ? bonusSources.map((source) => source.short ?? '').filter(Boolean).join(' · ')
-        : base > 0
-          ? '无种族加值'
-          : '还没填',
       formula: sources
         .map((source) =>
           source.label === '初始' ? `初始 ${source.value}` : `${source.short ?? source.label} +${source.value}`,
@@ -1302,30 +1386,117 @@ const attributeRows = computed<AttributeRow[]>(() =>
     }
   }),
 )
-/** 面板底部的小结：生命值上限 / 无甲 AC / 先攻 / 被动察觉 */
-const attributeSnapshot = computed(() => {
+/** 有没有填过初始属性：填了才显示「最终属性」栏 */
+const hasFilledAttributes = computed(() => attributeRows.value.some((row) => row.base > 0))
+/** 面板底部的小结：生命值上限 / 无甲 AC / 先攻 / 被动察觉；每项都能点开看怎么算出来的 */
+const attributeSnapshot = computed<StatRow[]>(() => {
   const rows = attributeRows.value
   if (!rows.length || rows.some((row) => !row.base)) {
     return []
   }
 
-  const modifierOf = (key: string) => rows.find((row) => row.key === key)?.modifier ?? 0
-  const items: Array<{ label: string; value: string }> = [
-    { label: '无甲 AC', value: String(10 + modifierOf('DEX')) },
-    { label: '先攻', value: signed(modifierOf('DEX')) },
-    { label: '被动察觉', value: String(10 + modifierOf('WIS')) },
-  ]
+  const rowOf = (key: string) => rows.find((row) => row.key === key)
+  const dexRow = rowOf('DEX')
+  const conRow = rowOf('CON')
+  const wisRow = rowOf('WIS')
+  const dex = dexRow?.modifier ?? 0
+  const con = conRow?.modifier ?? 0
+  const wis = wisRow?.modifier ?? 0
+  const dexNote = `敏捷 ${dexRow?.final ?? 10} → 调整值 ${signed(dex)}`
 
-  const hitDie = classes.value.find((item) => item.code === draft.value.classCode)?.hitDie ?? ''
+  const items: StatRow[] = []
+
+  const className = classOption.value?.name ?? '职业'
+  const hitDie = classOption.value?.hitDie ?? ''
   const sides = Number(hitDie.replace(/\D/g, ''))
   if (sides > 0) {
-    items.unshift({ label: '生命值上限', value: String(sides + modifierOf('CON')) })
+    items.push({
+      key: 'hitPoints',
+      label: '生命值上限',
+      value: String(Math.max(1, sides + con)),
+      sources: [
+        { label: '职业生命骰', note: `${className} ${hitDie}，1 级直接取满`, value: sides, plus: false },
+        { label: '体质调整值', note: `体质 ${conRow?.final ?? 10} → 调整值 ${signed(con)}`, value: con, plus: true },
+      ],
+    })
   }
+
+  // AC 和装备页一致：职业起始护甲 + 盾；没甲时武僧走无甲防御，其它职业 10 + 敏捷
+  const armor = armorOption.value
+  const shield = selectedKit.value?.shield ? 2 : 0
+  const acSources: StatSource[] = []
+  let armorClass = 10 + dex
+
+  if (armor) {
+    const heavy = armor.type === '重甲'
+    const cap = heavy ? 0 : armor.dexCap
+    const dexPart = heavy ? 0 : cap === null || cap === undefined ? dex : Math.min(dex, cap)
+    armorClass = armor.baseAc + dexPart + shield
+    acSources.push({
+      label: armor.name,
+      note: `${armor.type}，基础 AC ${armor.baseAc}`,
+      value: armor.baseAc,
+      plus: false,
+    })
+    acSources.push({
+      label: '敏捷调整值',
+      note: heavy ? `${armor.name}是重甲，不计敏捷调整值` : dexNote,
+      value: dexPart,
+      plus: true,
+    })
+  } else if (draft.value.classCode === 'monk') {
+    armorClass = 10 + dex + wis
+    acSources.push(
+      { label: '基础 AC', note: '不穿护甲时的起始值', value: 10, plus: false },
+      { label: '敏捷调整值', note: dexNote, value: dex, plus: true },
+      { label: '感知调整值', note: '武僧「无甲防御」把感知也计入 AC', value: wis, plus: true },
+    )
+  } else {
+    acSources.push(
+      { label: '基础 AC', note: '不穿护甲时的起始值', value: 10, plus: false },
+      { label: '敏捷调整值', note: dexNote, value: dex, plus: true },
+    )
+  }
+
+  if (shield > 0) {
+    acSources.push({ label: '盾', note: '盾牌 AC +2', value: shield, plus: true })
+  }
+
+  items.push({
+    key: 'armorClass',
+    label: 'AC',
+    value: String(armorClass),
+    sources: acSources,
+  })
+
+  items.push({
+    key: 'initiative',
+    label: '先攻',
+    value: signed(dex),
+    sources: [{ label: '敏捷调整值', note: dexNote, value: dex, plus: true }],
+  })
+
+  const perceptionProficient = proficientSkillNames.value.has('察觉')
+  items.push({
+    key: 'passivePerception',
+    label: '被动察觉',
+    value: String(10 + wis + (perceptionProficient ? 2 : 0)),
+    sources: [
+      { label: '基础值', note: '被动检定从 10 起算', value: 10, plus: false },
+      { label: '感知调整值', note: `感知 ${wisRow?.final ?? 10} → 调整值 ${signed(wis)}`, value: wis, plus: true },
+      ...(perceptionProficient
+        ? [{ label: '察觉熟练', note: '背景 / 种族给的熟练，加值 +2', value: 2, plus: true }]
+        : []),
+    ],
+  })
 
   return items
 })
 const attributeSheetRow = computed<AttributeRow | null>(
   () => attributeRows.value.find((row) => row.key === attributeSheetKey.value) ?? null,
+)
+const statSheetRow = computed<StatRow | null>(
+  () => attributeSnapshot.value.find((row) => row.key === statSheetKey.value) ?? null,
 )
 /** 选中的阵营：内容还没加载完（旧草稿）时先用草稿里的名字兜底 */
 const pickedAlignment = computed<AlignmentOption | null>(() => {
@@ -1524,6 +1695,7 @@ watch(
     // 九宫格只在当前步骤里开，切步骤就收起来
     alignmentSheetVisible.value = false
     attributeSheetVisible.value = false
+    statSheetVisible.value = false
     // 步骤条跟着当前步骤走，保证它落在一屏三个里
     syncStepperToStep()
 
@@ -1550,6 +1722,8 @@ watch(
 
     if (item?.kind === 'attributes') {
       void ensureAttributeContext()
+      // 属性页底部的 AC 要算上职业起始护甲，先把装备包加载好
+      void ensureEquipmentData()
     }
 
     if (item?.kind === 'background') {
@@ -2270,6 +2444,15 @@ function closeAttributeSheet(): void {
   attributeSheetVisible.value = false
 }
 
+function openStatSheet(key: string): void {
+  statSheetKey.value = key
+  statSheetVisible.value = true
+}
+
+function closeStatSheet(): void {
+  statSheetVisible.value = false
+}
+
 /** 半精灵「任选两项 +1」：点一下选中，再点取消 */
 function toggleRaceChoice(key: string): void {
   if (!raceChoice.value) {
@@ -2338,6 +2521,7 @@ const backgroundOption = computed<BackgroundDetail | null>(() => {
       id: CUSTOM_BACKGROUND_CODE,
       name: custom.name || '自定义背景',
       description: custom.description,
+      detail: '',
       skills: custom.skills,
       tools: custom.tools,
       languageCount: custom.languageCount,
@@ -2350,8 +2534,18 @@ const backgroundOption = computed<BackgroundDetail | null>(() => {
   return backgroundCatalog.value.find((item) => item.id === draft.value.backgroundCode) ?? null
 })
 
+const equipmentKits = computed<EquipmentKit[]>(() => equipmentCatalog.value?.kits ?? [])
+/** 选中的起始套装：草稿里记的 kitId 找不到就用第一套 */
+const selectedKit = computed<EquipmentKit | null>(() => {
+  const kits = equipmentKits.value
+  if (!kits.length) {
+    return null
+  }
+
+  return kits.find((kit) => kit.kitId === draft.value.equipmentKitId) ?? kits[0]
+})
 const armorOption = computed(() => {
-  const kit = equipmentCatalog.value?.kit
+  const kit = selectedKit.value
   if (!kit?.armorId) {
     return null
   }
@@ -2359,7 +2553,7 @@ const armorOption = computed(() => {
   return equipmentCatalog.value?.armor.find((item) => item.id === kit.armorId) ?? null
 })
 const weaponOptions = computed<WeaponOption[]>(() => {
-  const kit = equipmentCatalog.value?.kit
+  const kit = selectedKit.value
   if (!kit) {
     return []
   }
@@ -2369,10 +2563,39 @@ const weaponOptions = computed<WeaponOption[]>(() => {
     .filter((weapon): weapon is WeaponOption => Boolean(weapon))
 })
 const selectedWeapon = computed<WeaponOption | null>(() => {
+  const weapons = weaponOptions.value
+  if (!weapons.length) {
+    return null
+  }
+
   const id = draft.value.equipmentWeaponId
-  const found = id ? equipmentCatalog.value?.weapons.find((weapon) => weapon.id === id) : null
-  return found ?? weaponOptions.value[0] ?? null
+  const found = id ? weapons.find((weapon) => weapon.id === id) : null
+  const fallback =
+    weapons.find((weapon) => weapon.id === selectedKit.value?.defaultWeaponId) ?? weapons[0]
+  return found ?? fallback
 })
+
+/** 套装卡片的副标题：护甲 · 盾 · 武器 */
+function kitSummary(kit: EquipmentKit): string {
+  const parts: string[] = []
+  const armor = equipmentCatalog.value?.armor.find((item) => item.id === kit.armorId)
+  parts.push(armor?.name ?? '无甲')
+  if (kit.shield) {
+    parts.push('盾')
+  }
+
+  const weapons = kit.weaponIds
+    .map((id) => equipmentCatalog.value?.weapons.find((weapon) => weapon.id === id)?.name)
+    .filter(Boolean)
+  if (weapons.length) {
+    parts.push(weapons.join(' / '))
+  }
+  if (kit.pack) {
+    parts.push(kit.pack)
+  }
+
+  return parts.join(' · ')
+}
 
 /** 背景 + 种族直接给的技能，不可再选 */
 const grantedSkills = computed(
@@ -2381,6 +2604,14 @@ const grantedSkills = computed(
 const skillPickCount = computed(
   () => (classOption.value?.skillChoiceCount ?? 0) + (raceOption.value?.skillChoiceCount ?? 0),
 )
+/** 技能选项上方的提示：带 [] 的关键词交给 KeywordText 渲染 */
+const skillHintText = computed(() => {
+  const count = classOption.value?.skillChoiceCount ?? 0
+  const race = raceOption.value
+  const racePart =
+    race && race.skillChoiceCount > 0 ? `，[${race.name}] 再自选 ${race.skillChoiceCount} 项` : ''
+  return `[职业]可自选 ${count} 项[技能]${racePart}；[背景]与[种族]固定给的已锁定。`
+})
 const allowedSkillNames = computed(() => {
   const allowed = new Set(classOption.value?.skillOptions ?? [])
   if ((raceOption.value?.skillChoiceCount ?? 0) > 0) {
@@ -2431,7 +2662,15 @@ const featuresReady = computed(() =>
   featureGroups.value.every((group) => Boolean(draft.value.featureChoices[group.type])),
 )
 
-const equipmentReady = computed(() => Boolean(selectedWeapon.value))
+const equipmentReady = computed(() => {
+  if (!equipmentCatalog.value) {
+    // 还在加载（或加载失败）时先别放行，避免跳到下一步
+    return false
+  }
+
+  // 没配起始套装的职业直接放行
+  return !equipmentKits.value.length || Boolean(selectedWeapon.value)
+})
 
 const attributeFinal = computed(() => {
   const map: Record<string, number> = {}
@@ -2466,12 +2705,14 @@ const combatSummary = computed(() => {
   const wis = modifierOf('WIS')
   const sides = Number((classOption.value?.hitDie ?? 'd8').replace(/\D/g, '')) || 8
   const armor = armorOption.value
-  const shield = equipmentCatalog.value?.kit?.shield ? 2 : 0
+  const shield = selectedKit.value?.shield ? 2 : 0
   let armorClass = 10 + dex
 
   if (armor) {
-    const cap = armor.type === '重甲' ? 0 : armor.dexCap
-    const dexPart = cap === null || cap === undefined ? dex : Math.min(dex, cap)
+    // 重甲不计敏捷调整值，也不会因为敏捷为负而扣 AC
+    const heavy = armor.type === '重甲'
+    const cap = heavy ? 0 : armor.dexCap
+    const dexPart = heavy ? 0 : cap === null || cap === undefined ? dex : Math.min(dex, cap)
     armorClass = armor.baseAc + dexPart + shield
   } else if (draft.value.classCode === 'monk') {
     armorClass = 10 + dex + wis
@@ -2732,6 +2973,16 @@ function pickFeature(type: string, name: string): void {
   draft.value.featureChoices = { ...draft.value.featureChoices, [type]: name }
 }
 
+function pickKit(kitId: string): void {
+  if (draft.value.equipmentKitId === kitId) {
+    return
+  }
+
+  draft.value.equipmentKitId = kitId
+  // 换套装后武器跟着换回这套的默认武器
+  draft.value.equipmentWeaponId = null
+}
+
 function pickWeapon(id: string): void {
   draft.value.equipmentWeaponId = id
 }
@@ -2808,6 +3059,7 @@ function pickSystem(system: GameSystem): void {
     draft.value.selectedSkills = []
     draft.value.selectedLanguages = []
     draft.value.featureChoices = {}
+    draft.value.equipmentKitId = null
     draft.value.equipmentWeaponId = null
     draft.value.classStates = {}
     classes.value = []
@@ -2872,6 +3124,7 @@ function pickClass(option: ClassOption): void {
   draft.value.subclassName = saved?.subclassName ?? ''
   draft.value.selectedSkills = []
   draft.value.featureChoices = {}
+  draft.value.equipmentKitId = null
   draft.value.equipmentWeaponId = null
   featureCatalog.value = []
   equipmentCatalog.value = null
@@ -3007,24 +3260,27 @@ async function finish(): Promise<void> {
     }
 
     const equipmentItems: Array<{ name: string; quantity: number; note?: string }> = []
+    const kit = selectedKit.value
     if (armorOption.value) {
       equipmentItems.push({ name: armorOption.value.name, quantity: 1, note: armorOption.value.type })
     }
 
-    if (equipmentCatalog.value?.kit?.shield) {
+    if (kit?.shield) {
       equipmentItems.push({ name: '盾', quantity: 1, note: 'AC +2' })
     }
 
-    if (selectedWeapon.value) {
+    // 套装里的武器全部带上，选中的那把标成主手
+    for (const weapon of weaponOptions.value) {
+      const main = weapon.id === selectedWeapon.value?.id
       equipmentItems.push({
-        name: selectedWeapon.value.name,
+        name: weapon.name,
         quantity: 1,
-        note: `${selectedWeapon.value.damage} ${selectedWeapon.value.damageType}`,
+        note: `${main ? '主手' : '备用'} · ${weapon.damage} ${weapon.damageType}`,
       })
     }
 
-    if (equipmentCatalog.value?.kit?.pack) {
-      equipmentItems.push({ name: equipmentCatalog.value.kit.pack, quantity: 1 })
+    if (kit?.pack) {
+      equipmentItems.push({ name: kit.pack, quantity: 1 })
     }
 
     const backgroundEquipment = (backgroundOption.value?.equipment ?? '')
@@ -3955,10 +4211,6 @@ function scrollTop(): void {
   border-color: #d8c6a5;
 }
 
-.attr-card:active {
-  opacity: 0.85;
-}
-
 .attr-card-head {
   display: flex;
   align-items: center;
@@ -3969,18 +4221,6 @@ function scrollTop(): void {
 .attr-name {
   font-size: 24rpx;
   letter-spacing: 2rpx;
-}
-
-.attr-mod {
-  font-size: 20rpx;
-}
-
-.attr-mod-up {
-  color: $trpg-accent;
-}
-
-.attr-mod-down {
-  color: #8a3b34;
 }
 
 .attr-input-wrap {
@@ -3998,19 +4238,6 @@ function scrollTop(): void {
   font-size: 58rpx;
   font-weight: 600;
   color: $trpg-accent-deep;
-}
-
-.attr-short {
-  min-height: 30rpx;
-  margin-top: 4rpx;
-  font-size: 20rpx;
-  line-height: 1.4;
-}
-
-.attr-source-link {
-  margin-top: 8rpx;
-  font-size: 20rpx;
-  color: $trpg-accent;
 }
 
 .attr-choice {
@@ -4091,6 +4318,70 @@ function scrollTop(): void {
 }
 
 .attr-snap-label {
+  font-size: 20rpx;
+}
+
+.attr-snap-link {
+  margin-top: 2rpx;
+  font-size: 18rpx;
+  color: $trpg-accent;
+}
+
+/* 最终属性：初始值叠加种族 / 亚种加值后的结果 */
+.attr-final {
+  padding: 18rpx;
+  margin-top: 20rpx;
+  border: 2rpx solid $trpg-line;
+  border-radius: 16rpx;
+  background: #fffdf8;
+}
+
+.attr-final-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.attr-final-title {
+  flex: none;
+  font-size: 24rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+}
+
+.attr-final-hint {
+  flex: 1;
+  font-size: 20rpx;
+  text-align: right;
+}
+
+.attr-final-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10rpx;
+}
+
+.attr-final-cell {
+  padding: 10rpx 6rpx;
+  border-radius: 12rpx;
+  background: #fff;
+  text-align: center;
+}
+
+.attr-final-value {
+  font-size: 34rpx;
+  font-weight: 600;
+  line-height: 1.2;
+  color: $trpg-accent-deep;
+}
+
+.attr-final-empty .attr-final-value {
+  color: #c9bca8;
+}
+
+.attr-final-label {
   font-size: 20rpx;
 }
 
@@ -4306,6 +4597,29 @@ function scrollTop(): void {
   line-height: 1.6;
 }
 
+.bg-detail-long {
+  padding: 16rpx 18rpx;
+  margin: 10rpx 0 14rpx;
+  border-left: 4rpx solid $trpg-accent;
+  border-radius: 8rpx;
+  background: #fff;
+}
+
+.bg-detail-long-title {
+  margin-bottom: 8rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+  color: $trpg-accent-deep;
+}
+
+.bg-detail-long-text {
+  font-size: 24rpx;
+  line-height: 1.8;
+  text-align: justify;
+  color: $trpg-ink;
+}
+
 .bg-grant {
   padding: 16rpx 18rpx;
   margin-top: 14rpx;
@@ -4382,6 +4696,47 @@ function scrollTop(): void {
   padding-top: 20rpx;
   margin-top: 24rpx;
   border-top: 2rpx dashed $trpg-line;
+}
+
+.equip-kits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+  margin-bottom: 18rpx;
+}
+
+.equip-kit-card {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 16rpx 18rpx;
+  border: 2rpx solid $trpg-line;
+  border-radius: 14rpx;
+  background: #fff;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.equip-kit-on {
+  border-color: $trpg-accent;
+  background: #fdf8ef;
+}
+
+.equip-kit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.equip-kit-name {
+  font-size: 24rpx;
+  font-weight: 600;
+  letter-spacing: 1rpx;
+}
+
+.equip-kit-line {
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  line-height: 1.5;
 }
 
 .equip-kit {
@@ -4935,13 +5290,6 @@ function scrollTop(): void {
     padding: 14px;
     border-width: 1px;
     border-radius: 12px;
-    cursor: pointer;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-  }
-
-  .attr-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(91, 70, 54, 0.12);
   }
 
   .attr-name {
@@ -4955,14 +5303,6 @@ function scrollTop(): void {
     border-width: 1px;
     border-radius: 8px;
     font-size: 34px;
-  }
-
-  .attr-short {
-    font-size: 12px;
-  }
-
-  .attr-source-link {
-    font-size: 12px;
   }
 
   .attr-choice {
@@ -4998,6 +5338,55 @@ function scrollTop(): void {
   }
 
   .attr-snap-label {
+    font-size: 12px;
+  }
+
+  .attr-snap-link {
+    font-size: 11px;
+    cursor: pointer;
+  }
+
+  .attr-final {
+    padding: 14px;
+    margin-top: 16px;
+    border-width: 1px;
+    border-radius: 12px;
+  }
+
+  .attr-final-head {
+    margin-bottom: 10px;
+  }
+
+  .attr-final-title {
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+
+  .attr-final-hint {
+    font-size: 12px;
+  }
+
+  .attr-final-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+  }
+
+  .attr-final-cell {
+    padding: 8px 4px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .attr-final-cell:hover {
+    background: #f7efe1;
+  }
+
+  .attr-final-value {
+    font-size: 20px;
+  }
+
+  .attr-final-label {
     font-size: 12px;
   }
 
@@ -5099,6 +5488,21 @@ function scrollTop(): void {
     font-size: 13px;
   }
 
+  .bg-detail-long {
+    padding: 12px 14px;
+    margin: 8px 0 12px;
+    border-left-width: 3px;
+  }
+
+  .bg-detail-long-title {
+    font-size: 13px;
+  }
+
+  .bg-detail-long-text {
+    font-size: 14px;
+    line-height: 1.8;
+  }
+
   .bg-grant {
     padding: 12px 14px;
     border-width: 1px;
@@ -5136,6 +5540,31 @@ function scrollTop(): void {
 
   .option-hint,
   .option-count {
+    font-size: 12px;
+  }
+
+  .equip-kits {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .equip-kit-card {
+    width: calc(50% - 5px);
+    padding: 12px 14px;
+    border-width: 1px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+
+  .equip-kit-card:hover {
+    border-color: #d8c6a5;
+  }
+
+  .equip-kit-name {
+    font-size: 14px;
+  }
+
+  .equip-kit-line {
     font-size: 12px;
   }
 

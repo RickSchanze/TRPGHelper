@@ -96,11 +96,12 @@ public sealed record SkillOptionDto(string Id, string Name, string Ability, stri
 /// <summary>语言（标准语 / 异界语）。</summary>
 public sealed record LanguageOptionDto(string Id, string Name, string Kind, string Description);
 
-/// <summary>背景详情：技能、工具、语言、装备、背景特性。</summary>
+/// <summary>背景详情：一句话描述、详细介绍、技能、工具、语言、装备、背景特性。</summary>
 public sealed record BackgroundDetailDto(
     string Id,
     string Name,
     string Description,
+    string Detail,
     IReadOnlyList<string> Skills,
     string Tools,
     int LanguageCount,
@@ -132,9 +133,11 @@ public sealed record WeaponOptionDto(
     bool Ranged,
     string Properties);
 
-/// <summary>职业起始装备包。</summary>
+/// <summary>职业起始装备的其中一套：车卡时玩家挑一套。</summary>
 public sealed record EquipmentKitDto(
+    string KitId,
     string ClassId,
+    string Name,
     string ArmorId,
     bool Shield,
     IReadOnlyList<string> WeaponIds,
@@ -144,7 +147,7 @@ public sealed record EquipmentKitDto(
 public sealed record EquipmentResponse(
     IReadOnlyList<ArmorOptionDto> Armor,
     IReadOnlyList<WeaponOptionDto> Weapons,
-    EquipmentKitDto? Kit);
+    IReadOnlyList<EquipmentKitDto> Kits);
 
 /// <summary>
 /// 阵营（九宫格）。解释文字在关键词里，这里只给车卡流程渲染图标 + 名字要用的字段。

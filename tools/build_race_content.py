@@ -65,11 +65,11 @@ TRAITS = {
     "属性值加成": (
         "种族带来的属性加值；可选规则下可改为任意两项 +2 / +1。",
         "创建角色时由种族提供的属性加值。人类是全部六项各 +1；变体人类改为自选两项各 +1，"
-        "并获得一项技能熟练与一项[专长]。若开启可选规则，任何种族都可改为自选两项属性分别 +2 / +1。",
+        "并获得一项[技能熟练]与一项[专长]。若开启可选规则，任何种族都可改为自选两项属性分别 +2 / +1。",
     ),
     "敏锐感官": (
         "精灵的感官天赋：获得察觉技能熟练。",
-        "精灵特质：你获得察觉技能的熟练项。",
+        "精灵特质：你获得[察觉]技能的[技能熟练]。",
     ),
     "妖精血统": (
         "对抗魅惑的豁免有优势，魔法也无法使你睡眠。",
@@ -90,8 +90,8 @@ TRAITS = {
     ),
     "石中精妙": (
         "石制品的历史检定可加双倍熟练。",
-        "矮人特质：对石制品做智力（历史）[属性检定]时，视为具有历史技能熟练，"
-        "并加上双倍的熟练加值。",
+        "矮人特质：对石制品做智力（历史）[属性检定]时，视为具有[历史]技能的[技能熟练]，"
+        "并加上双倍的[熟练加值]。",
     ),
     "幸运": (
         "攻击、属性检定、豁免掷出 1 时可以重掷。",
@@ -120,11 +120,11 @@ TRAITS = {
     ),
     "多才多艺": (
         "获得两项自选技能的熟练项。",
-        "半精灵特质：你获得两项自选技能的熟练项。",
+        "半精灵特质：你获得两项自选[技能熟练]。",
     ),
     "凶恶": (
         "获得威吓技能的熟练项。",
-        "半兽人特质：你获得威吓技能的熟练项。",
+        "半兽人特质：你获得[威吓]技能的[技能熟练]。",
     ),
     "坚韧不屈": (
         "生命值降到 0 时可改为 1，长休后恢复。",
@@ -162,12 +162,12 @@ RACES = [
         "content": (
             "属性值：全部六项各 +1（[属性值加成]）。[年龄]：不到 20 岁成年，很少活过 100 岁。"
             "[体型]：中型，身高 5 到 6 尺以上。[速度]：30 尺。[语言]：通用语和一门自选语言。"
-            "变体人类（可选规则）改为自选两项属性各 +1，并获得一项技能熟练与一项[专长]。"
+            "变体人类（可选规则）改为自选两项属性各 +1，并获得一项[技能熟练]与一项[专长]。"
             + HOUSE_RULE
         ),
         "traits": [
             "[属性值加成]：全部六项各 +1",
-            "变体人类：自选两项属性各 +1，获得一项技能熟练和一项[专长]",
+            "变体人类：自选两项属性各 +1，获得一项[技能熟练]和一项[专长]",
         ],
     },
     {
@@ -272,12 +272,12 @@ RACES = [
             "[魅力] +2，另选两项属性值各 +1。[年龄]：20 岁左右成年，通常能活到 180 岁以上。"
             "[体型]：中型。[速度]：30 尺。拥有[黑暗视觉] 60 尺；"
             "[妖精血统]：对抗[魅惑]的[豁免]有优势，魔法也无法使你陷入睡眠；"
-            "[多才多艺]：两项自选技能熟练。[语言]：通用语、精灵语和一门自选语言。" + HOUSE_RULE
+            "[多才多艺]：两项自选[技能熟练]。[语言]：通用语、精灵语和一门自选语言。" + HOUSE_RULE
         ),
         "traits": [
             "[黑暗视觉]：60 尺",
             "[妖精血统]：对抗[魅惑]有优势",
-            "[多才多艺]：两项技能熟练",
+            "[多才多艺]：两项[技能熟练]",
         ],
     },
     {
@@ -386,18 +386,62 @@ SUBRACES = [
      "traits": ["[吐息武器]：15 尺锥形，2d6 寒冷", "伤害[抗性]：寒冷"]},
 ]
 
-def subrace_rows() -> list[list[object]]:
-    return [
-        [
-            "dnd5e",
-            item["id"],
-            item["raceId"],
-            item["name"],
-            item["description"],
-            "\n".join(item["traits"]),
-        ]
-        for item in SUBRACES
-    ]
+SUBRACE_HEADERS = ["systemId", "id", "raceId", "name", "description", "traits", "abilityBonuses"]
+# 脚本只管这些列；abilityBonuses 等数据由内容维护，重跑时保留原值
+SUBRACE_MANAGED = ["systemId", "id", "raceId", "name", "description", "traits"]
+
+
+def subrace_values(item: dict) -> dict[str, str]:
+    return {
+        "systemId": "dnd5e",
+        "id": item["id"],
+        "raceId": item["raceId"],
+        "name": item["name"],
+        "description": item["description"],
+        "traits": "\n".join(item["traits"]),
+    }
+
+
+def write_subraces() -> None:
+    """按 id 更新亚种的展示字段，新增亚种追加；已有列（abilityBonuses 等）原样保留。"""
+    if SUBRACE_FILE.exists():
+        workbook = openpyxl.load_workbook(SUBRACE_FILE)
+        sheet = workbook["subraces"]
+    else:
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "subraces"
+        sheet.append(SUBRACE_HEADERS)
+
+    headers = [cell.value for cell in sheet[1]]
+    for column_name in SUBRACE_HEADERS:
+        if column_name not in headers:
+            sheet.cell(row=1, column=len(headers) + 1, value=column_name)
+            headers.append(column_name)
+
+    rows = {str(row[1].value): row for row in sheet.iter_rows(min_row=2) if row[1].value}
+    added = updated = 0
+
+    for item in SUBRACES:
+        values = subrace_values(item)
+        if item["id"] in rows:
+            row = rows[item["id"]]
+            changed = False
+            for column_name in SUBRACE_MANAGED:
+                cell = row[headers.index(column_name)]
+                if cell.value != values[column_name]:
+                    cell.value = values[column_name]
+                    changed = True
+            updated += int(changed)
+            continue
+
+        values["abilityBonuses"] = item.get("abilityBonuses", "")
+        sheet.append([values.get(header) for header in headers])
+        added += 1
+
+    if added or updated:
+        workbook.save(SUBRACE_FILE)
+    print(f"写入 {SUBRACE_FILE.relative_to(REPO_ROOT)}（新增 {added} 个、更新 {updated} 个亚种）")
 
 
 def lookup_category_code(path: Path, name: str) -> str | None:
@@ -552,14 +596,22 @@ def check() -> int:
         problems.append(f"缺少 {SUBRACE_FILE.name}")
     else:
         workbook = openpyxl.load_workbook(SUBRACE_FILE, data_only=True)
-        actual = [
-            [str(cell) if cell is not None else "" for cell in row]
-            for row in workbook["subraces"].iter_rows(min_row=2, values_only=True)
-            if row and row[0] is not None
-        ]
-        expected = [[str(cell) if cell is not None else "" for cell in row] for row in subrace_rows()]
-        if actual != expected:
-            problems.append(f"{SUBRACE_FILE.name} 与脚本不一致")
+        sheet = workbook["subraces"]
+        headers = [cell.value for cell in sheet[1]]
+        missing_columns = [name for name in SUBRACE_HEADERS if name not in headers]
+        for name in missing_columns:
+            problems.append(f"{SUBRACE_FILE.name} 缺少 {name} 列")
+        rows = {str(row[1]): row for row in sheet.iter_rows(min_row=2, values_only=True) if row and row[1]}
+        for item in SUBRACES:
+            row = rows.get(item["id"])
+            if row is None:
+                problems.append(f"{SUBRACE_FILE.name} 缺少亚种「{item['id']}」")
+                continue
+            for column_name, value in subrace_values(item).items():
+                if column_name in missing_columns:
+                    continue
+                if str(row[headers.index(column_name)] or "") != value:
+                    problems.append(f"{SUBRACE_FILE.name} 亚种「{item['id']}」的 {column_name} 与脚本不一致")
 
     if not RACE_FILE.exists():
         problems.append(f"缺少 {RACE_FILE.name}")
@@ -642,16 +694,7 @@ def build() -> int:
     workbook.save(RACE_FILE)
     print(f"写入 {RACE_FILE.relative_to(REPO_ROOT)}（{written} 个种族的 description / abilityBonus / traits）")
 
-    workbook = openpyxl.Workbook()
-    sheet = workbook.active
-    sheet.title = "subraces"
-    sheet.append(["systemId", "id", "raceId", "name", "description", "traits"])
-    for row in subrace_rows():
-        sheet.append(row)
-    for column, width in {"A": 11, "B": 18, "C": 12, "D": 16, "E": 40, "F": 72}.items():
-        sheet.column_dimensions[column].width = width
-    workbook.save(SUBRACE_FILE)
-    print(f"写入 {SUBRACE_FILE.relative_to(REPO_ROOT)}（{len(SUBRACES)} 个亚种）")
+    write_subraces()
     return 0
 
 
